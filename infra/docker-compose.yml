@@ -1,0 +1,77 @@
+services:
+  eureka-server:
+    build:
+      context: ..
+      dockerfile: services/eureka-server/Dockerfile
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - where-is-my-parcel-network
+
+  config-server:
+    build:
+      context: ..
+      dockerfile: services/config-server/Dockerfile
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://eureka-server:8761/eureka/apps/CONFIG-SERVER", "-H", "Accept: application/json"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    environment:
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
+    networks:
+      - where-is-my-parcel-network
+
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    environment:
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
+      SPRING_PROFILES_ACTIVE: dev
+    networks:
+      - where-is-my-parcel-network
+
+  user-service:
+    build:
+      context: ..
+      dockerfile: services/user-service/Dockerfile
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    environment:
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
+      SPRING_PROFILES_ACTIVE: dev
+    networks:
+      - where-is-my-parcel-network
+
+networks:
+  where-is-my-parcel-network:
+    driver: bridge

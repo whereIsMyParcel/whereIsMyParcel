@@ -7,11 +7,11 @@ COPY common ./common
 COPY services ./services
 
 RUN chmod +x gradlew
-RUN ./gradlew :services:api-gateway:bootJar -x test --no-daemon
+RUN ./gradlew :services:eureka-server:bootJar -x test --no-daemon
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 
-COPY --from=build /workspace/services/api-gateway/build/libs/*.jar app.jar
+COPY --from=build /workspace/services/eureka-server/build/libs/*.jar app.jar
 
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
