@@ -1,0 +1,24 @@
+name: "기능 구현 및 버그 수정"
+description: "새로운 기능 구현이나 버그 수정을 요청할 때 사용합니다."
+title: "[TYPE] 업무 요약"
+labels: ["enhancement", "bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: "📌 업무 요약"
+      description: "어떤 작업을 진행하는지 간략하게 설명해 주세요."
+    validations:
+      required: true
+  - type: textarea
+    id: tasks
+    attributes:
+      label: "✅ 작업 상세 내역"
+      description: "진행할 작업 목록을 작성해 주세요."
+    validations:
+      required: true
+  - type: textarea
+    id: etc
+    attributes:
+      label: "💬 기타 사항"
+      description: "참고할 문서나 이미지, 주의 사항 등을 작성해 주세요."
