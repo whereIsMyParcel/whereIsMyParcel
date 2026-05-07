@@ -1,1 +1,3 @@
-rootProject.name = 'whereismyparcel'
+rootProject.name = 'whereIsMyParcel'
+
+include 'common'
