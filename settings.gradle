@@ -3,4 +3,8 @@ rootProject.name = 'whereIsMyParcel'
 include 'common'
 include 'services:api-gateway'
 include 'services:config-server'
+<<<<<<< feature/initEureka
 include 'services:eureka-server'
+=======
+include 'services:user-service'
+>>>>>>> develop
