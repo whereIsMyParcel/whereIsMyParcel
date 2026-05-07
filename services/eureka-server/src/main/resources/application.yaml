@@ -1,0 +1,30 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: eureka-server
+
+
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  server:
+    # 자기 보호 모드 비활성화 (기본값은 true)
+    enable-self-preservation: false
+    # 서비스가 신호를 안 보낼 때 목록에서 지우는 주기 (로컬용으로 짧게 설정 가능)
+    eviction-interval-timer-in-ms: 3000
+
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
