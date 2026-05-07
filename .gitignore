@@ -27,7 +27,7 @@ out/
 !**/src/test/**/out/
 
 ### NetBeans ###
-/nbproject/private/1
+/nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
@@ -35,7 +35,3 @@ out/
 
 ### VS Code ###
 .vscode/
-
-# Private Memory
-MEMORY.md
-.gemini/

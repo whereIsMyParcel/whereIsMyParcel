@@ -1,8 +1,1 @@
-rootProject.name = 'delivhub'
-
-include 'eureka-server'
-include 'config-server'
-include 'api-gateway'
-include 'user-service'
-include 'common-module'
-include 'infra'
+rootProject.name = 'whereismyparcel'
