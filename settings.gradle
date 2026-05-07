@@ -1,3 +1,5 @@
 rootProject.name = 'whereIsMyParcel'
 
 include 'common'
+include 'services:api-gateway'
+include 'services:config-server'

@@ -3,6 +3,10 @@ plugins {
 	id 'io.spring.dependency-management' version '1.1.7' apply false
 }
 
+ext {
+	springCloudVersion = '2025.0.1'
+}
+
 allprojects {
 	group = 'com.sparta'
 	version = '0.0.1-SNAPSHOT'
@@ -12,7 +16,7 @@ allprojects {
 	}
 }
 
-configure(subprojects) {
+configure(subprojects.findAll { it.buildFile.exists() }) {
 	apply plugin: 'java-library'
 	apply plugin: 'io.spring.dependency-management'
 
@@ -25,6 +29,7 @@ configure(subprojects) {
 	dependencyManagement {
 		imports {
 			mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
+			mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
 		}
 	}
 
