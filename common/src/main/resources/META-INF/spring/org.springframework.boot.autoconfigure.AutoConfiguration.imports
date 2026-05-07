@@ -1,0 +1,2 @@
+com.sparta.whereismyparcel.common.config.CommonWebAutoConfiguration
+com.sparta.whereismyparcel.common.config.CommonJpaAutoConfiguration
