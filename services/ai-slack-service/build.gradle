@@ -2,7 +2,7 @@ plugins {
 	id 'org.springframework.boot'
 }
 
-description = 'User 서비스'
+description = 'AI & Slack 알림 서비스'
 
 dependencies {
 	implementation project(':common')
