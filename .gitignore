@@ -73,6 +73,9 @@ logs/
 **/src/main/resources/application-secret.yml
 **/src/main/resources/application-secret.yaml
 
+### Docker bind mount data ###
+infra/docker-data/
+
 ### Local AI assistant notes ###
 GEMINI.md
 MEMORY.md
