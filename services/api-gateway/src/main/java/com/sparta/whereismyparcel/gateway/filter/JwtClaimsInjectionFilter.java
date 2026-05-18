@@ -61,8 +61,9 @@ public class JwtClaimsInjectionFilter implements GlobalFilter, Ordered {
 	}
 
 	private void removeUserHeaders(org.springframework.http.HttpHeaders headers) {
-		headers.remove("X-User-Id");
-		headers.remove("X-User-Role");
+		List.copyOf(headers.keySet()).stream()
+			.filter(name -> name.regionMatches(true, 0, "X-User-", 0, 7))
+			.forEach(headers::remove);
 		headers.remove("X-Username");
 	}
 
