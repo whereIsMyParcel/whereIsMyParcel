@@ -1,6 +1,7 @@
 package com.sparta.whereismyparcel.order.domain.entity;
 
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
+import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -37,7 +38,7 @@ public class Order extends BaseEntity {
     private OrderStatus orderStatus;
 
     @Column(name = "total_price", nullable = false)
-    private Integer totalPrice;
+    private Long totalPrice;
 
     @Column(name = "recipient_name", nullable = false, length = 50)
     private String recipientName;
@@ -69,7 +70,6 @@ public class Order extends BaseEntity {
     private Order(
             UUID companyMemberId,
             String orderNumber,
-            Integer totalPrice,
             String recipientName,
             String recipientPhone,
             String zipCode,
@@ -82,7 +82,6 @@ public class Order extends BaseEntity {
         this.companyMemberId = companyMemberId;
         this.orderNumber = orderNumber;
         this.orderStatus = OrderStatus.PENDING;
-        this.totalPrice = totalPrice;
         this.recipientName = recipientName;
         this.recipientPhone = recipientPhone;
         this.zipCode = zipCode;
@@ -97,7 +96,6 @@ public class Order extends BaseEntity {
     public static Order create(
             UUID companyMemberId,
             String orderNumber,
-            Integer totalPrice,
             String recipientName,
             String recipientPhone,
             String zipCode,
@@ -108,10 +106,12 @@ public class Order extends BaseEntity {
             String orderedBy,
             List<OrderItem> orderItems
     ) {
+        if (orderItems == null || orderItems.isEmpty()) {
+            throw new InvalidOrderItemsException();
+        }
         Order order = new Order(
                 companyMemberId,
                 orderNumber,
-                totalPrice,
                 recipientName,
                 recipientPhone,
                 zipCode,
@@ -123,6 +123,7 @@ public class Order extends BaseEntity {
         );
 
         orderItems.forEach(order::addItem);
+        order.totalPrice = order.calculateTotalPrice();
 
         return order;
     }
@@ -163,5 +164,11 @@ public class Order extends BaseEntity {
     private void addItem(OrderItem orderItem) {
         this.orderItems.add(orderItem);
         orderItem.assignOrder(this);
+    }
+
+    private Long calculateTotalPrice() {
+        return this.orderItems.stream()
+                .mapToLong(OrderItem::calculateTotalPrice)
+                .sum();
     }
 }

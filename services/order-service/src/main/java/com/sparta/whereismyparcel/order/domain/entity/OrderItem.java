@@ -33,7 +33,7 @@ public class OrderItem extends BaseEntity {
     private String productOptionSnapshot;
 
     @Column(name = "unit_price", nullable = false)
-    private Integer unitPrice;
+    private Long unitPrice;
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
@@ -42,7 +42,7 @@ public class OrderItem extends BaseEntity {
             UUID productVariantId,
             String productNameSnapshot,
             String productOptionSnapshot,
-            Integer unitPrice,
+            Long unitPrice,
             Integer quantity
     ) {
         this.productVariantId = productVariantId;
@@ -51,11 +51,12 @@ public class OrderItem extends BaseEntity {
         this.unitPrice = unitPrice;
         this.quantity = quantity;
     }
+
     public static OrderItem create(
             UUID productVariantId,
             String productNameSnapshot,
             String productOptionSnapshot,
-            Integer unitPrice,
+            Long unitPrice,
             Integer quantity
     ) {
         return new OrderItem(
@@ -69,5 +70,9 @@ public class OrderItem extends BaseEntity {
 
     void assignOrder(Order order) {
         this.order = order;
+    }
+
+    public Long calculateTotalPrice() {
+        return unitPrice * quantity;
     }
 }
