@@ -1,0 +1,28 @@
+name: Stale Issues and PRs
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  stale:
+    name: Mark Stale and Close
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Mark stale issues and PRs
+        uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          days-before-stale: 7
+          days-before-close: 3
+          stale-pr-label: stale
+          stale-issue-label: stale
+          stale-pr-message: '7일간 활동이 없는 PR입니다. 3일 후 자동으로 닫힙니다.'
+          stale-issue-message: '7일간 활동이 없는 이슈입니다. 3일 후 자동으로 닫힙니다.'
+          close-pr-message: '활동이 없어 자동으로 닫혔습니다. 작업을 재개하려면 PR을 다시 열어주세요.'
+          close-issue-message: '활동이 없어 자동으로 닫혔습니다. 이슈가 여전히 유효하다면 다시 열어주세요.'

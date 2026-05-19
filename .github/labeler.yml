@@ -1,0 +1,74 @@
+# ============================================================
+# GitHub 라벨 자동 지정 규칙 (actions/labeler@v5)
+#
+# ⚠️  아래 라벨들을 GitHub 저장소에 미리 생성해야 합니다.
+#     Settings → Labels → New label
+#
+# 필요한 라벨 목록:
+#   - api-gateway
+#   - user-service
+#   - hub-service
+#   - order-service
+#   - shipment-service
+#   - company-service
+#   - ai-slack-service
+#   - eureka-server
+#   - config-server
+#   - common
+#   - infra
+#   - docs
+#   - dependencies
+#   - stale
+# ============================================================
+
+api-gateway:
+  - changed-files:
+      - any-glob-to-any-file: services/api-gateway/**
+
+user-service:
+  - changed-files:
+      - any-glob-to-any-file: services/user-service/**
+
+hub-service:
+  - changed-files:
+      - any-glob-to-any-file: services/hub-service/**
+
+order-service:
+  - changed-files:
+      - any-glob-to-any-file: services/order-service/**
+
+shipment-service:
+  - changed-files:
+      - any-glob-to-any-file: services/shipment-service/**
+
+company-service:
+  - changed-files:
+      - any-glob-to-any-file: services/company-service/**
+
+ai-slack-service:
+  - changed-files:
+      - any-glob-to-any-file: services/ai-slack-service/**
+
+eureka-server:
+  - changed-files:
+      - any-glob-to-any-file: services/eureka-server/**
+
+config-server:
+  - changed-files:
+      - any-glob-to-any-file: services/config-server/**
+
+common:
+  - changed-files:
+      - any-glob-to-any-file: common/**
+
+infra:
+  - changed-files:
+      - any-glob-to-any-file: infra/**
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file: docs/**
+
+github:
+  - changed-files:
+      - any-glob-to-any-file: .github/**
