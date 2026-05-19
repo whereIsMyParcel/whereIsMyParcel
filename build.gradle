@@ -41,4 +41,8 @@ configure(subprojects.findAll { it.buildFile.exists() }) {
 	tasks.named('test') {
 		useJUnitPlatform()
 	}
+
+	tasks.withType(JavaCompile) {
+		options.encoding = 'UTF-8'
+	}
 }
