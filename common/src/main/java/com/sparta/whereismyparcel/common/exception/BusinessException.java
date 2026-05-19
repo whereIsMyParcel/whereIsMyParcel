@@ -13,15 +13,7 @@ public class BusinessException extends RuntimeException {
 	}
 
 	public BusinessException(ErrorCode errorCode, String message) {
-		super(resolveMessage(errorCode, message));
+		super(message);
 		this.errorCode = errorCode;
-	}
-
-	private static String resolveMessage(ErrorCode errorCode, String message) {
-		if (message == null || message.isBlank()) {
-			return errorCode.getMessage();
-		}
-
-		return message;
 	}
 }

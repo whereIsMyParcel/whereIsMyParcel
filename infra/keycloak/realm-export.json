@@ -1,0 +1,78 @@
+{
+  "realm": "sparta-logistics",
+  "displayName": "스파르타 물류",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 300,
+  "refreshTokenMaxReuse": 0,
+  "roles": {
+    "realm": [
+      { "name": "MASTER",           "description": "전체 관리자" },
+      { "name": "HUB_MANAGER",      "description": "허브 관리자" },
+      { "name": "DELIVERY_MANAGER", "description": "배송 담당자" },
+      { "name": "COMPANY_MANAGER",  "description": "업체 담당자" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "user-service-admin",
+      "name": "User Service Admin Client",
+      "description": "user-service가 Keycloak Admin API 호출 시 사용하는 서비스 계정 클라이언트",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "user-service-admin-secret",
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "local-dev-client",
+      "name": "Local Dev Client",
+      "description": "Postman 등 로컬 테스트용 퍼블릭 클라이언트 (Password Grant)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true
+    }
+  ],
+  "users": [
+    {
+      "username": "master01",
+      "email": "master01@sparta.com",
+      "firstName": "마스터",
+      "lastName": "관리자",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "Master1234!", "temporary": false }
+      ],
+      "realmRoles": ["MASTER"]
+    },
+    {
+      "username": "testuser01",
+      "email": "testuser01@sparta.com",
+      "firstName": "테스트",
+      "lastName": "유저",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "Test1234!", "temporary": false }
+      ],
+      "realmRoles": ["COMPANY_MANAGER"]
+    },
+    {
+      "username": "service-account-user-service-admin",
+      "serviceAccountClientId": "user-service-admin",
+      "enabled": true,
+      "clientRoles": {
+        "realm-management": ["manage-users"]
+      }
+    }
+  ]
+}

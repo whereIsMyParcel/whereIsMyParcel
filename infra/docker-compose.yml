@@ -1,4 +1,90 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    env_file: ../.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sh:/docker-entrypoint-initdb.d/init.sh
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    labels:
+      org.springframework.boot.ignore: "true"
+    networks:
+      - where-is-my-parcel-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: keycloak
+    command: start-dev --import-realm
+    env_file: ../.env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080 && printf 'GET /realms/master HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+    labels:
+      org.springframework.boot.ignore: "true"
+    networks:
+      - where-is-my-parcel-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    env_file: ../.env
+    command:
+      - sh
+      - -c
+      - redis-server --requirepass $$REDIS_PASSWORD
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD --no-auth-warning ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    labels:
+      org.springframework.boot.ignore: "true"
+    networks:
+      - where-is-my-parcel-network
+
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:9411/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    labels:
+      org.springframework.boot.ignore: "true"
+    networks:
+      - where-is-my-parcel-network
+
   eureka-server:
     build:
       context: ..
@@ -12,6 +98,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+    restart: unless-stopped
     networks:
       - where-is-my-parcel-network
 
@@ -22,17 +109,18 @@ services:
     container_name: config-server
     ports:
       - "8888:8888"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://eureka-server:8761/eureka/apps/CONFIG-SERVER", "-H", "Accept: application/json"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 20s
-    depends_on:
-      eureka-server:
-        condition: service_healthy
     environment:
-      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
+      EUREKA_URL: ${EUREKA_URL}
+    restart: unless-stopped
     networks:
       - where-is-my-parcel-network
 
@@ -41,6 +129,7 @@ services:
       context: ..
       dockerfile: services/api-gateway/Dockerfile
     container_name: api-gateway
+    profiles: ["services"]
     ports:
       - "8000:8000"
     depends_on:
@@ -48,9 +137,14 @@ services:
         condition: service_healthy
       config-server:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
     environment:
-      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
-      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_URL: ${EUREKA_URL}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+    restart: unless-stopped
     networks:
       - where-is-my-parcel-network
 
@@ -59,6 +153,7 @@ services:
       context: ..
       dockerfile: services/user-service/Dockerfile
     container_name: user-service
+    profiles: ["services"]
     ports:
       - "8081:8081"
     depends_on:
@@ -66,12 +161,158 @@ services:
         condition: service_healthy
       config-server:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
     environment:
-      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
-      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_URL: ${EUREKA_URL}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      DB_URL: ${USER_DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+      KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+    restart: unless-stopped
+    networks:
+      - where-is-my-parcel-network
+
+  hub-service:
+    build:
+      context: ..
+      dockerfile: services/hub-service/Dockerfile
+    container_name: hub-service
+    profiles: ["services"]
+    ports:
+      - "8082:8082"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      EUREKA_URL: ${EUREKA_URL}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      HUB_DB_URL: ${HUB_DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+    restart: unless-stopped
+    networks:
+      - where-is-my-parcel-network
+
+  company-service:
+    build:
+      context: ..
+      dockerfile: services/company-service/Dockerfile
+    container_name: company-service
+    profiles: ["services"]
+    ports:
+      - "8083:8083"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      EUREKA_URL: ${EUREKA_URL}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      COMPANY_DB_URL: ${COMPANY_DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+    restart: unless-stopped
+    networks:
+      - where-is-my-parcel-network
+
+  order-service:
+    build:
+      context: ..
+      dockerfile: services/order-service/Dockerfile
+    container_name: order-service
+    profiles: ["services"]
+    ports:
+      - "8084:8084"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      EUREKA_URL: ${EUREKA_URL}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      ORDER_DB_URL: ${ORDER_DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+    restart: unless-stopped
+    networks:
+      - where-is-my-parcel-network
+
+  shipment-service:
+    build:
+      context: ..
+      dockerfile: services/shipment-service/Dockerfile
+    container_name: shipment-service
+    profiles: ["services"]
+    ports:
+      - "8085:8085"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      EUREKA_URL: ${EUREKA_URL}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SHIPMENT_DB_URL: ${SHIPMENT_DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+    restart: unless-stopped
+    networks:
+      - where-is-my-parcel-network
+
+  ai-slack-service:
+    build:
+      context: ..
+      dockerfile: services/ai-slack-service/Dockerfile
+    container_name: ai-slack-service
+    profiles: ["services"]
+    ports:
+      - "8086:8086"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      EUREKA_URL: ${EUREKA_URL}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      NOTIFICATION_DB_URL: ${NOTIFICATION_DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+    restart: unless-stopped
     networks:
       - where-is-my-parcel-network
 
 networks:
   where-is-my-parcel-network:
     driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
