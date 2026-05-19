@@ -38,6 +38,13 @@ configure(subprojects.findAll { it.buildFile.exists() }) {
 		implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 	}
 
+	// 서비스 모듈들에 공통 테스트 환경(ArchUnit 포함) 적용
+	if (it.path.startsWith(':services:')) {
+		dependencies {
+			testImplementation testFixtures(project(':common'))
+		}
+	}
+
 	tasks.named('test') {
 		useJUnitPlatform()
 	}
