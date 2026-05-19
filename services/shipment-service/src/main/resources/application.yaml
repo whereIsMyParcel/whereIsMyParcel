@@ -1,3 +1,6 @@
+server:
+  port: 8085
+
 spring:
   application:
     name: shipment-service
@@ -5,9 +8,24 @@ spring:
     import: "optional:configserver:"
   cloud:
     config:
+      enabled: ${SPRING_CLOUD_CONFIG_ENABLED:false}
       discovery:
         enabled: true
         service-id: config-server
+  datasource:
+    url: ${SHIPMENT_DB_URL:jdbc:postgresql://localhost:5432/sparta_logistics?currentSchema=shipment_db}
+    username: ${DB_USERNAME:sparta}
+    password: ${DB_PASSWORD:sparta1234}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: shipment_db
+    show-sql: false
+    open-in-view: false
 
 eureka:
   client:
