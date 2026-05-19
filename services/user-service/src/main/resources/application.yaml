@@ -1,3 +1,6 @@
+server:
+  port: 8081
+
 spring:
   application:
     name: user-service
@@ -5,11 +8,32 @@ spring:
     import: "optional:configserver:"
   cloud:
     config:
+      enabled: ${SPRING_CLOUD_CONFIG_ENABLED:false}
       discovery:
         enabled: true
         service-id: config-server
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/sparta_logistics?currentSchema=user_db}
+    username: ${DB_USERNAME:sparta}
+    password: ${DB_PASSWORD:sparta1234}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: user_db
+    show-sql: false
+    open-in-view: false
 
 eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+
+keycloak:
+  issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/sparta-logistics}
+  admin:
+    client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:user-service-admin}
+    client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:user-service-admin-secret}
