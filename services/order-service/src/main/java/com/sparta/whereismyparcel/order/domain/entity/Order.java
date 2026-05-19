@@ -1,6 +1,7 @@
 package com.sparta.whereismyparcel.order.domain.entity;
 
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
+import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -124,6 +125,39 @@ public class Order extends BaseEntity {
         orderItems.forEach(order::addItem);
 
         return order;
+    }
+
+    public void confirm() {
+        if (this.orderStatus != OrderStatus.PENDING) {
+            throw new InvalidOrderStatusException();
+        }
+        this.orderStatus = OrderStatus.CONFIRMED;
+    }
+
+    public void cancel() {
+        if (this.orderStatus != OrderStatus.PENDING && this.orderStatus != OrderStatus.CONFIRMED) {
+            throw new InvalidOrderStatusException();
+        }
+        this.orderStatus = OrderStatus.CANCELLED;
+    }
+
+    public void fail() {
+        if (this.orderStatus != OrderStatus.PENDING) {
+            throw new InvalidOrderStatusException();
+        }
+        this.orderStatus = OrderStatus.FAILED;
+    }
+
+    public void complete() {
+        if (this.orderStatus != OrderStatus.CONFIRMED) {
+            throw new InvalidOrderStatusException();
+        }
+        this.orderStatus = OrderStatus.COMPLETED;
+    }
+
+    public void delete(String userId) {
+        softDelete(userId);
+        this.orderItems.forEach(item -> item.softDelete(userId));
     }
 
     private void addItem(OrderItem orderItem) {
