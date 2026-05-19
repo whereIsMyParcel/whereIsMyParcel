@@ -1,25 +1,4 @@
-# ============================================================
-# GitHub 라벨 자동 지정 규칙 (actions/labeler@v5)
-#
-# ⚠️  아래 라벨들을 GitHub 저장소에 미리 생성해야 합니다.
-#     Settings → Labels → New label
-#
-# 필요한 라벨 목록:
-#   - api-gateway
-#   - user-service
-#   - hub-service
-#   - order-service
-#   - shipment-service
-#   - company-service
-#   - ai-slack-service
-#   - eureka-server
-#   - config-server
-#   - common
-#   - infra
-#   - docs
-#   - dependencies
-#   - stale
-# ============================================================
+
 
 api-gateway:
   - changed-files:
