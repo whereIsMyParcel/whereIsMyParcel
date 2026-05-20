@@ -31,7 +31,7 @@ public class Hub extends BaseEntity {
     @Column(nullable = false)
     private Double longitude;
 
-    /// 빌더 수정 !
+    /// 빌더 수정
     @Builder(access = AccessLevel.PRIVATE) // 내부 빌더
     private Hub(String name, String address, Double latitude, Double longitude) {
         validateCoordinates(latitude, longitude);
