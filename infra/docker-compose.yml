@@ -141,6 +141,7 @@ services:
         condition: service_healthy
     environment:
       EUREKA_URL: ${EUREKA_URL}
+      SPRING_CLOUD_CONFIG_ENABLED: true
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
       ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
@@ -167,6 +168,7 @@ services:
         condition: service_healthy
     environment:
       EUREKA_URL: ${EUREKA_URL}
+      SPRING_CLOUD_CONFIG_ENABLED: true
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       DB_URL: ${USER_DB_URL}
       DB_USERNAME: ${DB_USERNAME}
@@ -196,6 +198,7 @@ services:
         condition: service_healthy
     environment:
       EUREKA_URL: ${EUREKA_URL}
+      SPRING_CLOUD_CONFIG_ENABLED: true
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       HUB_DB_URL: ${HUB_DB_URL}
       DB_USERNAME: ${DB_USERNAME}
@@ -222,6 +225,7 @@ services:
         condition: service_healthy
     environment:
       EUREKA_URL: ${EUREKA_URL}
+      SPRING_CLOUD_CONFIG_ENABLED: true
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       COMPANY_DB_URL: ${COMPANY_DB_URL}
       DB_USERNAME: ${DB_USERNAME}
@@ -248,6 +252,7 @@ services:
         condition: service_healthy
     environment:
       EUREKA_URL: ${EUREKA_URL}
+      SPRING_CLOUD_CONFIG_ENABLED: true
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       ORDER_DB_URL: ${ORDER_DB_URL}
       DB_USERNAME: ${DB_USERNAME}
@@ -274,6 +279,7 @@ services:
         condition: service_healthy
     environment:
       EUREKA_URL: ${EUREKA_URL}
+      SPRING_CLOUD_CONFIG_ENABLED: true
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       SHIPMENT_DB_URL: ${SHIPMENT_DB_URL}
       DB_USERNAME: ${DB_USERNAME}
@@ -300,6 +306,7 @@ services:
         condition: service_healthy
     environment:
       EUREKA_URL: ${EUREKA_URL}
+      SPRING_CLOUD_CONFIG_ENABLED: true
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       NOTIFICATION_DB_URL: ${NOTIFICATION_DB_URL}
       DB_USERNAME: ${DB_USERNAME}

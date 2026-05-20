@@ -1,0 +1,53 @@
+
+
+api-gateway:
+  - changed-files:
+      - any-glob-to-any-file: services/api-gateway/**
+
+user-service:
+  - changed-files:
+      - any-glob-to-any-file: services/user-service/**
+
+hub-service:
+  - changed-files:
+      - any-glob-to-any-file: services/hub-service/**
+
+order-service:
+  - changed-files:
+      - any-glob-to-any-file: services/order-service/**
+
+shipment-service:
+  - changed-files:
+      - any-glob-to-any-file: services/shipment-service/**
+
+company-service:
+  - changed-files:
+      - any-glob-to-any-file: services/company-service/**
+
+ai-slack-service:
+  - changed-files:
+      - any-glob-to-any-file: services/ai-slack-service/**
+
+eureka-server:
+  - changed-files:
+      - any-glob-to-any-file: services/eureka-server/**
+
+config-server:
+  - changed-files:
+      - any-glob-to-any-file: services/config-server/**
+
+common:
+  - changed-files:
+      - any-glob-to-any-file: common/**
+
+infra:
+  - changed-files:
+      - any-glob-to-any-file: infra/**
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file: docs/**
+
+github:
+  - changed-files:
+      - any-glob-to-any-file: .github/**
