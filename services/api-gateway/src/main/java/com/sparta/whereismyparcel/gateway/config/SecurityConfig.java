@@ -19,6 +19,7 @@ public class SecurityConfig {
 			.authorizeExchange(exchanges -> exchanges
 				.pathMatchers(HttpMethod.POST, "/api/v1/auth/signup").permitAll()
 				.pathMatchers("/actuator/health").permitAll()
+				.pathMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/webjars/**").permitAll()
 				.anyExchange().authenticated()
 			)
 			.oauth2ResourceServer(oauth2 -> oauth2
