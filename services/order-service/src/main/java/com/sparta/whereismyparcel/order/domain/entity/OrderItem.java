@@ -1,0 +1,78 @@
+package com.sparta.whereismyparcel.order.domain.entity;
+
+import com.sparta.whereismyparcel.common.entity.BaseEntity;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.util.UUID;
+
+@Entity
+@Getter
+@Table(name = "p_order_items")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class OrderItem extends BaseEntity {
+
+    @Id
+    @GeneratedValue
+    @Column(name = "order_item_id", nullable = false, updatable = false)
+    private UUID orderItemId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id", nullable = false)
+    private Order order;
+
+    @Column(name = "product_variant_id", nullable = false)
+    private UUID productVariantId;
+
+    @Column(name = "product_name_snapshot", nullable = false, length = 150)
+    private String productNameSnapshot;
+
+    @Column(name = "product_option_snapshot", length = 150)
+    private String productOptionSnapshot;
+
+    @Column(name = "unit_price", nullable = false)
+    private Long unitPrice;
+
+    @Column(name = "quantity", nullable = false)
+    private Integer quantity;
+
+    private OrderItem(
+            UUID productVariantId,
+            String productNameSnapshot,
+            String productOptionSnapshot,
+            Long unitPrice,
+            Integer quantity
+    ) {
+        this.productVariantId = productVariantId;
+        this.productNameSnapshot = productNameSnapshot;
+        this.productOptionSnapshot = productOptionSnapshot;
+        this.unitPrice = unitPrice;
+        this.quantity = quantity;
+    }
+
+    public static OrderItem create(
+            UUID productVariantId,
+            String productNameSnapshot,
+            String productOptionSnapshot,
+            Long unitPrice,
+            Integer quantity
+    ) {
+        return new OrderItem(
+                productVariantId,
+                productNameSnapshot,
+                productOptionSnapshot,
+                unitPrice,
+                quantity
+        );
+    }
+
+    void assignOrder(Order order) {
+        this.order = order;
+    }
+
+    public Long calculateTotalPrice() {
+        return unitPrice * quantity;
+    }
+}
