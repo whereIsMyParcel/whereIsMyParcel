@@ -4,10 +4,12 @@ import com.sparta.whereismyparcel.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
+@Getter
 @Entity
 @Table(name = "p_shipment_histories")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
