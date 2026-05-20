@@ -15,35 +15,37 @@ spring:
         enabled: true
         service-id: config-server
     gateway:
-      routes:
-        - id: user-service-auth
-          uri: lb://user-service
-          predicates:
-            - Path=/api/v1/auth/**
-        - id: user-service-users
-          uri: lb://user-service
-          predicates:
-            - Path=/api/v1/users/**
-        - id: hub-service
-          uri: lb://hub-service
-          predicates:
-            - Path=/api/v1/hubs/**
-        - id: company-service
-          uri: lb://company-service
-          predicates:
-            - Path=/api/v1/companies/**,/api/v1/products/**
-        - id: order-service
-          uri: lb://order-service
-          predicates:
-            - Path=/api/v1/orders/**
-        - id: shipment-service
-          uri: lb://shipment-service
-          predicates:
-            - Path=/api/v1/shipments/**
-        - id: ai-slack-service
-          uri: lb://ai-slack-service
-          predicates:
-            - Path=/api/v1/ai/**
+      server:
+        webflux:
+          routes:
+            - id: user-service-auth
+              uri: lb://user-service
+              predicates:
+                - Path=/api/v1/auth/**
+            - id: user-service-users
+              uri: lb://user-service
+              predicates:
+                - Path=/api/v1/users/**
+            - id: hub-service
+              uri: lb://hub-service
+              predicates:
+                - Path=/api/v1/hubs/**
+            - id: company-service
+              uri: lb://company-service
+              predicates:
+                - Path=/api/v1/companies/**,/api/v1/products/**
+            - id: order-service
+              uri: lb://order-service
+              predicates:
+                - Path=/api/v1/orders/**
+            - id: shipment-service
+              uri: lb://shipment-service
+              predicates:
+                - Path=/api/v1/shipments/**
+            - id: ai-slack-service
+              uri: lb://ai-slack-service
+              predicates:
+                - Path=/api/v1/ai/**
   security:
     oauth2:
       resourceserver:
@@ -54,3 +56,19 @@ eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: user-service
+        url: /v3/api-docs/user-service
+      - name: hub-service
+        url: /v3/api-docs/hub-service
+      - name: company-service
+        url: /v3/api-docs/company-service
+      - name: order-service
+        url: /v3/api-docs/order-service
+      - name: shipment-service
+        url: /v3/api-docs/shipment-service
+      - name: ai-slack-service
+        url: /v3/api-docs/ai-slack-service
