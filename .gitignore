@@ -79,3 +79,6 @@ infra/docker-data/
 ### Local AI assistant notes ###
 GEMINI.md
 MEMORY.md
+
+### Local Prompts ###
+harness.md
