@@ -26,8 +26,19 @@ spring:
         default_schema: notification_db
     show-sql: false
     open-in-view: false
+  ai:
+    google:
+      genai:
+        api.key: ${GEMINI_API_KEY}
+        chat:
+          options:
+            model: gemini-2.0-flash
 
 eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+
+slack:
+  bot:
+    token: ${SLACK_BOT_TOKEN}

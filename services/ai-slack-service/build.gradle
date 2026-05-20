@@ -14,6 +14,10 @@ dependencies {
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 	implementation 'org.springframework.cloud:spring-cloud-starter-config'
 
+	// 외부 API
+	implementation 'com.slack.api:slack-api-client:1.49.0'
+	implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
+
 	runtimeOnly 'org.postgresql:postgresql'
 
 	compileOnly 'org.projectlombok:lombok'
