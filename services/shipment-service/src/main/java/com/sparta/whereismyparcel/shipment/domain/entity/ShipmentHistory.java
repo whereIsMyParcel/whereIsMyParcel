@@ -3,6 +3,7 @@ package com.sparta.whereismyparcel.shipment.domain.entity;
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.NoArgsConstructor;
 
 import java.util.UUID;
@@ -43,4 +44,55 @@ public class ShipmentHistory extends BaseEntity {
 
     @Column(length = 255)
     private String description;
+
+    @Builder(access = AccessLevel.PRIVATE)
+    private ShipmentHistory(
+            Shipment shipment,
+            UUID originHubId,
+            int sequence,
+            UUID destinationHubId,
+            UUID hubDeliveryManagerId,
+            ShipmentStatus status,
+            int estimatedDuration,
+            int actualDistance,
+            int actualDuration,
+            String description
+    ) {
+        this.shipment = shipment;
+        this.originHubId = originHubId;
+        this.sequence = sequence;
+        this.destinationHubId = destinationHubId;
+        this.hubDeliveryManagerId = hubDeliveryManagerId;
+        this.status = status;
+        this.estimatedDuration = estimatedDuration;
+        this.actualDistance = actualDistance;
+        this.actualDuration = actualDuration;
+        this.description = description;
+    }
+
+    public static ShipmentHistory create(
+            Shipment shipment,
+            UUID originHubId,
+            int sequence,
+            UUID destinationHubId,
+            UUID hubDeliveryManagerId,
+            ShipmentStatus status,
+            int estimatedDuration,
+            int actualDistance,
+            int actualDuration,
+            String description
+    ) {
+        return ShipmentHistory.builder()
+                .shipment(shipment)
+                .originHubId(originHubId)
+                .sequence(sequence)
+                .destinationHubId(destinationHubId)
+                .hubDeliveryManagerId(hubDeliveryManagerId)
+                .status(status)
+                .estimatedDuration(estimatedDuration)
+                .actualDistance(actualDistance)
+                .actualDuration(actualDuration)
+                .description(description)
+                .build();
+    }
 }

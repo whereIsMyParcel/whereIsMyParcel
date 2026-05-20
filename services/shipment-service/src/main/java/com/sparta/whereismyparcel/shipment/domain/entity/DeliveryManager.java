@@ -3,6 +3,7 @@ package com.sparta.whereismyparcel.shipment.domain.entity;
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -29,4 +30,21 @@ public class DeliveryManager extends BaseEntity {
 
     @Column(nullable = false)
     private int deliveryOrder;
+
+    @Builder(access = AccessLevel.PRIVATE)
+    private DeliveryManager(UUID hubId, UUID slackId, DeliveryType type, int deliveryOrder) {
+        this.hubId = hubId;
+        this.slackId = slackId;
+        this.type = type;
+        this.deliveryOrder = deliveryOrder;
+    }
+
+    public static DeliveryManager create(UUID hubId, UUID slackId, DeliveryType type, int deliveryOrder) {
+        return DeliveryManager.builder()
+                .hubId(hubId)
+                .slackId(slackId)
+                .type(type)
+                .deliveryOrder(deliveryOrder)
+                .build();
+    }
 }
