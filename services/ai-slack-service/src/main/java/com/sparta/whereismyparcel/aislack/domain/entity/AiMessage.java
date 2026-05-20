@@ -45,7 +45,7 @@ public class AiMessage extends BaseEntity {
             LocalDateTime finalDispatchDeadline
     ) {
         this.orderId = orderId;
-        this.analysisStatus = AnalysisStatus.AISUCCESS; // 분석 완료 시점에 엔티티가 생성된다고 가정
+        this.analysisStatus = AnalysisStatus.AI_SUCCESS; // 분석 완료 시점에 엔티티가 생성된다고 가정
         this.requestContent = requestContent;
         this.responseContent = responseContent;
         this.finalDispatchDeadline = finalDispatchDeadline;
