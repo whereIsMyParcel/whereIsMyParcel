@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class OrderService {
 
@@ -43,9 +44,8 @@ public class OrderService {
                 orderItems
         );
 
-        Order savedOrder = orderRepository.save(order);
-
-        return OrderCreateResponse.from(savedOrder);
+        orderRepository.save(order);
+        return OrderCreateResponse.from(order);
     }
 
     // TODO: Feign 호출 없이 구현하기 위한 임시 메서드(주문 상품들 검증했다고 치고...)
