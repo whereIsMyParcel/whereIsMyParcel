@@ -15,35 +15,37 @@ spring:
         enabled: true
         service-id: config-server
     gateway:
-      routes:
-        - id: user-service-auth
-          uri: lb://user-service
-          predicates:
-            - Path=/api/v1/auth/**
-        - id: user-service-users
-          uri: lb://user-service
-          predicates:
-            - Path=/api/v1/users/**
-        - id: hub-service
-          uri: lb://hub-service
-          predicates:
-            - Path=/api/v1/hubs/**
-        - id: company-service
-          uri: lb://company-service
-          predicates:
-            - Path=/api/v1/companies/**,/api/v1/products/**
-        - id: order-service
-          uri: lb://order-service
-          predicates:
-            - Path=/api/v1/orders/**
-        - id: shipment-service
-          uri: lb://shipment-service
-          predicates:
-            - Path=/api/v1/shipments/**
-        - id: ai-slack-service
-          uri: lb://ai-slack-service
-          predicates:
-            - Path=/api/v1/ai/**
+      server:
+        webflux:
+          routes:
+            - id: user-service-auth
+              uri: lb://user-service
+              predicates:
+                - Path=/api/v1/auth/**
+            - id: user-service-users
+              uri: lb://user-service
+              predicates:
+                - Path=/api/v1/users/**
+            - id: hub-service
+              uri: lb://hub-service
+              predicates:
+                - Path=/api/v1/hubs/**
+            - id: company-service
+              uri: lb://company-service
+              predicates:
+                - Path=/api/v1/companies/**,/api/v1/products/**
+            - id: order-service
+              uri: lb://order-service
+              predicates:
+                - Path=/api/v1/orders/**
+            - id: shipment-service
+              uri: lb://shipment-service
+              predicates:
+                - Path=/api/v1/shipments/**
+            - id: ai-slack-service
+              uri: lb://ai-slack-service
+              predicates:
+                - Path=/api/v1/ai/**
   security:
     oauth2:
       resourceserver:
