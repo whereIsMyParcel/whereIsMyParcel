@@ -13,7 +13,7 @@ spring:
         enabled: true
         service-id: config-server
   datasource:
-    url: ${HUB_DB_URL:jdbc:postgresql://localhost:5432/sparta_logistics?currentSchema=hub_schema}
+    url: ${HUB_DB_URL:jdbc:postgresql://localhost:5432/sparta_logistics?currentSchema=hub_db}
     username: ${DB_USERNAME:sparta}
     password: ${DB_PASSWORD:sparta1234}
     driver-class-name: org.postgresql.Driver
@@ -23,7 +23,7 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        default_schema: hub_schema
+        default_schema: hub_db
     show-sql: false
     open-in-view: false
   data:
@@ -38,6 +38,7 @@ eureka:
 
 logging:
   level:
-    com.sparta.whereismyparcel: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    root: INFO
+    com.sparta.whereismyparcel: INFO
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: INFO
