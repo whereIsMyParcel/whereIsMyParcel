@@ -1,5 +1,6 @@
 package com.sparta.whereismyparcel.aislack.domain.entity;
 
+import com.sparta.whereismyparcel.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -12,7 +13,7 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "p_slack_messages", schema = "notification_db")
-public class SlackMessage {
+public class SlackMessage extends BaseEntity {
 
     @Id
     @GeneratedValue
@@ -47,7 +48,7 @@ public class SlackMessage {
         this.slackId = slackId;
         this.receiverId = receiverId;
         this.message = message;
-        this.slackStatus = SlackStatus.MASSAGESENT; // 성공 시 생성
+        this.slackStatus = SlackStatus.MASSAGE_SENT; // 성공 시 생성
         this.retryCount = 0;
         this.sentAt = LocalDateTime.now();
     }
@@ -61,12 +62,12 @@ public class SlackMessage {
     발송 실패시 재시도 횟수 증가 및 상태 관리
      */
     public void retry() {
-        this.slackStatus = SlackStatus.MASSAGEFAILED;
-        if(this.retryCount <= 3)  {
+        if(this.retryCount < 3)  {
             this.retryCount++;
+            this.slackStatus = SlackStatus.MASSAGE_FAILED;
         } else {
             // 최대 재시도 횟수 도달 시 알림.
-            this.slackStatus = SlackStatus.PERMANENTFAILED;
+            this.slackStatus = SlackStatus.PERMANENT_FAILED;
         }
     }
 

@@ -1,7 +1,7 @@
 package com.sparta.whereismyparcel.aislack.domain.entity;
 
 public enum SlackStatus {
-    MASSAGESENT,
-    MASSAGEFAILED,
-    PERMANENTFAILED
+    MASSAGE_SENT,
+    MASSAGE_FAILED,
+    PERMANENT_FAILED
 }

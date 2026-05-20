@@ -4,6 +4,22 @@ plugins {
 
 description = 'AI & Slack 알림 서비스'
 
+ext {
+	set('springAiVersion', "2.0.0-M6")
+}
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+	}
+}
+
+// 루트에 선언되지 않은 Spring AI 전용 레포지토리 추가
+repositories {
+	mavenCentral()
+	maven { url 'https://repo.spring.io/milestone' }
+}
+
+
 dependencies {
 	implementation project(':common')
 
@@ -26,3 +42,5 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
+
+
