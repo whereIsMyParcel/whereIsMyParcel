@@ -436,15 +436,13 @@ public interface UserFeignClient {
 
 - 물리 삭제(`DELETE` SQL) 금지
 - 삭제 시 `deleted_at = now()`, `deleted_by = {요청자 ID}` 세팅
-- 모든 조회 쿼리에 `deleted_at IS NULL` 조건 필수
-- Repository 메서드명에 `AndDeletedAtIsNull` 접미사 명시
+- 모든 엔티티에 `@SQLRestriction("deleted_at IS NULL")` 선언 필수 (Hibernate 6.x)
+- JpaRepository의 기본 메서드(`findById`, `findAll` 등) 사용 시 자동으로 삭제되지 않은 데이터만 조회됩니다.
+- **주의**: Native Query 사용 시에는 직접 `deleted_at IS NULL` 조건을 추가해야 합니다.
 
 ```java
-// ❌ 잘못된 예
+// ✅ 올바른 예 (전역 필터 적용으로 접미사 불필요)
 userRepository.findById(userId)
-
-// ✅ 올바른 예
-userRepository.findByUserIdAndDeletedAtIsNull(userId)
     .orElseThrow(UserNotFoundException::new);
 ```
 
@@ -518,9 +516,33 @@ user.setUpdatedBy(approverId.toString());
 user.approve(approverId);  // 엔티티 내부에서 상태/감사 필드 처리
 ```
 
----
+## 12. 엔티티 생성 규칙
 
-## 12. 서비스 간 통신
+- **외부**: 정적 팩토리 메서드 `create()` 사용 필수
+- **내부**: `@Builder`를 `private` 생성자에 선언해서 `create()` 안에서만 사용 (클래스 레벨 선언 금지)
+- **JPA**: `@NoArgsConstructor(access = AccessLevel.PROTECTED)` 필수
+
+```java
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Hub extends BaseEntity {
+    // ... 필드 정의
+
+    @Builder(access = AccessLevel.PRIVATE) // 내부 빌더
+    private Hub(String name, ...) {
+        this.name = name;
+        // ...
+    }
+
+    public static Hub create(String name, ...) {
+        return Hub.builder()
+                .name(name)
+                .build();
+    }
+}
+```
+
+## 13. 서비스 간 통신
 
 ### 규칙
 

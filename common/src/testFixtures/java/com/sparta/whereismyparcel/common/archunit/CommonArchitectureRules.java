@@ -130,7 +130,19 @@ public class CommonArchitectureRules {
                     .because("@Configuration은 infrastructure.config 또는 common.config 패키지에 위치해야 합니다.");
 
     // -------------------------------------------------------------------------
-    // 규칙 4. 예외 처리 규칙
+    // 규칙 4. Soft Delete (@SQLRestriction 도입)
+    // -------------------------------------------------------------------------
+
+    // 모든 엔티티는 @SQLRestriction("deleted_at IS NULL")을 가져야 함
+    public static final ArchRule ENTITIES_SHOULD_HAVE_SQL_RESTRICTION =
+            classes()
+                    .that().resideInAPackage("..domain.entity..")
+                    .and().areAnnotatedWith("jakarta.persistence.Entity")
+                    .should().beAnnotatedWith("org.hibernate.annotations.SQLRestriction")
+                    .because("@SQLRestriction(\"deleted_at IS NULL\") 선언이 없으면 Soft Delete된 데이터가 조회에 포함됩니다. 모든 엔티티에 @SQLRestriction을 선언하세요.");
+
+    // -------------------------------------------------------------------------
+    // 규칙 5. 예외 처리 규칙
     // -------------------------------------------------------------------------
 
     // RuntimeException 직접 throw 금지 (반드시 커스텀 예외 사용)

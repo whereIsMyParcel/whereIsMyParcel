@@ -64,7 +64,13 @@ public class ArchitectureTest {
     static final ArchRule CONFIGURATION_LOCATION_RULE = CommonArchitectureRules.CONFIGURATION_LOCATION_RULE;
 
     // -------------------------------------------------------------------------
-    // 규칙 4. 예외 처리 규칙
+    // 규칙 4. Soft Delete
+    // -------------------------------------------------------------------------
+    @ArchTest
+    static final ArchRule ENTITIES_SHOULD_HAVE_SQL_RESTRICTION = CommonArchitectureRules.ENTITIES_SHOULD_HAVE_SQL_RESTRICTION;
+
+    // -------------------------------------------------------------------------
+    // 규칙 5. 예외 처리 규칙
     // -------------------------------------------------------------------------
     @ArchTest
     static final ArchRule DO_NOT_THROW_GENERIC_EXCEPTIONS = CommonArchitectureRules.DO_NOT_THROW_GENERIC_EXCEPTIONS;

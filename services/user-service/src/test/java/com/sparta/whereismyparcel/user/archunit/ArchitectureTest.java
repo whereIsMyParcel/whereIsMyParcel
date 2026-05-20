@@ -55,6 +55,9 @@ public class ArchitectureTest {
     static final ArchRule CONFIGURATION_LOCATION_RULE = CommonArchitectureRules.CONFIGURATION_LOCATION_RULE;
 
     @ArchTest
+    static final ArchRule ENTITIES_SHOULD_HAVE_SQL_RESTRICTION = CommonArchitectureRules.ENTITIES_SHOULD_HAVE_SQL_RESTRICTION;
+
+    @ArchTest
     static final ArchRule DO_NOT_THROW_GENERIC_EXCEPTIONS = CommonArchitectureRules.DO_NOT_THROW_GENERIC_EXCEPTIONS;
 
     @ArchTest
