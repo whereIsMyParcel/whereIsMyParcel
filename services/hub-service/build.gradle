@@ -19,6 +19,8 @@ dependencies {
 	// Redisson for Distributed Lock
 	implementation 'org.redisson:redisson-spring-boot-starter:3.43.0'
 
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6'
+
 	runtimeOnly 'org.postgresql:postgresql'
 
 	compileOnly 'org.projectlombok:lombok'

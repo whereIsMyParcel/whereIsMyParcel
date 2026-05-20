@@ -18,7 +18,8 @@
 9. [Gateway 헤더 스펙](#9-gateway-헤더-스펙)
 10. [DB 컨벤션](#10-db-컨벤션)
 11. [서비스 구현 규칙](#11-서비스-구현-규칙)
-12. [서비스 간 통신](#12-서비스-간-통신)
+12. [엔티티 생성 규칙](#12-엔티티-생성-규칙)
+13. [서비스 간 통신](#13-서비스-간-통신)
 
 ---
 
@@ -122,6 +123,7 @@ com.sparta.whereismyparcel.{service-name}
 │   └── service/          ← 비즈니스 로직
 ├── domain/
 │   ├── entity/           ← JPA 엔티티
+│   ├── exception/        ← ErrorCode enum, 구체적인 예외 클래스
 │   └── repository/       ← JPA Repository 인터페이스
 ├── infrastructure/
 │   ├── client/           ← FeignClient 인터페이스
@@ -278,8 +280,10 @@ public enum UserErrorCode implements ErrorCode {
 
 ### 번호 할당 규칙
 
-- `001~099`: 조회 관련 (Not Found, 권한 없음)
-- `100~199`: 생성/수정 관련 (중복, 유효하지 않은 상태)
+순번으로 할당합니다. 범위를 구분하지 않으며, 추가되는 순서대로 번호를 부여합니다.
+
+- `001`: 첫 번째 에러 코드
+- `002`: 두 번째 에러 코드
 - `900~999`: 외부 연동 오류 (Keycloak, Feign 호출 실패)
 
 ---
@@ -352,6 +356,7 @@ services/user-service/src/main/java/com/sparta/whereismyparcel/user/
 ### 권한 체크
 
 각 서비스는 `X-User-Role` 헤더를 읽어서 도메인 권한을 직접 검증합니다. JWT를 파싱하지 않습니다.
+String 직접 비교 대신 enum 변환 후 비교합니다. 오타가 나면 `IllegalArgumentException`이 발생하므로 런타임에 즉시 감지됩니다.
 
 ```java
 @PatchMapping("/{userId}/approve")
@@ -361,7 +366,8 @@ public ResponseEntity<ApiResponse<ApproveResponse>> approve(
     @PathVariable UUID userId,
     @RequestBody @Valid ApproveRequest request
 ) {
-    if (!role.equals("MASTER") && !role.equals("HUB_MANAGER")) {
+    UserRole userRole = UserRole.valueOf(role);
+    if (userRole != UserRole.MASTER && userRole != UserRole.HUB_MANAGER) {
         throw new ForbiddenException();  // CommonErrorCode.FORBIDDEN을 감싼 예외 클래스
     }
     ...
@@ -437,7 +443,7 @@ public interface UserFeignClient {
 - 물리 삭제(`DELETE` SQL) 금지
 - 삭제 시 `deleted_at = now()`, `deleted_by = {요청자 ID}` 세팅
 - 모든 엔티티에 `@SQLRestriction("deleted_at IS NULL")` 선언 필수 (Hibernate 6.x)
-- JpaRepository의 기본 메서드(`findById`, `findAll` 등) 사용 시 자동으로 삭제되지 않은 데이터만 조회됩니다.
+- JpaRepository의 기본 메서드(`findById`, `findAll` 등) 호출 시 자동으로 삭제되지 않은 데이터만 조회됩니다.
 - **주의**: Native Query 사용 시에는 직접 `deleted_at IS NULL` 조건을 추가해야 합니다.
 
 ```java
@@ -487,19 +493,29 @@ return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(userSe
 
 ### 트랜잭션
 
-- `@Transactional`은 Service 메서드에 선언
-- 조회 전용 메서드는 `@Transactional(readOnly = true)`
-- Keycloak Admin API 호출처럼 외부 I/O가 포함된 경우, 트랜잭션 범위와 외부 호출 순서를 명확히 정의
+- Service 클래스 레벨에 `@Transactional(readOnly = true)`를 기본 선언합니다
+- 쓰기 메서드만 `@Transactional`로 오버라이드합니다
+- Keycloak Admin API 호출처럼 외부 I/O가 포함된 경우, 트랜잭션 범위와 외부 호출 순서를 명확히 정의합니다
 
 ```java
-// ✅ 올바른 예
-@Transactional
-public ApproveResponse approve(UUID userId, UUID approverId) {
-    User user = userRepository.findByUserIdAndDeletedAtIsNull(userId)
-        .orElseThrow(UserNotFoundException::new);
-    keycloakService.enableUser(userId);  // 외부 호출
-    user.approve(approverId);            // 도메인 상태 변경 (엔티티 메서드)
-    return ApproveResponse.from(user);
+@Service
+@Transactional(readOnly = true)  // 기본값 — 조회 메서드 전체 적용
+public class UserService {
+
+    // ✅ 쓰기 메서드만 오버라이드
+    @Transactional
+    public ApproveResponse approve(UUID userId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(UserNotFoundException::new);
+        keycloakService.enableUser(userId);  // 외부 호출
+        user.approve();                      // 도메인 상태 변경 (엔티티 메서드)
+        return ApproveResponse.from(user);
+    }
+
+    // 조회 메서드는 별도 선언 없이 클래스 레벨 readOnly 적용
+    public UserResponse getUser(UUID userId) {
+        ...
+    }
 }
 ```
 
@@ -510,11 +526,12 @@ public ApproveResponse approve(UUID userId, UUID approverId) {
 ```java
 // ❌ Service에서 직접 세팅
 user.setStatus(UserStatus.APPROVED);
-user.setUpdatedBy(approverId.toString());
 
 // ✅ 엔티티 메서드 위임
-user.approve(approverId);  // 엔티티 내부에서 상태/감사 필드 처리
+user.approve();  // 엔티티 내부에서 상태 변경 및 불변 조건 검증
 ```
+
+---
 
 ## 12. 엔티티 생성 규칙
 
@@ -525,22 +542,27 @@ user.approve(approverId);  // 엔티티 내부에서 상태/감사 필드 처리
 ```java
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Hub extends BaseEntity {
-    // ... 필드 정의
-
+public class User extends BaseEntity {
+    
     @Builder(access = AccessLevel.PRIVATE) // 내부 빌더
-    private Hub(String name, ...) {
-        this.name = name;
-        // ...
+    private User(UUID userId, String username, ..., UserStatus status) {
+        this.userId = userId;
+        ...
     }
 
-    public static Hub create(String name, ...) {
-        return Hub.builder()
-                .name(name)
+    // 외부에서 유일한 생성 진입점
+    public static User create(UUID userId, String username, ...) {
+        return User.builder()
+                .userId(userId)
+                .username(username)
+                .status(UserStatus.PENDING) // 초기값 고정
+                ...
                 .build();
     }
 }
 ```
+
+---
 
 ## 13. 서비스 간 통신
 
