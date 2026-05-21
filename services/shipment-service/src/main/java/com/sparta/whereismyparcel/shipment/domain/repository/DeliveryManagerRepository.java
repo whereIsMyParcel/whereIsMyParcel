@@ -9,8 +9,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.UUID;
 
 public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager, UUID> {
-    long countByHubId(UUID hubId);
-
+    long countByHubIdAndType(UUID hubId, DeliveryType type);
     //TODO 동시성 이슈 발생 가능성 높으므로 변경 필요
     @Query("""
         select coalesce(max(d.deliveryOrder), 0) + 1

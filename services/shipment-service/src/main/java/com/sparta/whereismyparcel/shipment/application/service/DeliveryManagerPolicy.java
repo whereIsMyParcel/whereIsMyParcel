@@ -48,7 +48,7 @@ public class DeliveryManagerPolicy {
 
     //배송담당자 등록 10명 제한
     private void checkLimit(DeliveryType type, UUID hubId) {
-        long managerCount = deliveryManagerRepository.countByHubId(hubId);
+        long managerCount = deliveryManagerRepository.countByHubIdAndType(hubId, type);
 
         if (managerCount < MAX_DELIVERY_MANAGER_COUNT) {
             return;

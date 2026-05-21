@@ -86,7 +86,7 @@ class DeliveryManagerPolicyTest {
         void checkCreate_fail_capacityExceeded() {
             when(userClient.exists(slackId)).thenReturn(true);
             when(hubClient.exists(hubId)).thenReturn(true);
-            when(deliveryManagerRepository.countByHubId(hubId)).thenReturn(10L);
+            when(deliveryManagerRepository.countByHubIdAndType(hubId, DeliveryType.COMPANY_DELIVERY)).thenReturn(10L);
 
             assertThrows(
                     DeliveryManagerCapacityExceededException.class,
@@ -103,7 +103,7 @@ class DeliveryManagerPolicyTest {
         void checkCreate_success() {
             when(userClient.exists(slackId)).thenReturn(true);
             when(hubClient.exists(hubId)).thenReturn(true);
-            when(deliveryManagerRepository.countByHubId(hubId)).thenReturn(5L);
+            when(deliveryManagerRepository.countByHubIdAndType(hubId, DeliveryType.COMPANY_DELIVERY)).thenReturn(5L);
 
             assertDoesNotThrow(() ->
                     deliveryManagerPolicy.checkCreate(
