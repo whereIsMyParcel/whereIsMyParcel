@@ -1,6 +1,8 @@
 package com.sparta.whereismyparcel.hub.domain.entity;
 
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
+import com.sparta.whereismyparcel.hub.presentation.dto.request.CreateHubRequest;
+import com.sparta.whereismyparcel.hub.presentation.dto.request.UpdateHubRequest;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
@@ -15,8 +17,7 @@ import java.util.UUID;
 public class Hub extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "hub_id", columnDefinition = "UUID")
+    @Column(name = "hub_id", updatable = false)
     private UUID hubId;
 
     @Column(nullable = false, length = 100)
@@ -31,10 +32,10 @@ public class Hub extends BaseEntity {
     @Column(nullable = false)
     private Double longitude;
 
-    /// 빌더 수정
-    @Builder(access = AccessLevel.PRIVATE) // 내부 빌더
-    private Hub(String name, String address, Double latitude, Double longitude) {
+    @Builder(access = AccessLevel.PRIVATE)
+    private Hub(UUID hubId, String name, String address, Double latitude, Double longitude) {
         validateCoordinates(latitude, longitude);
+        this.hubId = hubId;
         this.name = name;
         this.address = address;
         this.latitude = latitude;
@@ -42,25 +43,25 @@ public class Hub extends BaseEntity {
     }
 
     // 정적 팩토리 메서드
-    public static Hub create(String name, String address, Double latitude, Double longitude) {
+    public static Hub create(CreateHubRequest request) {
         return Hub.builder()
-                .name(name)
-                .address(address)
-                .latitude(latitude)
-                .longitude(longitude)
+                .hubId(UUID.randomUUID())
+                .name(request.name())
+                .address(request.address())
+                .latitude(request.latitude())
+                .longitude(request.longitude())
                 .build();
     }
 
-    // 비즈니스 로직: 허브 정보 수정
-    public void update(String name, String address, Double latitude, Double longitude) {
-        validateCoordinates(latitude, longitude);
-        this.name = name;
-        this.address = address;
-        this.latitude = latitude;
-        this.longitude = longitude;
+
+    public void update(UpdateHubRequest request) {
+        validateCoordinates(request.latitude(), request.longitude());
+        this.name = request.name();
+        this.address = request.address();
+        this.latitude = request.latitude();
+        this.longitude = request.longitude();
     }
 
-    // 위경도 유효성 검증
     private void validateCoordinates(Double latitude, Double longitude) {
         if (latitude == null || latitude < -90 || latitude > 90) {
             throw new IllegalArgumentException("위도(latitude)는 -90에서 90 사이여야 합니다.");
