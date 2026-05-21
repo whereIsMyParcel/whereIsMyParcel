@@ -16,6 +16,8 @@ dependencies {
 	compileOnly 'org.springframework.security:spring-security-config'
 	compileOnly 'org.springframework.data:spring-data-jpa'
 	compileOnly 'org.springdoc:springdoc-openapi-starter-common:2.8.6'
+	compileOnly 'io.github.openfeign:feign-core'
+	compileOnly 'com.fasterxml.jackson.core:jackson-databind'
 
 	annotationProcessor 'org.projectlombok:lombok'
 
