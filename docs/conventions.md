@@ -355,22 +355,43 @@ services/user-service/src/main/java/com/sparta/whereismyparcel/user/
 
 ### 권한 체크
 
-각 서비스는 `X-User-Role` 헤더를 읽어서 도메인 권한을 직접 검증합니다. JWT를 파싱하지 않습니다.
-String 직접 비교 대신 enum 변환 후 비교합니다. 오타가 나면 `IllegalArgumentException`이 발생하므로 런타임에 즉시 감지됩니다.
+`GatewayHeaderAuthFilter` (`common` 모듈)가 게이트웨이에서 주입한 `X-User-Role` 헤더를 읽어 Spring Security `SecurityContext`에 세팅합니다.
+각 서비스는 JWT를 파싱하지 않으며, `@PreAuthorize`로 선언적으로 권한을 검증합니다.
 
 ```java
-@PatchMapping("/{userId}/approve")
-public ResponseEntity<ApiResponse<ApproveResponse>> approve(
-    @RequestHeader("X-User-Role") String role,
-    @RequestHeader("X-User-Id") String requesterId,
-    @PathVariable UUID userId,
-    @RequestBody @Valid ApproveRequest request
-) {
-    UserRole userRole = UserRole.valueOf(role);
-    if (userRole != UserRole.MASTER && userRole != UserRole.HUB_MANAGER) {
-        throw new ForbiddenException();  // CommonErrorCode.FORBIDDEN을 감싼 예외 클래스
+// ✅ 올바른 예 — @PreAuthorize 사용
+@PreAuthorize("hasRole('MASTER')")
+@PatchMapping("/api/v1/users/{userId}/approve")
+public ResponseEntity<ApiResponse<ApproveResponse>> approve(@PathVariable UUID userId) {
+    return ResponseEntity.ok(ApiResponse.success(userService.approve(userId)));
+}
+
+// 복수 권한 허용 시
+@PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER')")
+@PatchMapping("/api/v1/hubs/{hubId}")
+public ResponseEntity<ApiResponse<HubResponse>> update(@PathVariable UUID hubId, ...) { ... }
+```
+
+각 서비스의 `SecurityConfig`에서 `GatewayHeaderAuthFilter`를 등록합니다.
+
+```java
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/v1/auth/**", "/actuator/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(new GatewayHeaderAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+        return http.build();
     }
-    ...
 }
 ```
 

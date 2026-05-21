@@ -12,6 +12,8 @@ dependencies {
 	compileOnly 'org.springframework:spring-context'
 	compileOnly 'org.springframework:spring-web'
 	compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
+	compileOnly 'org.springframework.security:spring-security-web'
+	compileOnly 'org.springframework.security:spring-security-config'
 	compileOnly 'org.springframework.data:spring-data-jpa'
 
 	annotationProcessor 'org.projectlombok:lombok'
