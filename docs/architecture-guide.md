@@ -184,8 +184,8 @@ DB까지 가기엔 무거운 데이터를 메모리에 잠깐 저장해둡니다
 | 캐시 대상 | TTL | 담당 서비스 |
 |-----------|-----|------------|
 | 사용자 인증 컨텍스트 | 5분 | api-gateway, user-service |
-| 허브 정보 | - | hub-service |
-| 허브 간 이동 경로 | - | hub-service, shipment-service |
+| 허브 정보 | 1시간 | hub-service |
+| 허브 간 이동 경로 | 6시간 | hub-service |
 | 배송 담당자 배정 순번 | - | shipment-service |
 
 ### 🗄️ PostgreSQL (`:5432`)
