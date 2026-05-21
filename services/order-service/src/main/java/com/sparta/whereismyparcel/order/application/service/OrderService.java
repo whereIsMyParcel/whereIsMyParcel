@@ -13,6 +13,7 @@ import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuVa
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -80,8 +82,10 @@ public class OrderService {
 
         try {
             orderCreateSaga.execute(order, context);
-        } catch (SagaCompensationFailedException | SagaFailedException e) {
-            // 로그 필요
+        } catch (SagaCompensationFailedException e) {
+            log.error("[OrderService] 보상 실패. orderId={}", order.getOrderId(), e);
+        } catch (SagaFailedException e) {
+            log.error("[OrderService] Saga 실패. orderId={}", order.getOrderId(), e);
         } finally {
             orderRepository.save(order);
         }

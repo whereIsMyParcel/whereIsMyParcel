@@ -9,8 +9,10 @@ import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.Shipme
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.StockCancelRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.StockReservationRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class OrderCreateSaga {
@@ -32,6 +34,7 @@ public class OrderCreateSaga {
                     .map(r -> new OrderCreateSagaContext.StockReservation(r.skuId(), null, r.reservedQuantity()))
                     .toList());
         } catch (Exception e) {
+            log.error("[Saga] 재고 예약 실패. orderId={}", context.getOrderId(), e);
             order.fail();
             throw new SagaFailedException();
         }
@@ -51,6 +54,7 @@ public class OrderCreateSaga {
             var shipmentIds = shipmentFeignClient.createShipments(context.getUserId(), request);
             context.applyShipmentIds(shipmentIds);
         } catch (Exception e) {
+            log.error("[Saga] 배송 생성 실패. orderId={}", context.getOrderId(), e);
             order.fail();
             compensateStockReservation(context);
             throw new SagaFailedException();
@@ -69,6 +73,7 @@ public class OrderCreateSaga {
             );
             companyFeignClient.cancelReservation(context.getUserId(), request);
         } catch (Exception e) {
+            log.error("[Saga] 재고 원복 실패. orderId={}", context.getOrderId(), e);
             throw new SagaCompensationFailedException();
         }
     }
