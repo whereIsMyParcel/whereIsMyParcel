@@ -1,6 +1,8 @@
 package com.sparta.whereismyparcel.user.application.service;
 
 import com.sparta.whereismyparcel.user.domain.entity.User;
+import com.sparta.whereismyparcel.user.domain.UserRole;
+import com.sparta.whereismyparcel.user.domain.UserStatus;
 import com.sparta.whereismyparcel.user.domain.exception.UserAlreadyExistsException;
 import com.sparta.whereismyparcel.user.domain.exception.UserNotFoundException;
 import com.sparta.whereismyparcel.user.domain.repository.UserRepository;
@@ -8,9 +10,12 @@ import com.sparta.whereismyparcel.user.infrastructure.keycloak.KeycloakAdminServ
 import com.sparta.whereismyparcel.user.presentation.dto.request.SignupRequest;
 import com.sparta.whereismyparcel.user.presentation.dto.response.ApproveResponse;
 import com.sparta.whereismyparcel.user.presentation.dto.response.SignupResponse;
+import com.sparta.whereismyparcel.user.presentation.dto.response.UserResponse;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,8 +44,8 @@ public class UserService {
 	@Transactional
 	public ApproveResponse approve(UUID userId) {
 		User user = findUserById(userId);
-		keycloakAdminService.enableUser(userId);
 		user.approve();
+		keycloakAdminService.enableUser(userId);
 		log.info("승인 처리 완료. userId={}", userId);
 		return ApproveResponse.from(user);
 	}
@@ -51,6 +56,14 @@ public class UserService {
 		user.reject();
 		log.info("거절 처리 완료. userId={}", userId);
 		return ApproveResponse.from(user);
+	}
+
+	public UserResponse getUser(UUID userId) {
+		return UserResponse.from(findUserById(userId));
+	}
+
+	public Page<UserResponse> getUsers(UserRole role, UserStatus status, Pageable pageable) {
+		return userRepository.findAllByFilter(role, status, pageable).map(UserResponse::from);
 	}
 
 	private User findUserById(UUID userId) {
