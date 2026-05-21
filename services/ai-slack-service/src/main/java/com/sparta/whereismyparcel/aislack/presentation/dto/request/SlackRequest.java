@@ -11,7 +11,7 @@ public record SlackRequest(
         @NotBlank(message = "슬랙 수신자 Id는 필수입니다.")
         String slackId,
 
-        @NotBlank(IMessage = "발송할 메시지 내용은 필수입니다.")
+        @NotBlank(message = "발송할 메시지 내용은 필수입니다.")
         String message
 ) {
     /**
