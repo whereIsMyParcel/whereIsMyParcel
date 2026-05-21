@@ -35,26 +35,39 @@ public record OrderInternalRequest(
         @Size(max = 500, message = "주문 요청 사항은 최대 500자까지 가능합니다.")
         String orderRequirement,
 
-        @NotNull(message = "발송지(허브) 정보는 필수입니다.")
-        String departureHub,
-
         @Valid
-        @NotNull(message = "경유지 목록은 필수입니다.")
-        List<String> pathInfo,
-
-        @NotNull(message = "도착지 정보는 필수입니다.")
-        String destinationBusiness,
-
-        @Valid
-        @NotNull(message = "배송 담당자 이름는 필수입니다.")
-        String deliveryManagerName,
-
-        @NotNull(message = "배송 담당자 이메일은 필수입니다.")
-        String deliveryManagerEmail,
-
-        @NotNull(message = "배송 담당자 슬랙 ID는 필수입니다.")
-        String deliveryManagerSlackId
+        @NotNull(message = "배송 건 목록은 필수입니다.")
+        @Size(min = 1, message = "최소 하나 이상의 배송 건이 필요합니다.")
+        List<String> delieveriesInfo
 
 ) {
+    /*
+     * 각각의 독립된 배송 1건에 대한 정보
+     */
+    public record  DeliveryInfo(
+            @NotNull(message = "상품 정보 목록은 필수입니다.")
+            @Size(min = 1, message = "최소 하나 이상의 상품 정보가 필요합니다.")
+            List<String> products,
+
+            @NotNull(message = "발송지(허브) 정보는 필수입니다.")
+            String departureHub,
+
+            @Valid
+            @NotNull(message = "경유지 목록은 필수입니다.")
+            List<String> pathInfo,
+
+            @NotNull(message = "도착지 정보는 필수입니다.")
+            String destinationBusiness,
+
+            @Valid
+            @NotNull(message = "배송 담당자 이름는 필수입니다.")
+            String deliveryManagerName,
+
+            @NotNull(message = "배송 담당자 이메일은 필수입니다.")
+            String deliveryManagerEmail,
+
+            @NotNull(message = "배송 담당자 슬랙 ID는 필수입니다.")
+            String deliveryManagerSlackId
+    ){}
 
 }
