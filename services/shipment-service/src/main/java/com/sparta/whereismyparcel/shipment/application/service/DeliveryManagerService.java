@@ -6,14 +6,17 @@ import com.sparta.whereismyparcel.shipment.presentation.dto.request.DeliveryMana
 import com.sparta.whereismyparcel.shipment.presentation.dto.response.DeliveryManagerCreateResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class DeliveryManagerService {
 
     private final DeliveryManagerPolicy deliveryManagerPolicy;
     private final DeliveryManagerRepository deliveryManagerRepository;
 
+    @Transactional
     public DeliveryManagerCreateResponse create(DeliveryManagerCreateRequest request) {
         //1. 생성 정책 확인
         deliveryManagerPolicy.checkCreate(request.slackId(), request.type(), request.hubId());
