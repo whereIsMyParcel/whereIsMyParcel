@@ -22,6 +22,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/hub-routes")
 @RequiredArgsConstructor
+/**
+ * 허브 간 이동 경로와 예상 소요 시간 정보를 관리하는 Controller.
+ * 생성/수정/삭제 시 MASTER, HUB_MANAGER 권한 검증이 필수입니다.
+ */
 public class HubRouteController {
 
     private final HubRouteService hubRouteService;

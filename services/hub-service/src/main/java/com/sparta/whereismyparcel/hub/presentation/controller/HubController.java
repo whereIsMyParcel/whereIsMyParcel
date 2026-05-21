@@ -22,6 +22,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/hubs")
 @RequiredArgsConstructor
+/**
+ * 17개 물류 허브의 CRUD를 담당하는 Controller.
+ * 외부 API이며, 생성/수정/삭제는 권한(MASTER/HUB_MANAGER) 검증이 필수입니다.
+ */
 public class HubController {
 
     private final HubService hubService;

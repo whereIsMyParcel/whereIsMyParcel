@@ -14,6 +14,10 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SQLRestriction("deleted_at IS NULL")
+/**
+ * 허브 간 이동 경로(HubRoute) 엔티티.
+ * 출발지와 목적지 허브를 매핑하며, 거리와 소요 시간(가중치) 정보를 포함합니다.
+ */
 public class HubRoute extends BaseEntity {
 
     @Id

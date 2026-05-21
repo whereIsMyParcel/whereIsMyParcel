@@ -25,6 +25,10 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+/**
+ * 허브 간 경로 관리 비즈니스 로직을 처리하는 Service.
+ * 경로 정보가 변경(생성/수정/삭제)될 경우 관련 다익스트라 최단 경로 캐시도 무효화(Evict)해야 합니다.
+ */
 public class HubRouteService {
 
     private final HubRouteRepository hubRouteRepository;

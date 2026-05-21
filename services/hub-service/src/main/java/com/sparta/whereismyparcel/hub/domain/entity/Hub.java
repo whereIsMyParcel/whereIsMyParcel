@@ -14,6 +14,10 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SQLRestriction("deleted_at IS NULL")
+/**
+ * 물류 센터(Hub) 엔티티.
+ * 물리 삭제(DELETE) 대신 BaseEntity의 deletedAt을 이용한 Soft Delete 방식을 사용합니다.
+ */
 public class Hub extends BaseEntity {
 
     @Id
