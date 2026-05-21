@@ -22,11 +22,13 @@ public class CommonSwaggerAutoConfiguration {
 				.addSecurityItem(new SecurityRequirement()
 						.addList("X-User-Id")
 						.addList("X-User-Role")
-						.addList("X-User-Status"))
+						.addList("X-User-Status")
+						.addList("X-Username"))
 				.components(new Components()
 						.addSecuritySchemes("X-User-Id", apiKeyHeader("X-User-Id"))
 						.addSecuritySchemes("X-User-Role", apiKeyHeader("X-User-Role"))
-						.addSecuritySchemes("X-User-Status", apiKeyHeader("X-User-Status")));
+						.addSecuritySchemes("X-User-Status", apiKeyHeader("X-User-Status"))
+						.addSecuritySchemes("X-Username", apiKeyHeader("X-Username")));
 	}
 
 	private SecurityScheme apiKeyHeader(String name) {
