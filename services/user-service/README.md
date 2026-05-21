@@ -13,7 +13,8 @@
 | 회원 거절 `PATCH /api/v1/users/{userId}/reject` | ✅ 완료 |
 | 회원 단건 조회 `GET /api/v1/users/{userId}` | ✅ 완료 |
 | 회원 목록 조회 `GET /api/v1/users` | ✅ 완료 |
-| 회원 삭제 `DELETE /api/v1/users/{userId}` | 구현 예정 |
+| 회원 수정 `PATCH /api/v1/users/{userId}` | ✅ 완료 |
+| 회원 삭제 `DELETE /api/v1/users/{userId}` | ✅ 완료 |
 
 ---
 
@@ -183,6 +184,68 @@
   }
 }
 ```
+
+---
+
+### PATCH /api/v1/users/{userId} — 회원 수정
+
+`MASTER` 또는 본인만 가능
+
+**Request Body** — 전달한 필드만 수정됨 (null이면 기존 값 유지)
+
+| 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| `name` | `String` | 이름 (최대 50자) |
+| `phone` | `String` | 전화번호 (`010-1234-5678` 형식) |
+| `slackId` | `String` | Slack 사용자 ID |
+
+**Response** `200 OK`
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "errorCode": null,
+  "message": "OK",
+  "data": {
+    "userId": "9e4813b2-2642-4729-ad9c-f3f7d3abcb51",
+    "username": "user01",
+    "name": "변경된이름",
+    "email": "hong@example.com",
+    "phone": "010-9999-8888",
+    "role": "COMPANY_MANAGER",
+    "status": "APPROVED",
+    "slackId": "NEW_SLACK_ID",
+    "businessNumber": "123-45-67890",
+    "hubId": null,
+    "companyId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+  }
+}
+```
+
+---
+
+### DELETE /api/v1/users/{userId} — 회원 삭제
+
+`X-User-Role: MASTER` 필요
+
+| 파라미터 | 타입 | 설명 |
+| --- | --- | --- |
+| `userId` | `UUID` | 삭제할 회원의 ID |
+
+**Response** `200 OK`
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "errorCode": null,
+  "message": "OK",
+  "data": null
+}
+```
+
+> Soft delete 처리 (`deleted_at` 세팅) 및 Keycloak 계정 `enabled = false`로 비활성화됩니다.
 
 ---
 
