@@ -10,7 +10,15 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 @Entity
-@Table(name = "p_delivery_managers")
+@Table(
+        name = "p_delivery_managers",
+        indexes = {
+                @Index(
+                        name = "idx_delivery_manager_hub_type_order",
+                        columnList = "hub_id, type, delivery_order"
+                )
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeliveryManager extends BaseEntity {
