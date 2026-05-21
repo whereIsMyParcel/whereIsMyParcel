@@ -1,0 +1,9 @@
+package com.sparta.whereismyparcel.shipment.domain.repository;
+
+import com.sparta.whereismyparcel.shipment.domain.entity.DeliveryManager;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.UUID;
+
+public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager, UUID> {
+}
