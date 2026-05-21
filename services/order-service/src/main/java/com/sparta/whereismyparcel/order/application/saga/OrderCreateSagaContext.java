@@ -10,14 +10,15 @@ import java.util.UUID;
 public class OrderCreateSagaContext {
 
     private final UUID orderId;
+    private final String userId;
     private final List<OrderItemInfo> items;
 
     private List<StockReservation> reservations = new ArrayList<>();
-
     private List<UUID> shipmentIds = new ArrayList<>();
 
-    public OrderCreateSagaContext(UUID orderId, List<OrderItemInfo> items) {
+    public OrderCreateSagaContext(UUID orderId, String userId, List<OrderItemInfo> items) {
         this.orderId = orderId;
+        this.userId = userId;
         this.items = items;
     }
 
