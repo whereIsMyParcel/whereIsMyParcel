@@ -74,5 +74,6 @@
         "realm-management": ["manage-users"]
       }
     }
-  ]
+  ],
+  "sslRequired": "none"
 }

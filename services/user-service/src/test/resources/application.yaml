@@ -1,0 +1,31 @@
+spring:
+  config:
+    import: ""
+  cloud:
+    config:
+      enabled: false
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        default_schema:
+    show-sql: false
+
+keycloak:
+  server-url: http://localhost:8080
+  realm: test-realm
+  issuer-uri: http://localhost:8080/realms/test-realm
+  admin:
+    client-id: test-client
+    client-secret: test-secret
+
+eureka:
+  client:
+    enabled: false
