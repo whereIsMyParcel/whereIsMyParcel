@@ -1,4 +1,4 @@
-4# ⚡ Redis 캐싱 전략 및 설정 (Step 5)
+# ⚡ Redis 캐싱 전략 및 설정 (Step 5)
 
 ## 1. 구현 내용
 - **CacheConfig**: Spring Cache 추상화와 `RedisCacheManager`를 설정했습니다.

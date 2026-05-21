@@ -17,7 +17,7 @@ import java.util.UUID;
 public class Hub extends BaseEntity {
 
     @Id
-    @Column(name = "hub_id")
+    @Column(name = "hub_id", updatable = false)
     private UUID hubId;
 
     @Column(nullable = false, length = 100)

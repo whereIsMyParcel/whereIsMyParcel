@@ -17,7 +17,7 @@ import java.util.UUID;
 public class HubRoute extends BaseEntity {
 
     @Id
-    @Column(name = "hub_route_id")
+    @Column(name = "hub_route_id", updatable = false)
     private UUID hubRouteId;
 
     @ManyToOne(fetch = FetchType.LAZY)
