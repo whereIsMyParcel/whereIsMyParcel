@@ -1,6 +1,8 @@
 package com.sparta.whereismyparcel.hub.domain.entity;
 
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
+import com.sparta.whereismyparcel.hub.presentation.dto.request.CreateHubRouteRequest;
+import com.sparta.whereismyparcel.hub.presentation.dto.request.UpdateHubRouteRequest;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
@@ -15,8 +17,7 @@ import java.util.UUID;
 public class HubRoute extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "hub_route_id", columnDefinition = "UUID")
+    @Column(name = "hub_route_id")
     private UUID hubRouteId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -34,9 +35,10 @@ public class HubRoute extends BaseEntity {
     private Integer duration; // 소요 시간 (분)
 
     @Builder(access = AccessLevel.PRIVATE)
-    private HubRoute(Hub originHub, Hub destinationHub, Double distance, Integer duration) {
+    private HubRoute(UUID hubRouteId, Hub originHub, Hub destinationHub, Double distance, Integer duration) {
         validateHubs(originHub, destinationHub);
         validateMetrics(distance, duration);
+        this.hubRouteId = hubRouteId;
         this.originHub = originHub;
         this.destinationHub = destinationHub;
         this.distance = distance;
@@ -44,20 +46,21 @@ public class HubRoute extends BaseEntity {
     }
 
     // 정적 팩토리 메서드
-    public static HubRoute create(Hub originHub, Hub destinationHub, Double distance, Integer duration) {
+    public static HubRoute create(Hub originHub, Hub destinationHub, CreateHubRouteRequest request) {
         return HubRoute.builder()
+                .hubRouteId(UUID.randomUUID())
                 .originHub(originHub)
                 .destinationHub(destinationHub)
-                .distance(distance)
-                .duration(duration)
+                .distance(request.distance())
+                .duration(request.duration())
                 .build();
     }
 
-    // 비즈니스 로직: 경로 정보 수정
-    public void update(Double distance, Integer duration) {
-        validateMetrics(distance, duration);
-        this.distance = distance;
-        this.duration = duration;
+    // 비즈니스 로직
+    public void update(UpdateHubRouteRequest request) {
+        validateMetrics(request.distance(), request.duration());
+        this.distance = request.distance();
+        this.duration = request.duration();
     }
 
     private void validateHubs(Hub origin, Hub dest) {
