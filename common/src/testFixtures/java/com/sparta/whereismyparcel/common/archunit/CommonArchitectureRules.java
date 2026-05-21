@@ -88,12 +88,13 @@ public class CommonArchitectureRules {
                     .should().haveSimpleNameEndingWith("FeignClient")
                     .because("infrastructure.client 패키지의 인터페이스는 이름이 FeignClient로 끝나야 합니다.");
 
-    // domain.exception 패키지의 예외 클래스는 Exception으로 끝나야 함
+    // domain.exception 패키지의 클래스는 Exception 또는 ErrorCode로 끝나야 함
     public static final ArchRule EXCEPTION_NAMING_RULE =
             classes()
                     .that().resideInAPackage("..domain.exception..")
                     .should().haveSimpleNameEndingWith("Exception")
-                    .because("domain.exception 패키지의 클래스는 이름이 Exception으로 끝나야 합니다.");
+                    .orShould().haveSimpleNameEndingWith("ErrorCode")
+                    .because("domain.exception 패키지의 클래스는 이름이 Exception 또는 ErrorCode로 끝나야 합니다.");
 
     // presentation.dto 패키지의 클래스는 Request 또는 Response로 끝나야 함
     public static final ArchRule DTO_NAMING_RULE =
@@ -157,9 +158,11 @@ public class CommonArchitectureRules {
                     .because("RuntimeException을 직접 사용하는 대신 도메인에 맞는 커스텀 예외를 정의하여 사용하세요.");
     
     // BusinessException 직접 throw 금지 (반드시 구체적인 서브클래스 사용)
+    // domain.exception 패키지의 커스텀 예외는 BusinessException을 상속하므로 허용
     public static final ArchRule DO_NOT_THROW_BUSINESS_EXCEPTION_DIRECTLY =
             noClasses()
-                    .that().resideOutsideOfPackage("..common.exception..") // common 쪽은 허용
+                    .that().resideOutsideOfPackage("..common.exception..")
+                    .and().resideOutsideOfPackage("..domain.exception..")
                     .should().dependOnClassesThat().haveFullyQualifiedName("com.sparta.whereismyparcel.common.exception.BusinessException")
                     .because("BusinessException을 직접 사용하지 말고, 구체적인 커스텀 예외를 사용하세요.");
 
