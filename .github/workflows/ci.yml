@@ -31,3 +31,14 @@ jobs:
 
       - name: Compile all modules
         run: ./gradlew testClasses --no-daemon
+
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        if: always()
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_CHANNEL: 'github-actions-ci'
+          SLACK_COLOR: ${{ job.status == 'success' && 'good' || 'danger' }}
+          SLACK_TITLE: 'CI Build Result'
+          SLACK_USERNAME: 'GitHub Actions'
+

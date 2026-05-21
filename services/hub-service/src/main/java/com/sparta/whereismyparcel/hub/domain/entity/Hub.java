@@ -31,13 +31,24 @@ public class Hub extends BaseEntity {
     @Column(nullable = false)
     private Double longitude;
 
-    @Builder
-    public Hub(String name, String address, Double latitude, Double longitude) {
+    /// 빌더 수정
+    @Builder(access = AccessLevel.PRIVATE) // 내부 빌더
+    private Hub(String name, String address, Double latitude, Double longitude) {
         validateCoordinates(latitude, longitude);
         this.name = name;
         this.address = address;
         this.latitude = latitude;
         this.longitude = longitude;
+    }
+
+    // 정적 팩토리 메서드
+    public static Hub create(String name, String address, Double latitude, Double longitude) {
+        return Hub.builder()
+                .name(name)
+                .address(address)
+                .latitude(latitude)
+                .longitude(longitude)
+                .build();
     }
 
     // 비즈니스 로직: 허브 정보 수정

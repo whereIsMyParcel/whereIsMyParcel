@@ -21,4 +21,5 @@ dependencies {
 	testFixturesImplementation 'jakarta.servlet:jakarta.servlet-api'
 	testFixturesImplementation 'org.springframework:spring-web'
 	testFixturesImplementation 'org.springframework:spring-context'
+	testFixturesImplementation 'org.hibernate.orm:hibernate-core'
 }
