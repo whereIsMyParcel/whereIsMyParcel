@@ -1,0 +1,108 @@
+package com.sparta.whereismyparcel.product.domain.entity;
+
+import com.sparta.whereismyparcel.common.entity.BaseEntity;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+@Entity
+@Getter
+@Table(name = "p_products")
+@SQLRestriction("deleted_at IS NULL")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Product extends BaseEntity {
+
+    // 대대장
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "product_id", nullable = false,  updatable = false)
+    private UUID id;
+
+    @Column(name = "product_name", nullable = false, length = 100)
+    private String name;
+
+    @Column(name = "company_id", nullable = false)
+    private UUID companyId;
+
+    @Column(name = "hub_id", nullable = false)
+    private UUID hubId;
+
+    @Column(name = "description", length = 1000)
+    private String description;
+
+    @Column(name = "price", nullable = false)
+    private Integer price;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 30)
+    private ProductStatus status;
+
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = false)
+    private List<ProductOption> options = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = false)
+    private List<ProductVariant> variants = new ArrayList<>();
+
+
+    @Builder(access = AccessLevel.PRIVATE)
+    public Product(
+            String name,
+            UUID companyId,
+            UUID hubId,
+            String description,
+            Integer price) {
+        this.name = name;
+        this.companyId = companyId;
+        this.hubId = hubId;
+        this.description = description;
+        this.price = price;
+        this.status = ProductStatus.ACTIVE;
+    }
+
+    public void addOption(ProductOption option) {
+        this.options.add(option);
+    }
+
+    public void addVariant(ProductVariant variant) {
+        this.variants.add(variant);
+    }
+
+    public void updateDetails(String newName, String description, Integer price) {
+        String oldName = this.name;
+
+        this.name = name;
+        this.description = description;
+        this.price = price;
+
+        if (!oldName.equals(name)) {
+            this.variants.forEach(variants-> {
+                variants.updateProductNameInVariant(oldName, newName);
+            });
+        }
+
+    }
+
+    public void stopSelling() {
+        this.status = ProductStatus.INACTIVE;
+
+        this.options.forEach(options->{options.stopSelling();});
+        this.variants.forEach(productVariant->productVariant.stopSelling());
+    }
+
+    public void resumeSelling() {
+        this.status = ProductStatus.ACTIVE;
+        this.options.forEach(options->{options.resumeSelling();});
+    }
+
+    public void delete(String userId) {
+        super.softDelete(userId);
+        this.status = ProductStatus.DELETED;
+
+        this.options.forEach(options->{options.delete(userId);});
+        this.variants.forEach(productVariant->productVariant.delete(userId));
+    }
+}

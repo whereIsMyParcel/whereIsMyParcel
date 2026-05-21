@@ -139,8 +139,6 @@ public class Company extends BaseEntity {
         super.softDelete(userId);
         this.status = CompanyStatus.INACTIVE;
 
-        if (this.companyMembers != null) {
-            this.companyMembers.forEach(companyMember -> {companyMember.delete(userId);});
-        }
+        this.companyMembers.forEach(companyMember -> {companyMember.delete(userId);});
     }
 }

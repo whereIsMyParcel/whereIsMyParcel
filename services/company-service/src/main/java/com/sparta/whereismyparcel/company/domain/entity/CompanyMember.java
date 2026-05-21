@@ -19,7 +19,7 @@ public class CompanyMember extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "companyMember_id",nullable = false, updatable = false)
+    @Column(name = "company_member_id",nullable = false, updatable = false)
     private UUID id;
 
     @Column(name = "user_id", nullable = false)
