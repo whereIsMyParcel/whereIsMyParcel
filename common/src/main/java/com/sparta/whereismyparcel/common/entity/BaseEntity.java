@@ -24,8 +24,8 @@ public abstract class BaseEntity {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    // Keycloak UUID를 담기 위해 String 타입 사용
-    // SecurityContext 가 비어있는 시점에 생성되는 엔티티를 고려해 nullable 제약 제외
+    // X-Username 헤더 값(username)을 담으므로 String 타입 사용
+    // SecurityContext가 비어있는 시점에 생성되는 엔티티를 고려해 nullable 제약 제외
     @CreatedBy
     @Column(updatable = false)
     private String createdBy;

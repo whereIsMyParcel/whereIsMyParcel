@@ -15,6 +15,7 @@ public record UpdateUserRequest(
 		String slackId
 ) {
 	public UpdateUserRequest {
+		// 공백 문자열을 null로 정규화 — isValidRequest()가 빈 문자열을 "값 있음"으로 오인하지 않도록
 		name = (name != null && !name.isBlank()) ? name.trim() : null;
 		phone = (phone != null && !phone.isBlank()) ? phone.trim() : null;
 		slackId = (slackId != null && !slackId.isBlank()) ? slackId.trim() : null;
