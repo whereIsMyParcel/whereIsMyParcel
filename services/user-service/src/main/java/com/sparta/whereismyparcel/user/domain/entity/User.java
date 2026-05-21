@@ -1,6 +1,8 @@
 package com.sparta.whereismyparcel.user.domain.entity;
 
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
+import com.sparta.whereismyparcel.user.domain.UserRole;
+import com.sparta.whereismyparcel.user.domain.UserStatus;
 import com.sparta.whereismyparcel.user.domain.exception.InvalidApprovalStatusException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
