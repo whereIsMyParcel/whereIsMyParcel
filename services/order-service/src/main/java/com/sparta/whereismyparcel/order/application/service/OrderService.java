@@ -5,12 +5,13 @@ import com.sparta.whereismyparcel.order.application.saga.OrderCreateSaga;
 import com.sparta.whereismyparcel.order.application.saga.OrderCreateSagaContext;
 import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
-import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsException;
-import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
-import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedException;
-import com.sparta.whereismyparcel.order.domain.exception.SagaFailedException;
+import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
+import com.sparta.whereismyparcel.order.domain.exception.*;
 import com.sparta.whereismyparcel.order.domain.repository.OrderRepository;
 import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient;
+import com.sparta.whereismyparcel.order.infrastructure.client.ShipmentFeignClient;
+import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.ShipmentCancelRequest;
+import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.StockCancelRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
@@ -20,7 +21,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
@@ -34,8 +37,11 @@ public class OrderService {
     private static final DateTimeFormatter ORDER_NUMBER_DATE_FORMAT =
             DateTimeFormatter.ofPattern("yyyyMMdd");
 
+    private static final Duration ORDER_CANCEL_LIMIT = Duration.ofMinutes(5);
+
     private final OrderRepository orderRepository;
     private final CompanyFeignClient companyFeignClient;
+    private final ShipmentFeignClient shipmentFeignClient;
     private final OrderCreateSaga orderCreateSaga;
 
     @Transactional
@@ -103,9 +109,43 @@ public class OrderService {
         Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
-        order.cancel();
-
+        if (order.getOrderStatus() == OrderStatus.PENDING) {
+            order.validateCancelableTime(LocalDateTime.now(), ORDER_CANCEL_LIMIT);
+            order.cancel();
+        } else if (order.getOrderStatus() == OrderStatus.STOCK_RESERVED) {
+            order.validateCancelableTime(LocalDateTime.now(), ORDER_CANCEL_LIMIT);
+            cancelStockReservation(userId, order);
+            order.cancel();
+        } else if (order.getOrderStatus() == OrderStatus.CONFIRMED) {
+            order.validateCancelableTime(LocalDateTime.now(), ORDER_CANCEL_LIMIT);
+            cancelShipments(userId, order);
+            cancelStockReservation(userId, order);
+            order.cancel();
+        } else {
+            throw new InvalidOrderStatusException();
+        }
         return OrderCancelResponse.from(order);
+    }
+
+    private void cancelStockReservation(String userId, Order order) {
+        StockCancelRequest request = new StockCancelRequest(
+                order.getOrderId(),
+                order.getOrderItems().stream()
+                        .map(item -> new StockCancelRequest.Item(
+                                item.getProductVariantId(),
+                                item.getQuantity()
+                        ))
+                        .toList()
+        );
+
+        ApiResponse<Void> response = companyFeignClient.cancelReservation(userId, request);
+        ensureCompensationSuccess(response);
+    }
+
+    private void cancelShipments(String userId, Order order) {
+        ShipmentCancelRequest request = new ShipmentCancelRequest(order.getOrderId());
+        ApiResponse<Void> response = shipmentFeignClient.cancelShipments(userId, request);
+        ensureCompensationSuccess(response);
     }
 
     private String generateOrderNumber() {
@@ -120,5 +160,11 @@ public class OrderService {
             throw new InvalidOrderItemsException();
         }
         return response.data();
+    }
+
+    private void ensureCompensationSuccess(ApiResponse<Void> response) {
+        if (response == null || !response.success()) {
+            throw new SagaCompensationFailedException();
+        }
     }
 }

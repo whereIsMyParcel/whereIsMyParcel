@@ -3,12 +3,14 @@ package com.sparta.whereismyparcel.order.domain.entity;
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
+import com.sparta.whereismyparcel.order.domain.exception.OrderCancelTimeExpiredException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -179,6 +181,12 @@ public class Order extends BaseEntity {
     private void addItem(OrderItem orderItem) {
         this.orderItems.add(orderItem);
         orderItem.assignOrder(this);
+    }
+
+    public void validateCancelableTime(LocalDateTime now, Duration cancelLimit) {
+        if (orderedAt.plus(cancelLimit).isBefore(now)) {
+            throw new OrderCancelTimeExpiredException();
+        }
     }
 
     private static void validateOrderItems(List<OrderItem> orderItems) {
