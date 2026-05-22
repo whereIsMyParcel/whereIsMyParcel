@@ -5,7 +5,9 @@ import org.springframework.http.HttpStatus;
 public class RemoteServiceException extends BusinessException {
 
 	public RemoteServiceException(int httpStatus, String code, String message) {
-		super(new RemoteErrorCode(HttpStatus.valueOf(httpStatus), code, message));
+		super(new RemoteErrorCode(
+				HttpStatus.resolve(httpStatus) != null ? HttpStatus.resolve(httpStatus) : HttpStatus.INTERNAL_SERVER_ERROR,
+				code, message));
 	}
 
 	// GlobalExceptionHandler가 BusinessException.getErrorCode()를 호출하므로
