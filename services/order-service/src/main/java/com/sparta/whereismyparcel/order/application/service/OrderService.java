@@ -6,12 +6,14 @@ import com.sparta.whereismyparcel.order.application.saga.OrderCreateSagaContext;
 import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsException;
+import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaFailedException;
 import com.sparta.whereismyparcel.order.domain.repository.OrderRepository;
 import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -94,6 +96,16 @@ public class OrderService {
         }
 
         return OrderCreateResponse.from(order);
+    }
+
+    @Transactional
+    public OrderCancelResponse cancelOrder(String userId, UUID orderId) {
+        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+                .orElseThrow(OrderNotFoundException::new);
+
+        order.cancel();
+
+        return OrderCancelResponse.from(order);
     }
 
     private String generateOrderNumber() {
