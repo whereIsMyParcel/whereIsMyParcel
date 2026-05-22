@@ -39,10 +39,10 @@ public abstract class BaseEntity {
     private LocalDateTime deletedAt;
     private String deletedBy;
 
-    public void softDelete(String userId) {
+    public void softDelete(String username) {
         if (isDeleted()) return; // 이미 삭제된 엔티티 재삭제 방지 (멱등성 보장)
         this.deletedAt = LocalDateTime.now();
-        this.deletedBy = userId;
+        this.deletedBy = username;
     }
 
     public boolean isDeleted() {

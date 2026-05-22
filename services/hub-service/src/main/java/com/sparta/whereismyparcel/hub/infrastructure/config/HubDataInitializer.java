@@ -44,6 +44,6 @@ public class HubDataInitializer implements ApplicationRunner {
             new CreateHubRequest("제주특별자치도 센터", "제주특별자치도 제주시 문연로 6", 33.4890, 126.4983)
         );
 
-        hubs.forEach(request -> hubRepository.save(Hub.create(request)));
+        hubs.forEach(req -> hubRepository.save(Hub.create(req.name(), req.address(), req.latitude(), req.longitude())));
     }
 }

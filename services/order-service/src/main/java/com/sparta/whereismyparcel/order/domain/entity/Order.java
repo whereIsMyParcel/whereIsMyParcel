@@ -5,6 +5,7 @@ import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsExcept
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -67,6 +68,7 @@ public class Order extends BaseEntity {
     @Column(name = "ordered_by", length = 100)
     private String orderedBy;
 
+    @Builder(access = AccessLevel.PRIVATE)
     private Order(
             UUID companyMemberId,
             String orderNumber,
@@ -106,21 +108,20 @@ public class Order extends BaseEntity {
             String orderedBy,
             List<OrderItem> orderItems
     ) {
-        if (orderItems == null || orderItems.isEmpty()) {
-            throw new InvalidOrderItemsException();
-        }
-        Order order = new Order(
-                companyMemberId,
-                orderNumber,
-                recipientName,
-                recipientPhone,
-                zipCode,
-                address,
-                addressDetail,
-                requestMemo,
-                deliveryDeadline,
-                orderedBy
-        );
+        validateOrderItems(orderItems);
+
+        Order order = Order.builder()
+                .companyMemberId(companyMemberId)
+                .orderNumber(orderNumber)
+                .recipientName(recipientName)
+                .recipientPhone(recipientPhone)
+                .zipCode(zipCode)
+                .address(address)
+                .addressDetail(addressDetail)
+                .requestMemo(requestMemo)
+                .deliveryDeadline(deliveryDeadline)
+                .orderedBy(orderedBy)
+                .build();
 
         orderItems.forEach(order::addItem);
         order.totalPrice = order.calculateTotalPrice();
@@ -164,6 +165,12 @@ public class Order extends BaseEntity {
     private void addItem(OrderItem orderItem) {
         this.orderItems.add(orderItem);
         orderItem.assignOrder(this);
+    }
+
+    private static void validateOrderItems(List<OrderItem> orderItems) {
+        if (orderItems == null || orderItems.isEmpty()) {
+            throw new InvalidOrderItemsException();
+        }
     }
 
     private Long calculateTotalPrice() {
