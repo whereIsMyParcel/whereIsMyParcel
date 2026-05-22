@@ -25,10 +25,6 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-/**
- * 허브 간 경로 관리 비즈니스 로직을 처리하는 Service.
- * 경로 정보가 변경(생성/수정/삭제)될 경우 관련 다익스트라 최단 경로 캐시도 무효화(Evict)해야 합니다.
- */
 public class HubRouteService {
 
     private final HubRouteRepository hubRouteRepository;
@@ -42,7 +38,7 @@ public class HubRouteService {
         Hub destinationHub = hubRepository.findById(request.destinationHubId())
                 .orElseThrow(HubNotFoundException::new);
 
-        HubRoute route = HubRoute.create(originHub, destinationHub, request);
+        HubRoute route = HubRoute.create(originHub, destinationHub, request.distance(), request.duration());
         
         // 경로가 생성되면 기존에 계산된 모든 최단 경로 캐시를 무효화해야 함
         evictPathCache(originHub.getHubId(), destinationHub.getHubId());
@@ -67,7 +63,7 @@ public class HubRouteService {
     public HubRouteResponse updateHubRoute(UUID hubRouteId, UpdateHubRouteRequest request) {
         HubRoute route = hubRouteRepository.findById(hubRouteId)
                 .orElseThrow(HubRouteNotFoundException::new);
-        route.update(request);
+        route.update(request.distance(), request.duration());
         
         // 경로 정보가 수정되면 관련 최단 경로 캐시 무효화
         evictPathCache(route.getOriginHub().getHubId(), route.getDestinationHub().getHubId());
@@ -86,10 +82,6 @@ public class HubRouteService {
         evictPathCache(route.getOriginHub().getHubId(), route.getDestinationHub().getHubId());
     }
 
-    /**
-     * 경로 데이터 변경 시, 해당 허브들이 포함된 모든 최단 경로(path) 캐시를 삭제합니다.
-     * 하네스 지침: Set<String> keys = redisTemplate.keys("path:*" + hubId + "*");
-     */
     private void evictPathCache(UUID originId, UUID destId) {
         Set<String> keys1 = redisTemplate.keys("path:*" + originId + "*");
         Set<String> keys2 = redisTemplate.keys("path:*" + destId + "*");

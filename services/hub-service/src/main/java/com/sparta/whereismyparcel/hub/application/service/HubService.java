@@ -20,17 +20,13 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-/**
- * 허브(Hub) 관리 비즈니스 로직을 처리하는 Service.
- * 단건 조회, 수정, 삭제 시 Redis 캐시가 갱신되거나 무효화됩니다.
- */
 public class HubService {
 
     private final HubRepository hubRepository;
 
     @Transactional
     public HubResponse createHub(CreateHubRequest request) {
-        Hub hub = Hub.create(request);
+        Hub hub = Hub.create(request.name(), request.address(), request.latitude(), request.longitude());
         return HubResponse.from(hubRepository.save(hub));
     }
 
@@ -51,7 +47,7 @@ public class HubService {
     public HubResponse updateHub(UUID hubId, UpdateHubRequest request) {
         Hub hub = hubRepository.findById(hubId)
                 .orElseThrow(HubNotFoundException::new);
-        hub.update(request);
+        hub.update(request.name(), request.address(), request.latitude(), request.longitude());
         return HubResponse.from(hub);
     }
 
