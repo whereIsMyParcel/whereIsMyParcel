@@ -49,7 +49,7 @@ class DeliveryManagerServiceTest {
                 nextOrder
         );
 
-        when(deliveryManagerRepository.findNextDeliveryOrder(hubId, type))
+        when(deliveryManagerRepository.findNextOrderByCompany(hubId, type))
                 .thenReturn(nextOrder);
 
         when(deliveryManagerRepository.save(any(DeliveryManager.class)))
@@ -61,7 +61,7 @@ class DeliveryManagerServiceTest {
         // then
         verify(deliveryManagerPolicy).checkCreate(slackId, type, hubId);
 
-        verify(deliveryManagerRepository).findNextDeliveryOrder(hubId, type);
+        verify(deliveryManagerRepository).findNextOrderByCompany(hubId, type);
 
         verify(deliveryManagerRepository).save(any(DeliveryManager.class));
 

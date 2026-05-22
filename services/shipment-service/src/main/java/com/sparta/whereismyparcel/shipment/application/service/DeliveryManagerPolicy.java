@@ -10,6 +10,7 @@ import com.sparta.whereismyparcel.shipment.infrastructure.client.UserClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Objects;
 import java.util.UUID;
 
 @Component
@@ -41,6 +42,7 @@ public class DeliveryManagerPolicy {
     private void validateHub(DeliveryType type, UUID hubId) {
         if (type == DeliveryType.HUB_DELIVERY) return;
 
+        Objects.requireNonNull(hubId, "업체 배송 담당자는 hub id 존재해야 합니다");
         if (!hubClient.exists(hubId)) {
             throw new HubNotFoundException();
         }
@@ -48,7 +50,10 @@ public class DeliveryManagerPolicy {
 
     //배송담당자 등록 10명 제한
     private void checkLimit(DeliveryType type, UUID hubId) {
-        long managerCount = deliveryManagerRepository.countByHubIdAndType(hubId, type);
+        long managerCount = switch (type) {
+            case HUB_DELIVERY -> deliveryManagerRepository.countByType(type);
+            case COMPANY_DELIVERY -> deliveryManagerRepository.countByHubIdAndType(hubId, type);
+        };
 
         if (managerCount < MAX_DELIVERY_MANAGER_COUNT) {
             return;

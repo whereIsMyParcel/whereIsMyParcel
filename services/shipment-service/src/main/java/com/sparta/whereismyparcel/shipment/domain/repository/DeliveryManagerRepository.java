@@ -10,13 +10,22 @@ import java.util.UUID;
 
 public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager, UUID> {
     long countByHubIdAndType(UUID hubId, DeliveryType type);
-    //TODO 동시성 이슈 발생 가능성 높으므로 변경 필요
+    long countByType(DeliveryType type);
+
+    @Query("""
+        select coalesce(max(d.deliveryOrder), 0) + 1
+        from DeliveryManager d
+        where d.hubId is null
+          and d.type = :type
+    """)
+    int findNextOrderByHub(@Param("type") DeliveryType type);
+
     @Query("""
         select coalesce(max(d.deliveryOrder), 0) + 1
         from DeliveryManager d
         where d.hubId = :hubId
           and d.type = :type
     """)
-    int findNextDeliveryOrder(@Param("hubId") UUID hubId,
-                              @Param("type") DeliveryType type);
+    int findNextOrderByCompany(@Param("hubId") UUID hubId,
+                             @Param("type") DeliveryType type);
 }
