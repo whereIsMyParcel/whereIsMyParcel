@@ -2,9 +2,11 @@ package com.sparta.whereismyparcel.order.domain.entity;
 
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
+import com.sparta.whereismyparcel.order.domain.exception.OrderCancelTimeExpiredException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -58,7 +60,7 @@ class OrderTest {
     }
 
     @Test
-    @DisplayName("PENDING 상태의 주문은 STOCK_RESERVED로 변경할 수 있다")
+    @DisplayName("PENDING 상태 주문은 STOCK_RESERVED로 변경할 수 있다")
     void reserveStockPendingOrder() {
         // given
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
@@ -71,7 +73,7 @@ class OrderTest {
     }
 
     @Test
-    @DisplayName("STOCK_RESERVED 상태의 주문은 CONFIRMED로 변경할 수 있다")
+    @DisplayName("STOCK_RESERVED 상태 주문은 CONFIRMED로 변경할 수 있다")
     void confirmStockReservedOrder() {
         // given
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
@@ -85,7 +87,7 @@ class OrderTest {
     }
 
     @Test
-    @DisplayName("PENDING 상태의 주문은 CANCELLED로 변경할 수 있다")
+    @DisplayName("PENDING 상태 주문은 CANCELLED로 변경할 수 있다")
     void cancelPendingOrder() {
         // given
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
@@ -98,35 +100,21 @@ class OrderTest {
     }
 
     @Test
-    @DisplayName("PENDING 상태의 주문은 FAILED로 변경할 수 있다")
-    void failPendingOrder() {
-        // given
-        Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
-
-        // when
-        order.fail();
-
-        // then
-        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.FAILED);
-    }
-
-    @Test
-    @DisplayName("CONFIRMED 상태의 주문은 COMPLETED로 변경할 수 있다")
-    void completeConfirmedOrder() {
+    @DisplayName("STOCK_RESERVED 상태 주문은 CANCELLED로 변경할 수 있다")
+    void cancelStockReservedOrder() {
         // given
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
         order.reserveStock();
-        order.confirm();
 
         // when
-        order.complete();
+        order.cancel();
 
         // then
-        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.COMPLETED);
+        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.CANCELLED);
     }
 
     @Test
-    @DisplayName("CONFIRMED 상태의 주문은 CANCELLED로 변경할 수 있다")
+    @DisplayName("CONFIRMED 상태 주문은 CANCELLED로 변경할 수 있다")
     void cancelConfirmedOrder() {
         // given
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
@@ -141,7 +129,49 @@ class OrderTest {
     }
 
     @Test
-    @DisplayName("CONFIRMED 상태의 주문은 FAILED로 변경할 수 없다")
+    @DisplayName("PENDING 상태 주문은 FAILED로 변경할 수 있다")
+    void failPendingOrder() {
+        // given
+        Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
+
+        // when
+        order.fail();
+
+        // then
+        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.FAILED);
+    }
+
+    @Test
+    @DisplayName("STOCK_RESERVED 상태 주문은 FAILED로 변경할 수 있다")
+    void failStockReservedOrder() {
+        // given
+        Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
+        order.reserveStock();
+
+        // when
+        order.fail();
+
+        // then
+        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.FAILED);
+    }
+
+    @Test
+    @DisplayName("CONFIRMED 상태 주문은 COMPLETED로 변경할 수 있다")
+    void completeConfirmedOrder() {
+        // given
+        Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
+        order.reserveStock();
+        order.confirm();
+
+        // when
+        order.complete();
+
+        // then
+        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("CONFIRMED 상태 주문은 FAILED로 변경할 수 없다")
     void failConfirmedOrderThrowsException() {
         // given
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
@@ -154,7 +184,7 @@ class OrderTest {
     }
 
     @Test
-    @DisplayName("CANCELLED 상태의 주문은 다른 상태로 변경할 수 없다")
+    @DisplayName("CANCELLED 상태 주문은 다른 상태로 변경할 수 없다")
     void changeCancelledOrderStatusThrowsException() {
         // given
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
@@ -170,7 +200,7 @@ class OrderTest {
     }
 
     @Test
-    @DisplayName("FAILED 상태의 주문은 다른 상태로 변경할 수 없다")
+    @DisplayName("FAILED 상태 주문은 다른 상태로 변경할 수 없다")
     void changeFailedOrderStatusThrowsException() {
         // given
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
@@ -186,7 +216,7 @@ class OrderTest {
     }
 
     @Test
-    @DisplayName("COMPLETED 상태의 주문은 다른 상태로 변경할 수 없다")
+    @DisplayName("COMPLETED 상태 주문은 다른 상태로 변경할 수 없다")
     void changeCompletedOrderStatusThrowsException() {
         // given
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
@@ -204,7 +234,30 @@ class OrderTest {
     }
 
     @Test
-    @DisplayName("주문 삭제 시 주문과 주문상품을 논리 삭제한다")
+    @DisplayName("주문 생성 후 5분 이내면 취소 가능 시간 검증을 통과한다")
+    void validateCancelableTimeWithinLimit() {
+        // given
+        Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
+
+        // when & then
+        order.validateCancelableTime(LocalDateTime.now().plusMinutes(5), Duration.ofMinutes(5));
+    }
+
+    @Test
+    @DisplayName("주문 생성 후 5분이 지나면 취소 가능 시간 검증에 실패한다")
+    void validateCancelableTimeExpiredThrowsException() {
+        // given
+        Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
+
+        // when & then
+        assertThatThrownBy(() -> order.validateCancelableTime(
+                LocalDateTime.now().plusMinutes(5).plusSeconds(1),
+                Duration.ofMinutes(5)
+        )).isInstanceOf(OrderCancelTimeExpiredException.class);
+    }
+
+    @Test
+    @DisplayName("주문 삭제 시 주문과 주문상품은 논리 삭제된다")
     void deleteOrderAndOrderItems() {
         // given
         Order order = createOrder(List.of(
