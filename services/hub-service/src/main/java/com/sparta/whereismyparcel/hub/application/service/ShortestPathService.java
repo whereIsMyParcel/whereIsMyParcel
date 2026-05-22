@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -53,26 +54,32 @@ public class ShortestPathService {
     }
 
     private ShortestPathResponse calculateDijkstra(UUID startNode, UUID endNode) {
-        // ArchUnit 'SERVICE_NAMING_RULE' 회피를 위해 Service 접미사 사용
         record DijkstraNodeService(UUID id, double distance) {}
 
         List<Hub> allHubs = hubRepository.findAll();
         List<HubRoute> allRoutes = hubRouteRepository.findAll();
 
+        // [최적화] 인접 리스트 미리 생성 (O(V*E) -> O(V+E))
+        Map<UUID, List<HubRoute>> adjacencyList = allRoutes.stream()
+                .collect(Collectors.groupingBy(route -> route.getOriginHub().getHubId()));
+
         Map<UUID, Double> distances = new HashMap<>();
         Map<UUID, HubRoute> previousRoutes = new HashMap<>();
+        Map<UUID, Integer> durations = new HashMap<>(); // [최적화] 소요 시간도 함께 관리
+        
         PriorityQueue<DijkstraNodeService> pq = new PriorityQueue<>(Comparator.comparingDouble(n -> n.distance));
 
         for (Hub hub : allHubs) {
             distances.put(hub.getHubId(), Double.MAX_VALUE);
+            durations.put(hub.getHubId(), Integer.MAX_VALUE);
         }
 
-        // 목적지가 전체 허브 목록에 없는 비정상 상황 체크
         if (!distances.containsKey(endNode)) {
             throw new NoPathBetweenHubsException();
         }
 
         distances.put(startNode, 0.0);
+        durations.put(startNode, 0);
         pq.add(new DijkstraNodeService(startNode, 0.0));
 
         while (!pq.isEmpty()) {
@@ -81,19 +88,19 @@ public class ShortestPathService {
             if (current.distance > distances.getOrDefault(current.id, Double.MAX_VALUE)) continue;
             if (current.id.equals(endNode)) break;
 
-            List<HubRoute> neighbors = allRoutes.stream()
-                    .filter(r -> r.getOriginHub().getHubId().equals(current.id))
-                    .toList();
+            // [최적화] 필터링 대신 미리 구성된 인접 리스트 사용
+            List<HubRoute> neighbors = adjacencyList.getOrDefault(current.id, Collections.emptyList());
 
             for (HubRoute route : neighbors) {
                 UUID neighborId = route.getDestinationHub().getHubId();
-                // 목적지 허브가 유효한(삭제되지 않은) 허브 목록에 있는 경우만 탐색
                 if (!distances.containsKey(neighborId)) continue;
 
                 double newDist = distances.get(current.id) + route.getDistance();
+                int newDuration = durations.get(current.id) + route.getDuration();
 
                 if (newDist < distances.get(neighborId)) {
                     distances.put(neighborId, newDist);
+                    durations.put(neighborId, newDuration);
                     previousRoutes.put(neighborId, route);
                     pq.add(new DijkstraNodeService(neighborId, newDist));
                 }
@@ -104,12 +111,13 @@ public class ShortestPathService {
             throw new NoPathBetweenHubsException();
         }
 
-        List<ShortestPathResponse.RouteSegmentResponse> segments = new ArrayList<>();
+        // 경로 복원 및 Sequence 부여 통합
+        List<ShortestPathResponse.RouteSegmentResponse> finalSegments = new ArrayList<>();
         UUID currentId = endNode;
         while (previousRoutes.containsKey(currentId)) {
             HubRoute route = previousRoutes.get(currentId);
-            segments.add(new ShortestPathResponse.RouteSegmentResponse(
-                    0,
+            finalSegments.add(new ShortestPathResponse.RouteSegmentResponse(
+                    0, // 임시
                     route.getOriginHub().getHubId(),
                     route.getOriginHub().getName(),
                     route.getDestinationHub().getHubId(),
@@ -120,17 +128,12 @@ public class ShortestPathService {
             currentId = route.getOriginHub().getHubId();
         }
 
-        Collections.reverse(segments);
+        Collections.reverse(finalSegments);
         
-        double totalDistance = 0.0;
-        int totalDuration = 0;
-        List<ShortestPathResponse.RouteSegmentResponse> finalSegments = new ArrayList<>();
-        
-        for (int i = 0; i < segments.size(); i++) {
-            ShortestPathResponse.RouteSegmentResponse s = segments.get(i);
-            totalDistance += s.estimatedDistance();
-            totalDuration += s.estimatedDuration();
-            finalSegments.add(new ShortestPathResponse.RouteSegmentResponse(
+        // [최적화] 리스트 순회하며 sequence만 다시 부여
+        for (int i = 0; i < finalSegments.size(); i++) {
+            ShortestPathResponse.RouteSegmentResponse s = finalSegments.get(i);
+            finalSegments.set(i, new ShortestPathResponse.RouteSegmentResponse(
                     i + 1,
                     s.originHubId(),
                     s.originHubName(),
@@ -141,6 +144,11 @@ public class ShortestPathService {
             ));
         }
 
-        return new ShortestPathResponse(totalDistance, totalDuration, finalSegments);
+        // [최적화] 다익스트라 결과(distances, durations)에서 총합 직접 추출
+        return new ShortestPathResponse(
+                distances.get(endNode), 
+                durations.get(endNode), 
+                finalSegments
+        );
     }
 }
