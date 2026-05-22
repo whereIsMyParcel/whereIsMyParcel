@@ -1,5 +1,6 @@
 package com.sparta.whereismyparcel.order.application.service;
 
+import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.order.application.saga.OrderCreateSaga;
 import com.sparta.whereismyparcel.order.application.saga.OrderCreateSagaContext;
 import com.sparta.whereismyparcel.order.domain.entity.Order;
@@ -40,7 +41,9 @@ public class OrderService {
         List<UUID> productVariantIds = request.items().stream()
                 .map(OrderCreateRequest.OrderItemCreateRequest::productVariantId)
                 .toList();
-        SkuValidationResponse validation = companyFeignClient.validateProducts(userId, productVariantIds).data();
+        SkuValidationResponse validation = resolveSkuValidation(
+                companyFeignClient.validateProducts(userId, productVariantIds)
+        );
 
         List<OrderItem> orderItems = request.items().stream()
                 .map(i -> {
@@ -98,5 +101,12 @@ public class OrderService {
         String suffix = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
         return "ORD-" + date + "-" + suffix;
+    }
+
+    private SkuValidationResponse resolveSkuValidation(ApiResponse<SkuValidationResponse> response) {
+        if (response == null || !response.success() || response.data() == null) {
+            throw new InvalidOrderItemsException();
+        }
+        return response.data();
     }
 }

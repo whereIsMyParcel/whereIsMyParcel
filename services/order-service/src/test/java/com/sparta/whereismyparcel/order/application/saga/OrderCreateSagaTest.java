@@ -93,6 +93,8 @@ class OrderCreateSagaTest {
                 .willReturn(ApiResponse.success(List.of(new StockReservationResponse(UUID.randomUUID(), 10))));
         given(shipmentFeignClient.createShipments(any(), any()))
                 .willThrow(new RuntimeException("배송 생성 실패"));
+        given(companyFeignClient.cancelReservation(any(), any()))
+                .willReturn(ApiResponse.ok());
 
         // when & then
         assertThatThrownBy(() -> orderCreateSaga.execute(order, context))
