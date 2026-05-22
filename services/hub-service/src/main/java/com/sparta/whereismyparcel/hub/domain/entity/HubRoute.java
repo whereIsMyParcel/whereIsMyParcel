@@ -1,8 +1,6 @@
 package com.sparta.whereismyparcel.hub.domain.entity;
 
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
-import com.sparta.whereismyparcel.hub.presentation.dto.request.CreateHubRouteRequest;
-import com.sparta.whereismyparcel.hub.presentation.dto.request.UpdateHubRouteRequest;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
@@ -45,22 +43,22 @@ public class HubRoute extends BaseEntity {
         this.duration = duration;
     }
 
-    // 정적 팩토리 메서드
-    public static HubRoute create(Hub originHub, Hub destinationHub, CreateHubRouteRequest request) {
+    // 정적 팩토리 메서드: 도메인 독립성을 위해 DTO 대신 원시 타입 사용
+    public static HubRoute create(Hub originHub, Hub destinationHub, Double distance, Integer duration) {
         return HubRoute.builder()
                 .hubRouteId(UUID.randomUUID())
                 .originHub(originHub)
                 .destinationHub(destinationHub)
-                .distance(request.distance())
-                .duration(request.duration())
+                .distance(distance)
+                .duration(duration)
                 .build();
     }
 
-    // 비즈니스 로직
-    public void update(UpdateHubRouteRequest request) {
-        validateMetrics(request.distance(), request.duration());
-        this.distance = request.distance();
-        this.duration = request.duration();
+    // 비즈니스 로직: 도메인 독립성을 위해 DTO 대신 원시 타입 사용
+    public void update(Double distance, Integer duration) {
+        validateMetrics(distance, duration);
+        this.distance = distance;
+        this.duration = duration;
     }
 
     private void validateHubs(Hub origin, Hub dest) {

@@ -1,8 +1,6 @@
 package com.sparta.whereismyparcel.hub.domain.entity;
 
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
-import com.sparta.whereismyparcel.hub.presentation.dto.request.CreateHubRequest;
-import com.sparta.whereismyparcel.hub.presentation.dto.request.UpdateHubRequest;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
@@ -42,24 +40,24 @@ public class Hub extends BaseEntity {
         this.longitude = longitude;
     }
 
-    // 정적 팩토리 메서드
-    public static Hub create(CreateHubRequest request) {
+    // 정적 팩토리 메서드: 도메인 독립성을 위해 DTO 대신 원시 타입 사용
+    public static Hub create(String name, String address, Double latitude, Double longitude) {
         return Hub.builder()
                 .hubId(UUID.randomUUID())
-                .name(request.name())
-                .address(request.address())
-                .latitude(request.latitude())
-                .longitude(request.longitude())
+                .name(name)
+                .address(address)
+                .latitude(latitude)
+                .longitude(longitude)
                 .build();
     }
 
-
-    public void update(UpdateHubRequest request) {
-        validateCoordinates(request.latitude(), request.longitude());
-        this.name = request.name();
-        this.address = request.address();
-        this.latitude = request.latitude();
-        this.longitude = request.longitude();
+    // 비즈니스 로직: 도메인 독립성을 위해 DTO 대신 원시 타입 사용
+    public void update(String name, String address, Double latitude, Double longitude) {
+        validateCoordinates(latitude, longitude);
+        this.name = name;
+        this.address = address;
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 
     private void validateCoordinates(Double latitude, Double longitude) {
