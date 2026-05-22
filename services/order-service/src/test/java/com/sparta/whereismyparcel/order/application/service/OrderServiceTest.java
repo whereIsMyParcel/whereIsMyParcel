@@ -51,6 +51,7 @@ class OrderServiceTest {
         given(orderRepository.save(any())).willAnswer(i -> i.getArgument(0));
         willAnswer(invocation -> {
             Order o = invocation.getArgument(0);
+            o.reserveStock();
             o.confirm();
             return null;
         }).given(orderCreateSaga).execute(any(), any());

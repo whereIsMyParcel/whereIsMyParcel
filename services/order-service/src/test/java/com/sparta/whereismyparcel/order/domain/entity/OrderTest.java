@@ -58,10 +58,24 @@ class OrderTest {
     }
 
     @Test
-    @DisplayName("PENDING 상태의 주문은 CONFIRMED로 변경할 수 있다")
-    void confirmPendingOrder() {
+    @DisplayName("PENDING 상태의 주문은 STOCK_RESERVED로 변경할 수 있다")
+    void reserveStockPendingOrder() {
         // given
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
+
+        // when
+        order.reserveStock();
+
+        // then
+        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.STOCK_RESERVED);
+    }
+
+    @Test
+    @DisplayName("STOCK_RESERVED 상태의 주문은 CONFIRMED로 변경할 수 있다")
+    void confirmStockReservedOrder() {
+        // given
+        Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
+        order.reserveStock();
 
         // when
         order.confirm();
@@ -101,6 +115,7 @@ class OrderTest {
     void completeConfirmedOrder() {
         // given
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
+        order.reserveStock();
         order.confirm();
 
         // when
@@ -115,6 +130,7 @@ class OrderTest {
     void cancelConfirmedOrder() {
         // given
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
+        order.reserveStock();
         order.confirm();
 
         // when
@@ -129,6 +145,7 @@ class OrderTest {
     void failConfirmedOrderThrowsException() {
         // given
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
+        order.reserveStock();
         order.confirm();
 
         // when & then
@@ -173,6 +190,7 @@ class OrderTest {
     void changeCompletedOrderStatusThrowsException() {
         // given
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
+        order.reserveStock();
         order.confirm();
         order.complete();
 
