@@ -1,11 +1,19 @@
 package com.sparta.whereismyparcel.order.application.service;
 
+import com.sparta.whereismyparcel.order.application.saga.OrderCreateSaga;
+import com.sparta.whereismyparcel.order.application.saga.OrderCreateSagaContext;
 import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
+import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsException;
+import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedException;
+import com.sparta.whereismyparcel.order.domain.exception.SagaFailedException;
 import com.sparta.whereismyparcel.order.domain.repository.OrderRepository;
+import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient;
+import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +22,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -23,11 +32,30 @@ public class OrderService {
             DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final OrderRepository orderRepository;
+    private final CompanyFeignClient companyFeignClient;
+    private final OrderCreateSaga orderCreateSaga;
 
     @Transactional
     public OrderCreateResponse createOrder(String userId, OrderCreateRequest request) {
+        List<UUID> productVariantIds = request.items().stream()
+                .map(OrderCreateRequest.OrderItemCreateRequest::productVariantId)
+                .toList();
+        SkuValidationResponse validation = companyFeignClient.validateProducts(userId, productVariantIds);
+
         List<OrderItem> orderItems = request.items().stream()
-                .map(this::createOrderItemAssumingProductLookupSucceeded)
+                .map(i -> {
+                    SkuValidationResponse.Item skuInfo = validation.items().stream()
+                            .filter(v -> v.skuId().equals(i.productVariantId()))
+                            .findFirst()
+                            .orElseThrow(InvalidOrderItemsException::new);
+                    return OrderItem.create(
+                            i.productVariantId(),
+                            skuInfo.productName(),
+                            skuInfo.optionName(),
+                            skuInfo.unitPrice(),
+                            i.quantity()
+                    );
+                })
                 .toList();
 
         Order order = Order.create(
@@ -45,20 +73,24 @@ public class OrderService {
         );
 
         orderRepository.save(order);
-        return OrderCreateResponse.from(order);
-    }
 
-    // TODO: Feign 호출 없이 구현하기 위한 임시 메서드(주문 상품들 검증했다고 치고...)
-    private OrderItem createOrderItemAssumingProductLookupSucceeded(
-            OrderCreateRequest.OrderItemCreateRequest item
-    ) {
-        return OrderItem.create(
-                item.productVariantId(),
-                "TEMP_PRODUCT_NAME",
-                "TEMP_OPTION",
-                1_000L,
-                item.quantity()
-        );
+        List<OrderCreateSagaContext.OrderItemInfo> itemInfos = request.items().stream()
+                .map(i -> new OrderCreateSagaContext.OrderItemInfo(i.productVariantId(), i.quantity()))
+                .toList();
+        OrderCreateSagaContext context = new OrderCreateSagaContext(
+                order.getOrderId(), userId, itemInfos);
+
+        try {
+            orderCreateSaga.execute(order, context);
+        } catch (SagaCompensationFailedException e) {
+            log.error("[OrderService] 보상 실패. orderId={}", order.getOrderId(), e);
+        } catch (SagaFailedException e) {
+            log.error("[OrderService] Saga 실패. orderId={}", order.getOrderId(), e);
+        } finally {
+            orderRepository.save(order);
+        }
+
+        return OrderCreateResponse.from(order);
     }
 
     private String generateOrderNumber() {
