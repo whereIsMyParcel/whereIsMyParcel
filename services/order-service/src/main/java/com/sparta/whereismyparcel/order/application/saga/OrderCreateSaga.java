@@ -29,7 +29,7 @@ public class OrderCreateSaga {
                             .map(i -> new StockReservationRequest.Item(i.productVariantId(), i.quantity()))
                             .toList()
             );
-            var reservations = companyFeignClient.reserveStock(context.getUserId(), request);
+            var reservations = companyFeignClient.reserveStock(context.getUserId(), request).data();
             context.applyReservation(reservations.stream()
                     .map(r -> new OrderCreateSagaContext.StockReservation(r.skuId(), null, r.reservedQuantity()))
                     .toList());
@@ -51,7 +51,7 @@ public class OrderCreateSaga {
                             .map(i -> new ShipmentCreateRequest.Item(i.productVariantId(), i.quantity()))
                             .toList()
             );
-            var shipmentIds = shipmentFeignClient.createShipments(context.getUserId(), request);
+            var shipmentIds = shipmentFeignClient.createShipments(context.getUserId(), request).data();
             context.applyShipmentIds(shipmentIds);
         } catch (Exception e) {
             log.error("[Saga] 배송 생성 실패. orderId={}", context.getOrderId(), e);

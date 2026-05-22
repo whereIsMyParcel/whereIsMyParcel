@@ -40,7 +40,7 @@ public class OrderService {
         List<UUID> productVariantIds = request.items().stream()
                 .map(OrderCreateRequest.OrderItemCreateRequest::productVariantId)
                 .toList();
-        SkuValidationResponse validation = companyFeignClient.validateProducts(userId, productVariantIds);
+        SkuValidationResponse validation = companyFeignClient.validateProducts(userId, productVariantIds).data();
 
         List<OrderItem> orderItems = request.items().stream()
                 .map(i -> {
