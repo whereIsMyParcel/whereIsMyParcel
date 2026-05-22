@@ -373,11 +373,10 @@ public ResponseEntity<ApiResponse<HubResponse>> update(@PathVariable UUID hubId,
 ```
 
 각 서비스의 `SecurityConfig`에서 `GatewayHeaderAuthFilter`를 등록합니다.
+`@EnableWebSecurity`·`@EnableMethodSecurity`는 `CommonSecurityAutoConfiguration`이 자동 등록하므로 서비스 `SecurityConfig`에는 선언하지 않습니다.
 
 ```java
-@Configuration
-@EnableWebSecurity
-@EnableMethodSecurity
+@Configuration  // @EnableWebSecurity, @EnableMethodSecurity 선언 불필요 — common이 처리
 public class SecurityConfig {
 
     @Bean
@@ -528,8 +527,8 @@ public class UserService {
     public ApproveResponse approve(UUID userId) {
         User user = userRepository.findById(userId)
             .orElseThrow(UserNotFoundException::new);
-        keycloakService.enableUser(userId);  // 외부 호출
-        user.approve();                      // 도메인 상태 변경 (엔티티 메서드)
+        user.approve();                      // 도메인 검증 먼저 — 실패 시 외부 호출 차단
+        keycloakService.enableUser(userId);  // 검증 통과 후 외부 호출
         return ApproveResponse.from(user);
     }
 
