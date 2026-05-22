@@ -8,6 +8,7 @@ import com.sparta.whereismyparcel.user.domain.exception.UserNotFoundException;
 import com.sparta.whereismyparcel.user.domain.repository.UserRepository;
 import com.sparta.whereismyparcel.user.infrastructure.keycloak.KeycloakAdminService;
 import com.sparta.whereismyparcel.user.presentation.dto.request.SignupRequest;
+import com.sparta.whereismyparcel.user.presentation.dto.request.UpdateUserRequest;
 import com.sparta.whereismyparcel.user.presentation.dto.response.ApproveResponse;
 import com.sparta.whereismyparcel.user.presentation.dto.response.SignupResponse;
 import com.sparta.whereismyparcel.user.presentation.dto.response.UserResponse;
@@ -35,8 +36,16 @@ public class UserService {
 		UUID userId = keycloakAdminService.createUser(
 				request.username(), request.email(), request.password());
 
-		User user = createUser(userId, request);
-		userRepository.save(user);
+		User user;
+		try {
+			// saveAndFlush: 트랜잭션 커밋 전 즉시 SQL을 실행해 DB 예외를 여기서 잡음
+			user = userRepository.saveAndFlush(createUser(userId, request));
+		} catch (Exception e) {
+			log.error("DB 유저 저장 실패. Keycloak 유저 삭제 시도. userId={}", userId, e);
+			tryRollbackKeycloakUser(userId);
+			throw e;
+		}
+
 		log.info("회원가입 완료. userId={}, username={}", userId, request.username());
 		return SignupResponse.from(user);
 	}
@@ -64,6 +73,29 @@ public class UserService {
 
 	public Page<UserResponse> getUsers(UserRole role, UserStatus status, Pageable pageable) {
 		return userRepository.findAllByFilter(role, status, pageable).map(UserResponse::from);
+	}
+
+	@Transactional
+	public UserResponse updateUser(UUID userId, UpdateUserRequest request) {
+		User user = findUserById(userId);
+		user.update(request.name(), request.phone(), request.slackId());
+		return UserResponse.from(user);
+	}
+
+	@Transactional
+	public void deleteUser(UUID userId, String requestedBy) {
+		User user = findUserById(userId);
+		user.softDelete(requestedBy);
+		keycloakAdminService.disableUser(userId);
+		log.info("회원 삭제 완료. userId={}", userId);
+	}
+
+	private void tryRollbackKeycloakUser(UUID userId) {
+		try {
+			keycloakAdminService.deleteUser(userId);
+		} catch (Exception e) {
+			log.error("Keycloak 유저 삭제 실패. 수동 처리 필요. userId={}", userId, e);
+		}
 	}
 
 	private User findUserById(UUID userId) {

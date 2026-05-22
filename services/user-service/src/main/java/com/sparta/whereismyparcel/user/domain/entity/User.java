@@ -98,6 +98,12 @@ public class User extends BaseEntity {
 				.build();
 	}
 
+	public void update(String name, String phone, String slackId) {
+		if (name != null) this.name = name;
+		if (phone != null) this.phone = phone;
+		if (slackId != null) this.slackId = slackId;
+	}
+
 	public void approve() {
 		if (this.status != UserStatus.PENDING) {
 			throw new InvalidApprovalStatusException();

@@ -6,6 +6,7 @@ import com.sparta.whereismyparcel.user.application.service.UserService;
 import com.sparta.whereismyparcel.user.domain.UserRole;
 import com.sparta.whereismyparcel.user.domain.UserStatus;
 import com.sparta.whereismyparcel.user.presentation.dto.request.SignupRequest;
+import com.sparta.whereismyparcel.user.presentation.dto.request.UpdateUserRequest;
 import com.sparta.whereismyparcel.user.presentation.dto.response.ApproveResponse;
 import com.sparta.whereismyparcel.user.presentation.dto.response.SignupResponse;
 import com.sparta.whereismyparcel.user.presentation.dto.response.UserResponse;
@@ -22,11 +23,13 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -66,6 +69,25 @@ public class UserController {
 	@GetMapping("/api/v1/users/{userId}")
 	public ResponseEntity<ApiResponse<UserResponse>> getUser(@PathVariable UUID userId) {
 		return ResponseEntity.ok(ApiResponse.success(userService.getUser(userId)));
+	}
+
+	@Operation(summary = "회원 정보 수정", description = "MASTER 또는 본인만 가능. name·phone·slackId 변경 지원. 전달한 필드만 수정됨")
+	@PreAuthorize("hasRole('MASTER') or authentication.name == #userId.toString()")
+	@PatchMapping("/api/v1/users/{userId}")
+	public ResponseEntity<ApiResponse<UserResponse>> updateUser(
+			@PathVariable UUID userId,
+			@RequestBody @Valid UpdateUserRequest request) {
+		return ResponseEntity.ok(ApiResponse.success(userService.updateUser(userId, request)));
+	}
+
+	@Operation(summary = "회원 삭제", description = "MASTER 권한 필요. Soft delete 처리 및 Keycloak 계정 비활성화")
+	@PreAuthorize("hasRole('MASTER')")
+	@DeleteMapping("/api/v1/users/{userId}")
+	public ResponseEntity<ApiResponse<Void>> deleteUser(
+			@PathVariable UUID userId,
+			@RequestHeader("X-Username") String requestedBy) {
+		userService.deleteUser(userId, requestedBy);
+		return ResponseEntity.ok(ApiResponse.ok());
 	}
 
 	@Operation(summary = "회원 목록 조회", description = "MASTER 권한 필요. role·status 필터, createdAt·updatedAt 정렬 지원. 페이지 크기는 10·30·50만 허용 (이외 값은 10으로 고정)")
