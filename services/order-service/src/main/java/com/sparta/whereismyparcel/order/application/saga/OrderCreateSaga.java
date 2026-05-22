@@ -1,5 +1,6 @@
 package com.sparta.whereismyparcel.order.application.saga;
 
+import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaFailedException;
@@ -29,7 +30,9 @@ public class OrderCreateSaga {
                             .map(i -> new StockReservationRequest.Item(i.productVariantId(), i.quantity()))
                             .toList()
             );
-            var reservations = companyFeignClient.reserveStock(context.getUserId(), request);
+            var reservations = resolveSagaResponse(
+                    companyFeignClient.reserveStock(context.getUserId(), request)
+            );
             context.applyReservation(reservations.stream()
                     .map(r -> new OrderCreateSagaContext.StockReservation(r.skuId(), null, r.reservedQuantity()))
                     .toList());
@@ -51,7 +54,9 @@ public class OrderCreateSaga {
                             .map(i -> new ShipmentCreateRequest.Item(i.productVariantId(), i.quantity()))
                             .toList()
             );
-            var shipmentIds = shipmentFeignClient.createShipments(context.getUserId(), request);
+            var shipmentIds = resolveSagaResponse(
+                    shipmentFeignClient.createShipments(context.getUserId(), request)
+            );
             context.applyShipmentIds(shipmentIds);
         } catch (Exception e) {
             log.error("[Saga] 배송 생성 실패. orderId={}", context.getOrderId(), e);
@@ -71,9 +76,22 @@ public class OrderCreateSaga {
                             .map(r -> new StockCancelRequest.Item(r.skuId(), r.quantity()))
                             .toList()
             );
-            companyFeignClient.cancelReservation(context.getUserId(), request);
+            ensureCompensationSuccess(companyFeignClient.cancelReservation(context.getUserId(), request));
         } catch (Exception e) {
             log.error("[Saga] 재고 원복 실패. orderId={}", context.getOrderId(), e);
+            throw new SagaCompensationFailedException();
+        }
+    }
+
+    private <T> T resolveSagaResponse(ApiResponse<T> response) {
+        if (response == null || !response.success() || response.data() == null) {
+            throw new SagaFailedException();
+        }
+        return response.data();
+    }
+
+    private void ensureCompensationSuccess(ApiResponse<Void> response) {
+        if (response == null || !response.success()) {
             throw new SagaCompensationFailedException();
         }
     }

@@ -1,5 +1,6 @@
 package com.sparta.whereismyparcel.order.application.saga;
 
+import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
 import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
@@ -59,9 +60,9 @@ class OrderCreateSagaTest {
     void executeSuccess() {
         // given
         given(companyFeignClient.reserveStock(any(), any()))
-                .willReturn(List.of(new StockReservationResponse(UUID.randomUUID(), 10)));
+                .willReturn(ApiResponse.success(List.of(new StockReservationResponse(UUID.randomUUID(), 10))));
         given(shipmentFeignClient.createShipments(any(), any()))
-                .willReturn(List.of(UUID.randomUUID()));
+                .willReturn(ApiResponse.success(List.of(UUID.randomUUID())));
 
         // when
         orderCreateSaga.execute(order, context);
@@ -89,9 +90,11 @@ class OrderCreateSagaTest {
     void executeFailOnShipmentCreation() {
         // given
         given(companyFeignClient.reserveStock(any(), any()))
-                .willReturn(List.of(new StockReservationResponse(UUID.randomUUID(), 10)));
+                .willReturn(ApiResponse.success(List.of(new StockReservationResponse(UUID.randomUUID(), 10))));
         given(shipmentFeignClient.createShipments(any(), any()))
                 .willThrow(new RuntimeException("배송 생성 실패"));
+        given(companyFeignClient.cancelReservation(any(), any()))
+                .willReturn(ApiResponse.ok());
 
         // when & then
         assertThatThrownBy(() -> orderCreateSaga.execute(order, context))
@@ -105,11 +108,11 @@ class OrderCreateSagaTest {
     void executeFailOnCompensation() {
         // given
         given(companyFeignClient.reserveStock(any(), any()))
-                .willReturn(List.of(new StockReservationResponse(UUID.randomUUID(), 10)));
+                .willReturn(ApiResponse.success(List.of(new StockReservationResponse(UUID.randomUUID(), 10))));
         given(shipmentFeignClient.createShipments(any(), any()))
                 .willThrow(new RuntimeException("배송 생성 실패"));
-        willThrow(new RuntimeException("재고 원복 실패"))
-                .given(companyFeignClient).cancelReservation(any(), any());
+        given(companyFeignClient.cancelReservation(any(), any()))
+                .willThrow(new RuntimeException("재고 원복 실패"));
 
         // when & then
         assertThatThrownBy(() -> orderCreateSaga.execute(order, context))

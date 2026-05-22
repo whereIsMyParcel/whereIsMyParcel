@@ -1,5 +1,6 @@
 package com.sparta.whereismyparcel.order.application.service;
 
+import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.order.application.saga.OrderCreateSaga;
 import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
@@ -46,7 +47,7 @@ class OrderServiceTest {
         String userId = UUID.randomUUID().toString();
         OrderCreateRequest request = createRequest();
         given(companyFeignClient.validateProducts(any(), any()))
-                .willReturn(createValidationResponse(request));
+                .willReturn(ApiResponse.success(createValidationResponse(request)));
         given(orderRepository.save(any())).willAnswer(i -> i.getArgument(0));
         willAnswer(invocation -> {
             Order o = invocation.getArgument(0);
@@ -83,7 +84,7 @@ class OrderServiceTest {
         String userId = UUID.randomUUID().toString();
         OrderCreateRequest request = createRequest();
         given(companyFeignClient.validateProducts(any(), any()))
-                .willReturn(createValidationResponse(request));
+                .willReturn(ApiResponse.success(createValidationResponse(request)));
         given(orderRepository.save(any())).willAnswer(i -> i.getArgument(0));
         willAnswer(invocation -> {
             Order o = invocation.getArgument(0);

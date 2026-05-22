@@ -1,5 +1,6 @@
 package com.sparta.whereismyparcel.order.infrastructure.client;
 
+import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.StockCancelRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.StockReservationRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
@@ -14,19 +15,19 @@ import java.util.UUID;
 public interface CompanyFeignClient {
 
     @GetMapping("/internal/v1/products")
-    SkuValidationResponse validateProducts(
+    ApiResponse<SkuValidationResponse> validateProducts(
             @RequestHeader("X-User-Id") String userId,
             @RequestParam List<UUID> productVariantIds
     );
 
     @PostMapping("/internal/v1/inventories")
-    List<StockReservationResponse> reserveStock(
+    ApiResponse<List<StockReservationResponse>> reserveStock(
             @RequestHeader("X-User-Id") String userId,
             @RequestBody StockReservationRequest request
     );
 
     @PostMapping("/internal/v1/inventories/cancel")
-    void cancelReservation(
+    ApiResponse<Void> cancelReservation(
             @RequestHeader("X-User-Id") String userId,
             @RequestBody StockCancelRequest request
     );
