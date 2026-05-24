@@ -240,7 +240,7 @@ class OrderTest {
         Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
 
         // when & then
-        order.validateCancelableTime(LocalDateTime.now().plusMinutes(5), Duration.ofMinutes(5));
+        order.validateCancelableTime(order.getOrderedAt().plusMinutes(5), Duration.ofMinutes(5));
     }
 
     @Test
@@ -251,7 +251,7 @@ class OrderTest {
 
         // when & then
         assertThatThrownBy(() -> order.validateCancelableTime(
-                LocalDateTime.now().plusMinutes(5).plusSeconds(1),
+                order.getOrderedAt().plusMinutes(5).plusSeconds(1),
                 Duration.ofMinutes(5)
         )).isInstanceOf(OrderCancelTimeExpiredException.class);
     }

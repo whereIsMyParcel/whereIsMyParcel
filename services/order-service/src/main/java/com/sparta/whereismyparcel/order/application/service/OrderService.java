@@ -6,7 +6,11 @@ import com.sparta.whereismyparcel.order.application.saga.OrderCreateSagaContext;
 import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
 import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
-import com.sparta.whereismyparcel.order.domain.exception.*;
+import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsException;
+import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
+import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
+import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedException;
+import com.sparta.whereismyparcel.order.domain.exception.SagaFailedException;
 import com.sparta.whereismyparcel.order.domain.repository.OrderRepository;
 import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.ShipmentFeignClient;
@@ -109,22 +113,41 @@ public class OrderService {
         Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
-        if (order.getOrderStatus() == OrderStatus.PENDING) {
-            order.validateCancelableTime(LocalDateTime.now(), ORDER_CANCEL_LIMIT);
-            order.cancel();
-        } else if (order.getOrderStatus() == OrderStatus.STOCK_RESERVED) {
-            order.validateCancelableTime(LocalDateTime.now(), ORDER_CANCEL_LIMIT);
-            cancelStockReservation(userId, order);
-            order.cancel();
-        } else if (order.getOrderStatus() == OrderStatus.CONFIRMED) {
-            order.validateCancelableTime(LocalDateTime.now(), ORDER_CANCEL_LIMIT);
-            cancelShipments(userId, order);
-            cancelStockReservation(userId, order);
-            order.cancel();
-        } else {
+        validateOrderOwner(order, userId);
+
+        if (!isCancelableStatus(order.getOrderStatus())) {
             throw new InvalidOrderStatusException();
         }
+
+        order.validateCancelableTime(LocalDateTime.now(), ORDER_CANCEL_LIMIT);
+
+        switch (order.getOrderStatus()) {
+            case PENDING -> order.cancel();
+            case STOCK_RESERVED -> {
+                cancelStockReservation(userId, order);
+                order.cancel();
+            }
+            case CONFIRMED -> {
+                cancelShipments(userId, order);
+                cancelStockReservation(userId, order);
+                order.cancel();
+            }
+            default -> throw new InvalidOrderStatusException();
+        }
+
         return OrderCancelResponse.from(order);
+    }
+
+    private void validateOrderOwner(Order order, String userId) {
+        if (!order.getOrderedBy().equals(userId)) {
+            throw new OrderNotFoundException();
+        }
+    }
+
+    private boolean isCancelableStatus(OrderStatus orderStatus) {
+        return orderStatus == OrderStatus.PENDING
+                || orderStatus == OrderStatus.STOCK_RESERVED
+                || orderStatus == OrderStatus.CONFIRMED;
     }
 
     private void cancelStockReservation(String userId, Order order) {

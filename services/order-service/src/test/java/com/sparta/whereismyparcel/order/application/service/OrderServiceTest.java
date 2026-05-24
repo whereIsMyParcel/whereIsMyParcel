@@ -7,6 +7,7 @@ import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
 import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
 import com.sparta.whereismyparcel.order.domain.exception.OrderErrorCode;
+import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaFailedException;
 import com.sparta.whereismyparcel.order.domain.repository.OrderRepository;
@@ -116,7 +117,7 @@ class OrderServiceTest {
         // given
         String userId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
-        Order order = createOrder();
+        Order order = createOrder(userId);
         given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
                 .willReturn(Optional.of(order));
 
@@ -135,7 +136,7 @@ class OrderServiceTest {
         // given
         String userId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
-        Order order = createOrder();
+        Order order = createOrder(userId);
         order.reserveStock();
         given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
                 .willReturn(Optional.of(order));
@@ -157,7 +158,7 @@ class OrderServiceTest {
         // given
         String userId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
-        Order order = createOrder();
+        Order order = createOrder(userId);
         order.reserveStock();
         order.confirm();
         given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
@@ -182,7 +183,7 @@ class OrderServiceTest {
         // given
         String userId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
-        Order order = createOrder();
+        Order order = createOrder(userId);
         order.reserveStock();
         given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
                 .willReturn(Optional.of(order));
@@ -201,7 +202,7 @@ class OrderServiceTest {
         // given
         String userId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
-        Order order = createOrder();
+        Order order = createOrder(userId);
         order.reserveStock();
         order.confirm();
         given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
@@ -222,7 +223,7 @@ class OrderServiceTest {
         // given
         String userId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
-        Order order = createOrder();
+        Order order = createOrder(userId);
         order.fail();
         given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
                 .willReturn(Optional.of(order));
@@ -230,6 +231,24 @@ class OrderServiceTest {
         // when & then
         assertThatThrownBy(() -> orderService.cancelOrder(userId, orderId))
                 .isInstanceOf(InvalidOrderStatusException.class);
+        then(companyFeignClient).should(never()).cancelReservation(any(), any());
+        then(shipmentFeignClient).should(never()).cancelShipments(any(), any());
+    }
+
+    @Test
+    @DisplayName("주문자가 아닌 사용자는 주문을 취소할 수 없다")
+    void cancelOrderByNonOwnerThrowsException() {
+        // given
+        String ownerId = UUID.randomUUID().toString();
+        String otherUserId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(ownerId);
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.cancelOrder(otherUserId, orderId))
+                .isInstanceOf(OrderNotFoundException.class);
         then(companyFeignClient).should(never()).cancelReservation(any(), any());
         then(shipmentFeignClient).should(never()).cancelShipments(any(), any());
     }
@@ -256,7 +275,7 @@ class OrderServiceTest {
         return new SkuValidationResponse(items);
     }
 
-    private Order createOrder() {
+    private Order createOrder(String orderedBy) {
         return Order.create(
                 UUID.randomUUID(),
                 "ORD-001",
@@ -267,7 +286,7 @@ class OrderServiceTest {
                 "101동 1001호",
                 "문 앞에 놓아주세요",
                 LocalDateTime.now().plusDays(3),
-                UUID.randomUUID().toString(),
+                orderedBy,
                 List.of(OrderItem.create(
                         UUID.randomUUID(),
                         "상품명",
