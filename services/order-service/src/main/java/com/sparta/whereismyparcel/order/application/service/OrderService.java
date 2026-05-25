@@ -144,6 +144,10 @@ public class OrderService {
         Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
+        if (order.getOrderStatus() == OrderStatus.COMPLETED) {
+            return OrderCompleteResponse.from(order);
+        }
+
         order.complete();
 
         return OrderCompleteResponse.from(order);

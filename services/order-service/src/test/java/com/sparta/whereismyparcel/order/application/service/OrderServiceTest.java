@@ -275,6 +275,27 @@ class OrderServiceTest {
     }
 
     @Test
+    @DisplayName("이미 완료된 주문 완료 요청은 성공 응답을 반환한다")
+    void completeAlreadyCompletedOrderReturnsSuccess() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        order.reserveStock();
+        order.confirm();
+        order.complete();
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderCompleteResponse response = orderService.completeOrder(orderId);
+
+        // then
+        assertThat(response.orderStatus()).isEqualTo(OrderStatus.COMPLETED);
+        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.COMPLETED);
+    }
+
+    @Test
     @DisplayName("존재하지 않는 주문은 완료 처리할 수 없다")
     void completeOrderNotFoundThrowsException() {
         // given
