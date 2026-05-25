@@ -48,9 +48,21 @@ public class KeycloakAdminService {
 	}
 
 	public void enableUser(UUID userId) {
+		setEnabled(userId, true);
+	}
+
+	public void disableUser(UUID userId) {
+		setEnabled(userId, false);
+	}
+
+	public void deleteUser(UUID userId) {
+		keycloak.realm(realm).users().get(userId.toString()).remove();
+	}
+
+	private void setEnabled(UUID userId, boolean enabled) {
 		var userResource = keycloak.realm(realm).users().get(userId.toString());
 		UserRepresentation user = userResource.toRepresentation();
-		user.setEnabled(true);
+		user.setEnabled(enabled);
 		userResource.update(user);
 	}
 }

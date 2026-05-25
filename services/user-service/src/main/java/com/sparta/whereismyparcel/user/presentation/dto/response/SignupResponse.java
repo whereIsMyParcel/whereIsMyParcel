@@ -1,8 +1,8 @@
 package com.sparta.whereismyparcel.user.presentation.dto.response;
 
 import com.sparta.whereismyparcel.user.domain.entity.User;
-import com.sparta.whereismyparcel.user.domain.entity.UserRole;
-import com.sparta.whereismyparcel.user.domain.entity.UserStatus;
+import com.sparta.whereismyparcel.user.domain.UserRole;
+import com.sparta.whereismyparcel.user.domain.UserStatus;
 import java.util.UUID;
 
 public record SignupResponse(

@@ -1,4 +1,4 @@
-package com.sparta.whereismyparcel.user.domain.entity;
+package com.sparta.whereismyparcel.user.domain;
 
 public enum UserRole {
 	MASTER,

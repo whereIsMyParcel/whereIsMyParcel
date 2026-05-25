@@ -1,6 +1,8 @@
 package com.sparta.whereismyparcel.user.domain.entity;
 
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
+import com.sparta.whereismyparcel.user.domain.UserRole;
+import com.sparta.whereismyparcel.user.domain.UserStatus;
 import com.sparta.whereismyparcel.user.domain.exception.InvalidApprovalStatusException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -94,6 +96,12 @@ public class User extends BaseEntity {
 				.hubId(hubId)
 				.companyId(companyId)
 				.build();
+	}
+
+	public void update(String name, String phone, String slackId) {
+		if (name != null) this.name = name;
+		if (phone != null) this.phone = phone;
+		if (slackId != null) this.slackId = slackId;
 	}
 
 	public void approve() {

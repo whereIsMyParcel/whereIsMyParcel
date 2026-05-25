@@ -1,6 +1,6 @@
 package com.sparta.whereismyparcel.user.presentation.dto.request;
 
-import com.sparta.whereismyparcel.user.domain.entity.UserRole;
+import com.sparta.whereismyparcel.user.domain.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -48,7 +48,9 @@ public record SignupRequest(
 	public SignupRequest {
 		name = name != null ? name.trim() : null;
 		slackId = slackId != null ? slackId.trim() : null;
-		phone = (phone != null && phone.isBlank()) ? null : phone;
+        phone = phone != null ? phone.trim() : null;
+        phone = (phone != null && phone.isBlank()) ? null : phone;
+        businessNumber = businessNumber != null ? businessNumber.trim() : null;
 		businessNumber = (businessNumber != null && businessNumber.isBlank()) ? null : businessNumber;
 	}
 }

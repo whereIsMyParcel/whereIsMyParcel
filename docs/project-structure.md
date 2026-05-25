@@ -105,10 +105,18 @@ whereIsMyParcel-config-hub/
 
 ```
 common/src/main/java/com/sparta/whereismyparcel/common/
-├── config/       # CommonJpaAutoConfiguration (JPA Auditing)
+├── config/       # CommonJpaAutoConfiguration, CommonSecurityAutoConfiguration, CommonSwaggerAutoConfiguration, CommonFeignAutoConfiguration
 ├── entity/       # BaseEntity
-├── exception/    # BusinessException, ErrorCode
-└── response/     # ApiResponse
+├── exception/    # BusinessException, ErrorCode, RemoteServiceException
+├── feign/        # FeignHeaderPropagationInterceptor, CommonFeignErrorDecoder
+├── response/     # ApiResponse
+├── security/     # GatewayHeaderAuthFilter
+└── util/         # PageableUtils
 ```
+
+- `CommonSecurityAutoConfiguration`: `@EnableWebSecurity`·`@EnableMethodSecurity` 및 기본 `SecurityFilterChain` 자동 등록. 서비스가 자체 `SecurityFilterChain`을 정의하면 기본 FilterChain은 등록되지 않음 (`@ConditionalOnMissingBean`)
+- `CommonSwaggerAutoConfiguration`: Swagger X-User-* 헤더 인증 스킴 자동 등록
+- `CommonFeignAutoConfiguration`: Feign classpath에 있는 서비스에 헤더 전파(`FeignHeaderPropagationInterceptor`)와 에러 디코더(`CommonFeignErrorDecoder`) 자동 등록
+- `PageableUtils.normalize()`: 목록 API 공통 페이지 크기(10·30·50) 및 정렬 필드 검증 유틸
 
 서비스 간 도메인 엔티티(User, Order 등)는 common에 두지 않습니다. 각 서비스 내부에 위치합니다.
