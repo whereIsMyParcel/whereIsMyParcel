@@ -3,6 +3,7 @@ package com.sparta.whereismyparcel.hub.presentation.controller;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.hub.application.service.HubService;
 import com.sparta.whereismyparcel.hub.application.service.ShortestPathService;
+import com.sparta.whereismyparcel.hub.domain.exception.HubNotFoundException;
 import com.sparta.whereismyparcel.hub.presentation.dto.response.HubResponse;
 import com.sparta.whereismyparcel.hub.presentation.dto.response.ShortestPathResponse;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +33,7 @@ public class HubInternalController {
         try {
             hubService.getHub(hubId);
             return ResponseEntity.ok(ApiResponse.success(true));
-        } catch (Exception e) {
+        } catch (HubNotFoundException e) {
             return ResponseEntity.ok(ApiResponse.success(false));
         }
     }

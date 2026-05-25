@@ -60,25 +60,32 @@ public class ShortestPathService {
     private ShortestPathResponse calculateDijkstra(UUID startNode, UUID endNode) {
         record DijkstraNodeService(UUID id, double distance) {}
 
-        List<Hub> allHubs = hubRepository.findAll();
         List<HubRoute> allRoutes = hubRouteRepository.findAll();
 
-        // [최적화] 인접 리스트 미리 생성 (O(V*E) -> O(V+E))
+        // [최적화] 인접 리스트 생성
         Map<UUID, List<HubRoute>> adjacencyList = allRoutes.stream()
                 .collect(Collectors.groupingBy(route -> route.getOriginHub().getHubId()));
 
         Map<UUID, Double> distances = new HashMap<>();
         Map<UUID, HubRoute> previousRoutes = new HashMap<>();
-        Map<UUID, Integer> durations = new HashMap<>(); // [최적화] 소요 시간도 함께 관리
+        Map<UUID, Integer> durations = new HashMap<>();
         
         PriorityQueue<DijkstraNodeService> pq = new PriorityQueue<>(Comparator.comparingDouble(n -> n.distance));
 
-        for (Hub hub : allHubs) {
-            distances.put(hub.getHubId(), Double.MAX_VALUE);
-            durations.put(hub.getHubId(), Integer.MAX_VALUE);
+        // [최적화] 전체 허브를 별도로 조회하지 않고, 경로에 존재하는 허브들만 추출하여 초기화
+        Set<UUID> validHubs = new HashSet<>();
+        for (HubRoute route : allRoutes) {
+            validHubs.add(route.getOriginHub().getHubId());
+            validHubs.add(route.getDestinationHub().getHubId());
         }
 
-        if (!distances.containsKey(endNode)) {
+        for (UUID hubId : validHubs) {
+            distances.put(hubId, Double.MAX_VALUE);
+            durations.put(hubId, Integer.MAX_VALUE);
+        }
+
+        // 목적지나 출발지가 고립된 허브인 경우
+        if (!distances.containsKey(endNode) || !distances.containsKey(startNode)) {
             throw new NoPathBetweenHubsException();
         }
 
@@ -92,7 +99,6 @@ public class ShortestPathService {
             if (current.distance > distances.getOrDefault(current.id, Double.MAX_VALUE)) continue;
             if (current.id.equals(endNode)) break;
 
-            // [최적화] 필터링 대신 미리 구성된 인접 리스트 사용
             List<HubRoute> neighbors = adjacencyList.getOrDefault(current.id, Collections.emptyList());
 
             for (HubRoute route : neighbors) {

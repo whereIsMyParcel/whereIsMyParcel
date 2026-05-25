@@ -17,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
 import java.util.UUID;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -70,9 +69,12 @@ public class HubService {
 
     private void evictAllPathCache() {
         redisTemplate.execute((RedisCallback<Object>) connection -> {
-            Set<byte[]> keys = connection.keys("path:*".getBytes());
-            if (keys != null && !keys.isEmpty()) {
-                connection.del(keys.toArray(new byte[0][]));
+            try (org.springframework.data.redis.core.Cursor<byte[]> cursor = connection.scan(org.springframework.data.redis.core.ScanOptions.scanOptions().match("path:*").count(100).build())) {
+                while (cursor.hasNext()) {
+                    connection.del(cursor.next());
+                }
+            } catch (Exception e) {
+                // ignore
             }
             return null;
         });

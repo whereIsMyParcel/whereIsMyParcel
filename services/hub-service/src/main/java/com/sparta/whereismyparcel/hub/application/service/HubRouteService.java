@@ -81,18 +81,17 @@ public class HubRouteService {
         evictAllPathCache();
     }
 
-    /**
-     * [최적화] KEYS 대신 효율적인 방식으로 최단 경로 캐시 전체 삭제
-     * 허브 수가 적으므로 prefix 기반 삭제가 정합성 유지에 유리함
-     */
     private void evictAllPathCache() {
         // SCAN 대신, 허브 수가 적고 정합성이 중요하므로 prefix 기반 전체 삭제를 권장함 (또는 버전 관리)
         // 여기서는 keys() 대신 connection 수준의 작업을 고려하거나, 
         // Small dataset 이므로 명확하게 전체 삭제를 수행함.
         redisTemplate.execute((RedisCallback<Object>) connection -> {
-            Set<byte[]> keys = connection.keys("path:*".getBytes());
-            if (keys != null && !keys.isEmpty()) {
-                connection.del(keys.toArray(new byte[0][]));
+            try (org.springframework.data.redis.core.Cursor<byte[]> cursor = connection.scan(org.springframework.data.redis.core.ScanOptions.scanOptions().match("path:*").count(100).build())) {
+                while (cursor.hasNext()) {
+                    connection.del(cursor.next());
+                }
+            } catch (Exception e) {
+                // ignore
             }
             return null;
         });
