@@ -16,6 +16,7 @@ import com.sparta.whereismyparcel.order.infrastructure.client.ShipmentFeignClien
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCompleteResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -251,6 +252,55 @@ class OrderServiceTest {
                 .isInstanceOf(OrderNotFoundException.class);
         then(companyFeignClient).should(never()).cancelReservation(any(), any());
         then(shipmentFeignClient).should(never()).cancelShipments(any(), any());
+    }
+
+    @Test
+    @DisplayName("CONFIRMED 상태 주문은 완료 처리할 수 있다")
+    void completeConfirmedOrder() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        order.reserveStock();
+        order.confirm();
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderCompleteResponse response = orderService.completeOrder(orderId);
+
+        // then
+        assertThat(response.orderStatus()).isEqualTo(OrderStatus.COMPLETED);
+        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주문은 완료 처리할 수 없다")
+    void completeOrderNotFoundThrowsException() {
+        // given
+        UUID orderId = UUID.randomUUID();
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> orderService.completeOrder(orderId))
+                .isInstanceOf(OrderNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("CONFIRMED가 아닌 주문은 완료 처리할 수 없다")
+    void completeInvalidStatusOrderThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.completeOrder(orderId))
+                .isInstanceOf(InvalidOrderStatusException.class);
+        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
     }
 
     private OrderCreateRequest createRequest() {
