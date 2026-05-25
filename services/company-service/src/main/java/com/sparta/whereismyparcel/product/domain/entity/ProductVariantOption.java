@@ -12,7 +12,7 @@ import java.util.UUID;
 
 @Entity
 @Getter
-@Table(name = "p_product_variant_options")
+@Table(name = "p_product_variant_options", schema = "product_db")
 @SQLRestriction("deleted_at IS NULL")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProductVariantOption extends BaseEntity {
@@ -46,6 +46,10 @@ public class ProductVariantOption extends BaseEntity {
         variants.addVariantOption(variantOption);
         optionValues.addVariantOption(variantOption);
         return variantOption;
+    }
+
+    public void delete(String userId) {
+        super.softDelete(userId);
     }
 
 }

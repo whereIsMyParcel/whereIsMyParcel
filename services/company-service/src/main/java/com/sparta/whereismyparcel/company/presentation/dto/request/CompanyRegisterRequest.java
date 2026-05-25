@@ -10,7 +10,7 @@ import java.util.UUID;
 public record CompanyRegisterRequest(
 
         @NotNull
-        String hubId,
+        UUID hubId,
 
         @NotNull
         @Size(max = 30)

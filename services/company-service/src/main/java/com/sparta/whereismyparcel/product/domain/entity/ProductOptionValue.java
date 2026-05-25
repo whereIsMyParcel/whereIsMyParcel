@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Entity
 @Getter
-@Table(name = "p_product_option_values")
+@Table(name = "p_product_option_values", schema = "product_db")
 @SQLRestriction("deleted_at IS NULL")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProductOptionValue extends BaseEntity {
@@ -27,7 +27,7 @@ public class ProductOptionValue extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_option_id", nullable = false)
-    private ProductOption productOption;
+    private ProductOption options;
 
     @Column(name = "option_value", nullable = false)
     private String value;
@@ -39,25 +39,25 @@ public class ProductOptionValue extends BaseEntity {
     @Column(name = "option_value_status", nullable = false)
     private ProductStatus status;
 
-    @OneToMany(mappedBy = "product_option_value", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = false)
+    @OneToMany(mappedBy = "optionValues", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductVariantOption> variantOptions = new ArrayList<>();
 
     @Builder(access = AccessLevel.PRIVATE)
-    public ProductOptionValue(ProductOption productOption, String value, Integer additionalPrice) {
-        this.productOption = productOption;
+    public ProductOptionValue(ProductOption options, String value, Integer additionalPrice) {
+        this.options = options;
         this.value = value;
         this.additionalPrice = additionalPrice;
         this.status = ProductStatus.ACTIVE;
     }
 
-    public static ProductOptionValue addOptionValue(ProductOption productOption, String value, Integer additionalPrice) {
+    public static ProductOptionValue addOptionValue(ProductOption options, String value, Integer additionalPrice) {
         ProductOptionValue productOptionValue = ProductOptionValue.builder()
-                .productOption(productOption)
+                .options(options)
                 .value(value)
                 .additionalPrice(additionalPrice)
                 .build();
 
-        productOption.addOptionValues(productOptionValue);
+        options.addOptionValues(productOptionValue);
         return productOptionValue;
     }
 
@@ -69,7 +69,6 @@ public class ProductOptionValue extends BaseEntity {
         this.value = newValue;
         this.additionalPrice = newAdditionalPrice;
     }
-    public void updateAdditionalPrice(Integer additionalPrice) {}
 
     public void stopSelling() {
         this.status =  ProductStatus.INACTIVE;
@@ -81,6 +80,7 @@ public class ProductOptionValue extends BaseEntity {
 
     public void delete(String userId) {
         super.softDelete(userId);
+        this.getVariantOptions().forEach(variantOption -> variantOption.delete(userId));
         this.status = ProductStatus.DELETED;
     }
 }

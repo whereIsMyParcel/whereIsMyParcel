@@ -12,7 +12,7 @@ import java.util.UUID;
 
 @Entity
 @Getter
-@Table(name = "p_company_members")
+@Table(name = "p_company_members", schema = "company_db")
 @SQLRestriction("deleted_at IS NULL")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CompanyMember extends BaseEntity {

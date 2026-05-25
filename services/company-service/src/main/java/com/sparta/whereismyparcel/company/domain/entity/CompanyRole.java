@@ -1,6 +1,6 @@
-package com.sparta.whereismyparcel.company.domain.entity;
-
-public enum CompanyRole {
-    MANAGER,
-    MEMBER
-}
+//package com.sparta.whereismyparcel.company.domain.entity;
+//
+//public enum CompanyRole {
+//    MANAGER,
+//    MEMBER
+//}

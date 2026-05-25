@@ -12,7 +12,7 @@ import java.util.UUID;
 
 @Entity
 @Getter
-@Table(name = "p_companies")
+@Table(name = "p_companies", schema = "company_db")
 @SQLRestriction("deleted_at IS NULL")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Company extends BaseEntity {
@@ -23,7 +23,7 @@ public class Company extends BaseEntity {
     private UUID companyId;
 
     @Column(name = "hub_id", nullable = false)
-    private String hubId;
+    private UUID hubId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "company_type", nullable = false, length = 30)
@@ -56,7 +56,7 @@ public class Company extends BaseEntity {
 
     @Builder(access = AccessLevel.PRIVATE)
     private Company(
-            String hubId,
+            UUID hubId,
             CompanyType companyType,
             String companyName,
             String businessNumber,
@@ -79,7 +79,7 @@ public class Company extends BaseEntity {
     }
 
     public static Company create(
-            String hubId,
+            UUID hubId,
             CompanyType companyType,
             String companyName,
             String businessNumber,

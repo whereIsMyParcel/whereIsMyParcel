@@ -11,7 +11,7 @@ import java.util.UUID;
 
 @Entity
 @Getter
-@Table(name = "p_products")
+@Table(name = "p_products", schema = "product_db")
 @SQLRestriction("deleted_at IS NULL")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Product extends BaseEntity {
@@ -41,10 +41,10 @@ public class Product extends BaseEntity {
     @Column(name = "status", nullable = false, length = 30)
     private ProductStatus status;
 
-    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = false)
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductOption> options = new ArrayList<>();
 
-    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = false)
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductVariant> variants = new ArrayList<>();
 
 
@@ -63,6 +63,23 @@ public class Product extends BaseEntity {
         this.status = ProductStatus.ACTIVE;
     }
 
+    public static Product create(
+            String name,
+            UUID companyId,
+            UUID hubId,
+            String description,
+            Integer price
+    ) {
+        Product product = Product.builder()
+                .name(name)
+                .companyId(companyId)
+                .hubId(hubId)
+                .description(description)
+                .price(price)
+                .build();
+        return product;
+    }
+
     public void addOption(ProductOption option) {
         this.options.add(option);
     }
@@ -71,38 +88,29 @@ public class Product extends BaseEntity {
         this.variants.add(variant);
     }
 
-    public void updateDetails(String newName, String description, Integer price) {
-        String oldName = this.name;
-
+    public void updateDetails(String name, String description, Integer price) {
         this.name = name;
         this.description = description;
         this.price = price;
-
-        if (!oldName.equals(name)) {
-            this.variants.forEach(variants-> {
-                variants.updateProductNameInVariant(oldName, newName);
-            });
-        }
-
     }
 
     public void stopSelling() {
         this.status = ProductStatus.INACTIVE;
 
-        this.options.forEach(options->{options.stopSelling();});
-        this.variants.forEach(productVariant->productVariant.stopSelling());
+        this.variants.forEach(variants->variants.stopSelling());
     }
 
     public void resumeSelling() {
         this.status = ProductStatus.ACTIVE;
-        this.options.forEach(options->{options.resumeSelling();});
+//        this.options.forEach(option->{option.resumeSelling();});
+        this.variants.forEach(variants->variants.resumeSelling());
     }
 
     public void delete(String userId) {
         super.softDelete(userId);
         this.status = ProductStatus.DELETED;
 
-        this.options.forEach(options->{options.delete(userId);});
-        this.variants.forEach(productVariant->productVariant.delete(userId));
+        this.options.forEach(option->option.delete(userId));
+        this.variants.forEach(variant->variant.delete(userId));
     }
 }
