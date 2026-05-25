@@ -10,6 +10,7 @@ import com.sparta.whereismyparcel.user.infrastructure.keycloak.KeycloakAdminServ
 import com.sparta.whereismyparcel.user.presentation.dto.request.SignupRequest;
 import com.sparta.whereismyparcel.user.presentation.dto.request.UpdateUserRequest;
 import com.sparta.whereismyparcel.user.presentation.dto.response.ApproveResponse;
+import com.sparta.whereismyparcel.user.presentation.dto.response.InternalUserResponse;
 import com.sparta.whereismyparcel.user.presentation.dto.response.SignupResponse;
 import com.sparta.whereismyparcel.user.presentation.dto.response.UserResponse;
 import java.util.UUID;
@@ -71,6 +72,16 @@ public class UserService {
 		return UserResponse.from(findUserById(userId));
 	}
 
+	public InternalUserResponse getInternalUser(UUID userId) {
+		return InternalUserResponse.from(findUserById(userId));
+	}
+
+	public InternalUserResponse getInternalUserByBusinessNumber(String businessNumber) {
+		User user = userRepository.findByBusinessNumber(businessNumber)
+				.orElseThrow(UserNotFoundException::new);
+		return InternalUserResponse.from(user);
+	}
+
 	public Page<UserResponse> getUsers(UserRole role, UserStatus status, Pageable pageable) {
 		return userRepository.findAllByFilter(role, status, pageable).map(UserResponse::from);
 	}
@@ -90,6 +101,8 @@ public class UserService {
 		log.info("회원 삭제 완료. userId={}", userId);
 	}
 
+	// 보상 트랜잭션(best-effort): DB 저장 실패 시 Keycloak 유저 삭제를 시도하되
+	// Keycloak 삭제마저 실패하면 원래 예외만 rethrow하고 수동 처리에 위임
 	private void tryRollbackKeycloakUser(UUID userId) {
 		try {
 			keycloakAdminService.deleteUser(userId);

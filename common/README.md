@@ -273,6 +273,43 @@ public ResponseEntity<?> getList(Pageable pageable) {
 
 ---
 
+## CommonFeignAutoConfiguration
+
+OpenFeign이 classpath에 있는 Servlet MVC 서비스에 공통 Feign 설정을 자동 등록합니다.
+
+### FeignHeaderPropagationInterceptor
+
+모든 Feign 요청에 게이트웨이 헤더를 자동으로 전파합니다. 서비스에서 `@RequestHeader`로 헤더를 직접 선언할 필요가 없습니다.
+
+| 전파 헤더 |
+|---|
+| `X-User-Id` |
+| `X-Username` |
+| `X-User-Role` |
+| `X-User-Status` |
+
+```java
+// ✅ 헤더 선언 불필요 — 자동 전파
+@FeignClient(name = "user-service")
+public interface UserFeignClient {
+    @GetMapping("/internal/v1/users/{userId}")
+    ApiResponse<InternalUserResponse> getUser(@PathVariable UUID userId);
+}
+```
+
+### CommonFeignErrorDecoder
+
+Feign 오류 응답 body를 `ApiResponse`로 파싱해 `RemoteServiceException`으로 변환합니다.
+`RemoteServiceException`은 `BusinessException`을 상속하므로 `GlobalExceptionHandler`가 자동으로 처리합니다.
+
+| 상황 | 에러 코드 |
+|---|---|
+| 응답 body 파싱 성공 | 원격 서비스의 에러 코드를 그대로 전달 |
+| 응답 body 없음 | `COMMON-998` |
+| 응답 body 파싱 실패 | `COMMON-999` |
+
+---
+
 ## 공통 코드 추가 기준
 
 `common`에는 모든 서비스가 사용해도 도메인 결합이 생기지 않는 코드만 추가합니다.
