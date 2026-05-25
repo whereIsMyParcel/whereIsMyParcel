@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -294,6 +295,7 @@ public class ProductService {
         product.delete(companyMemberId);
     }
 
+    // 상품 옵션 삭제(softDelete)
     @Transactional
     public void deleteOption(UUID productId, UUID optionValueId, String companyMemberId, OptionValueStatusRequest request) {
         Product product = productRepository.findById(productId)
@@ -317,5 +319,20 @@ public class ProductService {
         targetValue.getVariantOptions().stream()
                 .map(ProductVariantOption::getVariants)
                 .forEach(variants -> variants.delete(companyMemberId));
+    }
+
+    /**
+     * ③ 주문 생성 전 상품 상태 확인 (Order ➡️ Product)
+     */
+    public List<VariantResponse> validateVariantById(List<UUID> productVariantIds){
+        return productVariantIds.stream()
+                .map(variantId -> {
+                   return productVariantRepository.findById(variantId)
+                           .orElse(null);
+                })
+                .filter(Objects::nonNull)
+                .filter(variant -> variant.getStatus() == ProductStatus.ACTIVE)
+                .map(VariantResponse::from)
+                .toList();
     }
 }

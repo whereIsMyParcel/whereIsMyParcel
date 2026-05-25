@@ -23,7 +23,7 @@ public class CompanyMember extends BaseEntity {
     private UUID companyMemberId;
 
     @Column(name = "user_id", nullable = false)
-    private String userId;
+    private UUID userId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
@@ -35,7 +35,7 @@ public class CompanyMember extends BaseEntity {
 
     @Builder(access = AccessLevel.PRIVATE)
     private CompanyMember(
-            String userId,
+            UUID userId,
             Company company
     ) {
         this.userId = userId;
@@ -44,7 +44,7 @@ public class CompanyMember extends BaseEntity {
     }
 
     public static CompanyMember addMember(
-            String userId,
+            UUID userId,
             Company company
     ) {
         CompanyMember companyMember = CompanyMember.builder()

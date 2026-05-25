@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public interface CompanyMemberRepository extends JpaRepository<CompanyMember, UUID> {
 
-    Boolean existsByUserId(String userId);
+    Boolean existsByUserId(UUID userId);
 
     Optional<CompanyMember> findByCompanyMemberIdAndStatus(UUID companyMemberId, CompanyMemberStatus status);
 }

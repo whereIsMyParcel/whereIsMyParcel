@@ -2,6 +2,7 @@ package com.sparta.whereismyparcel.company.presentation.controller;
 
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.company.application.service.CompanyService;
+import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyMemberRequest;
 import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyRegisterRequest;
 import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyUpdateRequest;
 import com.sparta.whereismyparcel.company.presentation.dto.response.CompanyListResponse;
@@ -80,9 +81,9 @@ public class CompanyController {
     @PreAuthorize("hasRole('COMPANY_MANAGER')")
     public ResponseEntity<ApiResponse<CompanyMemberResponse>> registerCompanyMember(
             @PathVariable UUID companyId,
-            @RequestHeader("X-User-Id") String userId
+            @RequestBody @Valid CompanyMemberRequest request
     ) {
-        CompanyMemberResponse response = companyService.registerCompanyMember(companyId, userId);
+        CompanyMemberResponse response = companyService.registerCompanyMember(companyId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(response));
     }
 
@@ -100,10 +101,10 @@ public class CompanyController {
     @PreAuthorize("hasRole('COMPANY_MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deleteCompanyMember(
             @PathVariable UUID companyId,
-            @PathVariable UUID memberId,
+            @RequestBody @Valid CompanyMemberRequest request,
             @RequestHeader("X-User-Id") String hubManagerOrMasterId
     ) {
-        companyService.deleteCompanyMember(companyId, memberId, hubManagerOrMasterId);
+        companyService.deleteCompanyMember(companyId, request, hubManagerOrMasterId);
         return ResponseEntity.ok(ApiResponse.ok());
     }
 }

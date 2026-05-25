@@ -6,16 +6,14 @@ import java.util.UUID;
 
 public record CompanyMemberResponse(
         UUID companyMemberId,
-        String userId,
+        UUID userId,
         UUID companyId
-//        CompanyRole role
 ) {
     public static CompanyMemberResponse from(CompanyMember companyMember) {
         return new CompanyMemberResponse(
                 companyMember.getCompanyMemberId(),
                 companyMember.getUserId(),
                 companyMember.getCompany().getCompanyId()
-//                companyMember.getRole()
         );
     }
 }
