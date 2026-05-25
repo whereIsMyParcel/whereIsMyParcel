@@ -43,11 +43,9 @@ class ShipmentServiceTest {
         mockShipments(shipment1, shipment2);
 
         // when
-        boolean result = shipmentService.cancel(managerId.toString(), orderId);
+        shipmentService.cancel(managerId.toString(), orderId);
 
         // then
-        assertThat(result).isTrue();
-
         verify(shipment1).cancel();
         verify(shipment2).cancel();
     }

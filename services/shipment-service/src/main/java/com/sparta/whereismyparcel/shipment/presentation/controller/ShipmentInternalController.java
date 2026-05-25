@@ -1,7 +1,6 @@
 package com.sparta.whereismyparcel.shipment.presentation.controller;
 
 
-
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 
 import com.sparta.whereismyparcel.shipment.application.service.ShipmentService;
@@ -15,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "shipment-internal", description = "배송 내부 API")
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/internal/v1/shipments")
 public class ShipmentInternalController {
 
     private final ShipmentService shipmentService;
@@ -24,12 +24,12 @@ public class ShipmentInternalController {
             description = "주문에 속한 모든 배송이 출발 전 상태일 경우 배송을 취소한다"
     )
     @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER', 'DELIVERY_MANAGER')")
-    @PostMapping("/internal/v1/shipments/cancel")
+    @PostMapping("/cancel")
     public ApiResponse<Void> cancelShipments(
             @RequestHeader("X-User-Id") String userId,
             @RequestBody ShipmentCancelRequest request
     ) {
-        shipmentService.cancel(userId,request.orderId());
+        shipmentService.cancel(userId, request.orderId());
         return ApiResponse.ok();
     }
 }

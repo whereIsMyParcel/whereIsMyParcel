@@ -20,7 +20,7 @@ public class ShipmentService {
     }
 
     @Transactional
-    public boolean cancel(String userId, UUID orderId) {
+    public void cancel(String userId, UUID orderId) {
         UUID managerId = UUID.fromString(userId);
         //1. 주문에 속한 모든 배송들 조회
         List<Shipment> shipments = shipmentRepository.findAllByOrderId(orderId);
@@ -37,7 +37,6 @@ public class ShipmentService {
         }
         //4. 취소 처리
         shipments.forEach(Shipment::cancel);
-        return true;
     }
 
     private void validateUpdatePermission(List<Shipment> shipments, UUID managerId) {
