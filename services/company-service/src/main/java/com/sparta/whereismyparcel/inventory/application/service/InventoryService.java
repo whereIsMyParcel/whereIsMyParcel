@@ -4,6 +4,10 @@ import com.sparta.whereismyparcel.common.dto.HubValidateRequest;
 import com.sparta.whereismyparcel.common.infrastructure.client.HubFeignClient;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.inventory.domain.entity.Inventory;
+import com.sparta.whereismyparcel.inventory.domain.exception.HubNotFoundException;
+import com.sparta.whereismyparcel.inventory.domain.exception.InventoryAlreadyExistsException;
+import com.sparta.whereismyparcel.inventory.domain.exception.InventoryNotFoundException;
+import com.sparta.whereismyparcel.inventory.domain.exception.ProductVariantNotFoundException;
 import com.sparta.whereismyparcel.inventory.domain.repository.InventoryRepository;
 import com.sparta.whereismyparcel.inventory.presentation.dto.request.AddInventoryRequest;
 import com.sparta.whereismyparcel.inventory.presentation.dto.request.InventoryStockRequest;
@@ -35,15 +39,15 @@ public class InventoryService {
         // 허브 존재 확인 feign 요청
         ApiResponse<Void> hubCheck = hubFeignClient.validateHub(new HubValidateRequest(request.hubId()));
         if (hubCheck == null || !hubCheck.success()) {
-            throw new IllegalArgumentException("존재하지 않는 허브입니다");
+            throw new HubNotFoundException();
         }
 
         ProductVariant productVariant = productVariantRepository.findById(request.productVariantId())
-                .orElseThrow(() -> new IllegalArgumentException("Product variant not found"));
+                .orElseThrow(ProductVariantNotFoundException::new);
 
         inventoryRepository.findByHubIdAndProductVariant(request.hubId(), productVariant)
                 .ifPresent(inventory -> {
-                    throw new IllegalArgumentException("Inventory already exists");
+                    throw new InventoryAlreadyExistsException();
                 });
 
         Inventory inventory = Inventory.addInventory(
@@ -64,10 +68,10 @@ public class InventoryService {
         return request.items().stream()
                 .map(item -> {
                     ProductVariant variant = productVariantRepository.findProductBySkuCode(item.skuCode())
-                            .orElseThrow(() -> new IllegalArgumentException("Product variant not found"));
+                            .orElseThrow(ProductVariantNotFoundException::new);
 
                     Inventory inventory = inventoryRepository.findByHubIdAndProductVariant(item.hubId(),variant)
-                            .orElseThrow(() -> new IllegalArgumentException("Inventory not found"));
+                            .orElseThrow(InventoryNotFoundException::new);
 
                     inventory.addReservedStock(item.quantity());
                     return new StockReservationResponse(
@@ -83,10 +87,10 @@ public class InventoryService {
     @Transactional
     public void confirmDeliveryLaunch(InventoryStockRequest request) {
         ProductVariant productVariant = productVariantRepository.findById(request.productVariantId())
-                .orElseThrow(() -> new IllegalArgumentException("Product variant not found"));
+                .orElseThrow(ProductVariantNotFoundException::new);
 
         Inventory inventory = inventoryRepository.findByHubIdAndProductVariant(request.hubId(), productVariant)
-                .orElseThrow(() -> new IllegalArgumentException("재고 정보를 찾을 수 없습니다."));
+                .orElseThrow(InventoryNotFoundException::new);
 
         inventory.confirmShipment(request.quantity());
 
@@ -100,10 +104,10 @@ public class InventoryService {
     public void cancelOrderReservation(StockCancelRequest request) {
         request.items().forEach(item -> {
             ProductVariant variant = productVariantRepository.findProductBySkuCode(item.skuCode())
-                    .orElseThrow(() -> new IllegalArgumentException("Product variant not found"));
+                    .orElseThrow(ProductVariantNotFoundException::new);
 
             Inventory inventory = inventoryRepository.findByHubIdAndProductVariant(item.hubId(), variant)
-                    .orElseThrow(() -> new IllegalArgumentException("Inventory not found"));
+                    .orElseThrow(InventoryNotFoundException::new);
             inventory.cancelReservation(item.quantity());
         });
     }

@@ -1,7 +1,9 @@
 package com.sparta.whereismyparcel.inventory.domain.exception;
 
-public class HubNotFoundException extends RuntimeException {
-  public HubNotFoundException(String message) {
-    super(message);
-  }
+import com.sparta.whereismyparcel.common.exception.BusinessException;
+
+public class HubNotFoundException extends BusinessException {
+    public HubNotFoundException() {
+        super(InventoryErrorCode.HUB_NOT_FOUND);
+    }
 }

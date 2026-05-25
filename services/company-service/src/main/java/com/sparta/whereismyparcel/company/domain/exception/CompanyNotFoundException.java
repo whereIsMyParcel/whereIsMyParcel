@@ -1,7 +1,9 @@
 package com.sparta.whereismyparcel.company.domain.exception;
 
-public class CompanyNotFoundException extends RuntimeException {
-  public CompanyNotFoundException(String message) {
-    super(message);
-  }
+import com.sparta.whereismyparcel.common.exception.BusinessException;
+
+public class CompanyNotFoundException extends BusinessException {
+    public CompanyNotFoundException() {
+        super(CompanyErrorCode.COMPANY_NOT_FOUND);
+    }
 }

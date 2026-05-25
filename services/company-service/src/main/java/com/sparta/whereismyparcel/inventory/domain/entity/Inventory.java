@@ -1,6 +1,9 @@
 package com.sparta.whereismyparcel.inventory.domain.entity;
 
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
+import com.sparta.whereismyparcel.inventory.domain.exception.InvalidMinusPhysicalStockException;
+import com.sparta.whereismyparcel.inventory.domain.exception.InvalidMinusReservedStockException;
+import com.sparta.whereismyparcel.inventory.domain.exception.NotEnoughAvailableStockException;
 import com.sparta.whereismyparcel.product.domain.entity.ProductVariant;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -80,17 +83,17 @@ public class Inventory extends BaseEntity {
     // 예약 재고 설정
     public void addReservedStock(Integer orderQuantity) {
         if (this.quantity - this.reservedQuantity < orderQuantity) {
-            throw new IllegalArgumentException("Quantity cannot be negative");
+            throw new NotEnoughAvailableStockException();
         }
         this.reservedQuantity += orderQuantity;
     }
 
     public void confirmShipment(Integer orderQuantity) {
         if (this.reservedQuantity < orderQuantity) {
-            throw new IllegalArgumentException("Quantity cannot be negative");
+            throw new InvalidMinusReservedStockException();
         }
         if (this.quantity < orderQuantity) {
-            throw new IllegalArgumentException("Quantity cannot be negative");
+            throw new InvalidMinusPhysicalStockException();
         }
 
         this.quantity -= orderQuantity;
@@ -99,7 +102,7 @@ public class Inventory extends BaseEntity {
 
     public void cancelReservation(Integer orderQuantity) {
         if (this.reservedQuantity < orderQuantity) {
-            throw new IllegalArgumentException("Quantity cannot be negative");
+            throw new InvalidMinusReservedStockException();
         }
 
         this.reservedQuantity -= orderQuantity;

@@ -1,7 +1,9 @@
 package com.sparta.whereismyparcel.inventory.domain.exception;
 
-public class ProductVariantNotFoundException extends RuntimeException {
-  public ProductVariantNotFoundException(String message) {
-    super(message);
-  }
+import com.sparta.whereismyparcel.common.exception.BusinessException;
+
+public class ProductVariantNotFoundException extends BusinessException {
+    public ProductVariantNotFoundException() {
+        super(InventoryErrorCode.PRODUCT_VARIANT_NOT_FOUND);
+    }
 }

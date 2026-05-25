@@ -1,7 +1,9 @@
 package com.sparta.whereismyparcel.company.domain.exception;
 
-public class UserSyncFailedException extends RuntimeException {
-  public UserSyncFailedException(String message) {
-    super(message);
-  }
+import com.sparta.whereismyparcel.common.exception.BusinessException;
+
+public class UserSyncFailedException extends BusinessException {
+    public UserSyncFailedException() {
+        super(CompanyErrorCode.USER_SYNC_FAILED);
+    }
 }

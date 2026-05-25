@@ -7,6 +7,7 @@ import com.sparta.whereismyparcel.company.domain.entity.Company;
 import com.sparta.whereismyparcel.company.domain.entity.CompanyMember;
 import com.sparta.whereismyparcel.company.domain.entity.CompanyMemberStatus;
 import com.sparta.whereismyparcel.company.domain.entity.CompanyStatus;
+import com.sparta.whereismyparcel.company.domain.exception.*;
 import com.sparta.whereismyparcel.company.domain.repository.CompanyMemberRepository;
 import com.sparta.whereismyparcel.company.domain.repository.CompanyRepository;
 import com.sparta.whereismyparcel.company.infrastructure.feign.client.UserFeignClient;
@@ -41,12 +42,13 @@ public class CompanyService {
         // 해당 허브가 존재하는지 검증
         ApiResponse<Void> hubCheck = hubFeignClient.validateHub(new HubValidateRequest(request.hubId()));
         if (hubCheck == null || !hubCheck.success()) {
-            throw new IllegalArgumentException("존재하지 않는 허브입니다");
+            throw new HubNotFoundException();
+
         }
 
         ApiResponse<UserIdResponse> managerIdResponse = userFeignClient.getUserIdByBusinessNumber(request.businessNumber());
         if (managerIdResponse == null || !managerIdResponse.success() || managerIdResponse.data() == null) {
-            throw new IllegalArgumentException("해당 사업자 번호를 가진 유저가 없습니다");
+            throw new UserNotFoundException();
         }
 
         UUID managerId = managerIdResponse.data().userId();
@@ -109,7 +111,7 @@ public class CompanyService {
     @Transactional
     public void deleteCompany(UUID companyId, String hubManagerOrMasterId) {
         Company company = companyRepository.findByCompanyIdAndStatus(companyId, CompanyStatus.ACTIVE)
-                .orElseThrow(() -> new IllegalArgumentException("해당 업체를 찾을 수 없습니다"));
+                .orElseThrow(CompanyNotFoundException::new);
 
         company.delete(hubManagerOrMasterId);
         // TODO : feign으로 유저에게 해당 컴퍼니 아이디를 가진 유저들의 컴퍼니 아이디를 지워달라고 요청 (아예 유저를 지워도 될것 같습니다)
@@ -117,7 +119,7 @@ public class CompanyService {
 
         // 4. 유저 서비스 쪽에서 처리하다가 에러가 났거나 통신 실패 시 방어 코드
         if (userDeleteResponse == null || !userDeleteResponse.success()) { // 또는 .isSuccess() 등 프로젝트 공통 포맷에 맞춤
-            throw new IllegalStateException("유저 서비스와의 소속 해제 동기화에 실패했습니다.");
+            throw new UserNotFoundException();
         }
     }
 
@@ -125,17 +127,17 @@ public class CompanyService {
     @Transactional
     public CompanyMemberResponse registerCompanyMember(UUID companyId, CompanyMemberRequest request) {
         Company company = companyRepository.findByCompanyIdAndStatus(companyId, CompanyStatus.ACTIVE)
-                .orElseThrow(() -> new IllegalArgumentException("해당 업체를 찾을 수 없습니다"));
+                .orElseThrow(CompanyNotFoundException::new);
 
         Boolean isExistsMember = companyMemberRepository.existsByUserId(request.userId());
         if (isExistsMember) {
-            throw new IllegalArgumentException("이미 등록된 직원입니다");
+            throw new AlreadyRegisterMemberException();
         }
 
         // TODO : 리퀘스트를 만들어서 등록할 유저의 아이디를 입력을 하고 유저서비스에 해당 아이디의 유저에 컴퍼니아이디를 내가 주는걸로 넣어라
         ApiResponse<Void> updateUserResponse = userFeignClient.updateUserCompanyId(request.userId(), companyId);
         if (updateUserResponse == null || !updateUserResponse.success()) {
-            throw new IllegalArgumentException("유저 서비스와의 소속 등록 동기화에 실패했습니다");
+            throw new UserSyncFailedException();
         }
 
         CompanyMember companyMember = CompanyMember.addMember(request.userId(), company);
@@ -156,15 +158,15 @@ public class CompanyService {
     @Transactional
     public void deleteCompanyMember(UUID companyId, CompanyMemberRequest request, String companyManagerId) {
         Company company = companyRepository.findByCompanyIdAndStatus(companyId, CompanyStatus.ACTIVE)
-                .orElseThrow(() -> new IllegalArgumentException("해당 업체를 찾을 수 없습니다"));
+                .orElseThrow(CompanyNotFoundException::new);
 
         CompanyMember companyMember = companyMemberRepository.findByCompanyMemberIdAndStatus(request.userId(), CompanyMemberStatus.ACTIVE)
-                .orElseThrow(() -> new IllegalArgumentException("해당 직원을 찾을 수 없습니다"));
+                .orElseThrow(CompanyMemberNotFoundException::new);
 
         // TODO : 유저 서비스에서 해당 유저를 지워달라고 요청
         ApiResponse<Void> updateUserResponse = userFeignClient.deleteUserOrClearCompany(request.userId());
         if (updateUserResponse == null || !updateUserResponse.success()) {
-            throw new IllegalArgumentException("유저 서비스와의 소속 등록 동기화에 실패했습니다");
+            throw new UserSyncFailedException();
         }
 
         companyMember.delete(companyManagerId);

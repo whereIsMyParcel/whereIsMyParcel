@@ -1,7 +1,9 @@
 package com.sparta.whereismyparcel.company.domain.exception;
 
-public class AlreadyRegisterMemberException extends RuntimeException {
-  public AlreadyRegisterMemberException(String message) {
-    super(message);
-  }
+import com.sparta.whereismyparcel.common.exception.BusinessException;
+
+public class AlreadyRegisterMemberException extends BusinessException {
+    public AlreadyRegisterMemberException() {
+        super(CompanyErrorCode.ALREADY_REGISTERED_MEMBER);
+    }
 }

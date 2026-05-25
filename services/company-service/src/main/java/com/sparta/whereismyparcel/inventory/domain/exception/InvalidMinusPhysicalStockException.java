@@ -1,7 +1,9 @@
 package com.sparta.whereismyparcel.inventory.domain.exception;
 
-public class InvaildMinusPhysicalStockException extends RuntimeException {
-  public InvaildMinusPhysicalStockException(String message) {
-    super(message);
-  }
+import com.sparta.whereismyparcel.common.exception.BusinessException;
+
+public class InvalidMinusPhysicalStockException extends BusinessException {
+    public InvalidMinusPhysicalStockException() {
+        super(InventoryErrorCode.INVALID_MINUS_PHYSICAL_STOCK);
+    }
 }
