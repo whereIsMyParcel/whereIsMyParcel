@@ -21,7 +21,7 @@ dependencies {
 
 	annotationProcessor 'org.projectlombok:lombok'
 
-	testFixturesApi 'com.tngtech.archunit:archunit-junit5:1.3.0'
+	testFixturesApi 'com.tngtech.archunit:archunit-junit5:1.4.2'
 	testFixturesImplementation 'jakarta.persistence:jakarta.persistence-api'
 	testFixturesImplementation 'jakarta.servlet:jakarta.servlet-api'
 	testFixturesImplementation 'org.springframework:spring-web'
