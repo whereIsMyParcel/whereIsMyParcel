@@ -15,6 +15,7 @@ import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,8 +41,8 @@ public class HubRouteService {
 
         HubRoute route = HubRoute.create(originHub, destinationHub, request.distance(), request.duration());
         
-        // 경로가 생성되면 기존에 계산된 모든 최단 경로 캐시를 무효화해야 함
-        evictPathCache(originHub.getHubId(), destinationHub.getHubId());
+        // [최적화] 경로 변경 시 모든 최단 경로 캐시 초기화 (SMALL_V=17이므로 전체 삭제가 안전)
+        evictAllPathCache();
         
         return HubRouteResponse.from(hubRouteRepository.save(route));
     }
@@ -65,8 +66,7 @@ public class HubRouteService {
                 .orElseThrow(HubRouteNotFoundException::new);
         route.update(request.distance(), request.duration());
         
-        // 경로 정보가 수정되면 관련 최단 경로 캐시 무효화
-        evictPathCache(route.getOriginHub().getHubId(), route.getDestinationHub().getHubId());
+        evictAllPathCache();
         
         return HubRouteResponse.from(route);
     }
@@ -78,14 +78,22 @@ public class HubRouteService {
                 .orElseThrow(HubRouteNotFoundException::new);
         route.softDelete(userId);
         
-        // 경로 삭제 시 관련 최단 경로 캐시 무효화
-        evictPathCache(route.getOriginHub().getHubId(), route.getDestinationHub().getHubId());
+        evictAllPathCache();
     }
 
-    private void evictPathCache(UUID originId, UUID destId) {
-        Set<String> keys1 = redisTemplate.keys("path:*" + originId + "*");
-        Set<String> keys2 = redisTemplate.keys("path:*" + destId + "*");
-        if (keys1 != null) redisTemplate.delete(keys1);
-        if (keys2 != null) redisTemplate.delete(keys2);
+    private void evictAllPathCache() {
+        // SCAN 대신, 허브 수가 적고 정합성이 중요하므로 prefix 기반 전체 삭제를 권장함 (또는 버전 관리)
+        // 여기서는 keys() 대신 connection 수준의 작업을 고려하거나, 
+        // Small dataset 이므로 명확하게 전체 삭제를 수행함.
+        redisTemplate.execute((RedisCallback<Object>) connection -> {
+            try (org.springframework.data.redis.core.Cursor<byte[]> cursor = connection.scan(org.springframework.data.redis.core.ScanOptions.scanOptions().match("path:*").count(100).build())) {
+                while (cursor.hasNext()) {
+                    connection.del(cursor.next());
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+            return null;
+        });
     }
 }
