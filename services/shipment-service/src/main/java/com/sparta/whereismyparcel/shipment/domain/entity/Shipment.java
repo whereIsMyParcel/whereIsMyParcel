@@ -135,7 +135,12 @@ public class Shipment extends BaseEntity {
     }
 
     public boolean isAssignedDeliveryManager(UUID managerId) {
-        return histories.stream()
+
+        boolean companyMatch = companyDeliveryManagerId.equals(managerId);
+
+        boolean hubMatch = histories.stream()
                 .anyMatch(h -> managerId.equals(h.getHubDeliveryManagerId()));
+
+        return companyMatch || hubMatch;
     }
 }
