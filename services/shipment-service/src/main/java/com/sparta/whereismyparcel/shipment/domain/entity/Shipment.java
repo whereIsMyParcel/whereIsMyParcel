@@ -1,6 +1,7 @@
 package com.sparta.whereismyparcel.shipment.domain.entity;
 
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
+import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentAlreadyStartedException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -102,6 +103,7 @@ public class Shipment extends BaseEntity {
             UUID destinationHubId,
             UUID companyDeliveryManagerId,
             String shipmentNumber,
+            ShipmentStatus status,
             String deliveryAddress,
             String recipientName,
             String recipientSlackId
@@ -113,10 +115,32 @@ public class Shipment extends BaseEntity {
                 .destinationHubId(destinationHubId)
                 .companyDeliveryManagerId(companyDeliveryManagerId)
                 .shipmentNumber(shipmentNumber)
-                .shipmentStatus(ShipmentStatus.HUB_WAITING)
+                .shipmentStatus(status)
                 .deliveryAddress(deliveryAddress)
                 .recipientName(recipientName)
                 .recipientSlackId(recipientSlackId)
                 .build();
+    }
+
+    public void cancel() {
+        if (!canCancel()) {
+            throw new ShipmentAlreadyStartedException();
+        }
+
+        this.shipmentStatus = ShipmentStatus.CANCELLED;
+    }
+
+    public boolean canCancel() {
+        return this.shipmentStatus.canCancel();
+    }
+
+    public boolean isAssignedDeliveryManager(UUID managerId) {
+
+        boolean companyMatch = companyDeliveryManagerId.equals(managerId);
+
+        boolean hubMatch = histories.stream()
+                .anyMatch(h -> managerId.equals(h.getHubDeliveryManagerId()));
+
+        return companyMatch || hubMatch;
     }
 }
