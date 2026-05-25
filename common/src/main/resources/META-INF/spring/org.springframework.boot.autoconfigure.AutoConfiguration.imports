@@ -2,3 +2,4 @@ com.sparta.whereismyparcel.common.config.CommonWebAutoConfiguration
 com.sparta.whereismyparcel.common.config.CommonJpaAutoConfiguration
 com.sparta.whereismyparcel.common.config.CommonSwaggerAutoConfiguration
 com.sparta.whereismyparcel.common.config.CommonSecurityAutoConfiguration
+com.sparta.whereismyparcel.common.config.CommonFeignAutoConfiguration

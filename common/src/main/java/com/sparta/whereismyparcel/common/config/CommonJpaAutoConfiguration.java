@@ -26,11 +26,11 @@ public class CommonJpaAutoConfiguration {
 				return Optional.of("SYSTEM");
 			}
 			HttpServletRequest request = attrs.getRequest();
-			String userId = request.getHeader("X-User-Id");
-			if (!StringUtils.hasText(userId)) {
+			String username = request.getHeader("X-Username");
+			if (!StringUtils.hasText(username)) {
 				return Optional.of("SYSTEM");
 			}
-			return Optional.of(userId);
+			return Optional.of(username);
 		};
 	}
 }

@@ -3,6 +3,7 @@ package com.sparta.whereismyparcel.aislack.domain.entity;
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -40,6 +41,7 @@ public class SlackMessage extends BaseEntity {
     @Column(name = "sent_at", nullable = false)
     private LocalDateTime sentAt; // 발송 시간
 
+    @Builder(access = AccessLevel.PRIVATE)
     private SlackMessage(
             String slackId,
             UUID receiverId,
@@ -53,11 +55,20 @@ public class SlackMessage extends BaseEntity {
         this.sentAt = LocalDateTime.now();
     }
 
-    // TODO: 생성 메서드
+    public static SlackMessage create(
+            String slackId,
+            UUID receiverId,
+            String message
+    ) {
+        return SlackMessage.builder()
+                .slackId(slackId)
+                .receiverId(receiverId)
+                .message(message)
+                .build();
+    }
 
     // 비지니스 로직
 
-    // TODO: 상태 전이 메서드 구현
     /*
     발송 실패시 재시도 횟수 증가 및 상태 관리
      */

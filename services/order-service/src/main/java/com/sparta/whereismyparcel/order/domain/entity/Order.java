@@ -3,11 +3,14 @@ package com.sparta.whereismyparcel.order.domain.entity;
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
+import com.sparta.whereismyparcel.order.domain.exception.OrderCancelTimeExpiredException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +70,7 @@ public class Order extends BaseEntity {
     @Column(name = "ordered_by", length = 100)
     private String orderedBy;
 
+    @Builder(access = AccessLevel.PRIVATE)
     private Order(
             UUID companyMemberId,
             String orderNumber,
@@ -106,21 +110,20 @@ public class Order extends BaseEntity {
             String orderedBy,
             List<OrderItem> orderItems
     ) {
-        if (orderItems == null || orderItems.isEmpty()) {
-            throw new InvalidOrderItemsException();
-        }
-        Order order = new Order(
-                companyMemberId,
-                orderNumber,
-                recipientName,
-                recipientPhone,
-                zipCode,
-                address,
-                addressDetail,
-                requestMemo,
-                deliveryDeadline,
-                orderedBy
-        );
+        validateOrderItems(orderItems);
+
+        Order order = Order.builder()
+                .companyMemberId(companyMemberId)
+                .orderNumber(orderNumber)
+                .recipientName(recipientName)
+                .recipientPhone(recipientPhone)
+                .zipCode(zipCode)
+                .address(address)
+                .addressDetail(addressDetail)
+                .requestMemo(requestMemo)
+                .deliveryDeadline(deliveryDeadline)
+                .orderedBy(orderedBy)
+                .build();
 
         orderItems.forEach(order::addItem);
         order.totalPrice = order.calculateTotalPrice();
@@ -128,22 +131,36 @@ public class Order extends BaseEntity {
         return order;
     }
 
-    public void confirm() {
+    public void reserveStock() {
         if (this.orderStatus != OrderStatus.PENDING) {
+            throw new InvalidOrderStatusException();
+        }
+        this.orderStatus = OrderStatus.STOCK_RESERVED;
+    }
+
+    public void confirm() {
+        if (this.orderStatus != OrderStatus.STOCK_RESERVED) {
             throw new InvalidOrderStatusException();
         }
         this.orderStatus = OrderStatus.CONFIRMED;
     }
 
     public void cancel() {
-        if (this.orderStatus != OrderStatus.PENDING && this.orderStatus != OrderStatus.CONFIRMED) {
+        if (
+                this.orderStatus != OrderStatus.PENDING
+                && this.orderStatus != OrderStatus.STOCK_RESERVED
+                && this.orderStatus != OrderStatus.CONFIRMED
+        ) {
             throw new InvalidOrderStatusException();
         }
         this.orderStatus = OrderStatus.CANCELLED;
     }
 
     public void fail() {
-        if (this.orderStatus != OrderStatus.PENDING) {
+        if (
+                this.orderStatus != OrderStatus.PENDING
+                        && this.orderStatus != OrderStatus.STOCK_RESERVED
+        ) {
             throw new InvalidOrderStatusException();
         }
         this.orderStatus = OrderStatus.FAILED;
@@ -164,6 +181,18 @@ public class Order extends BaseEntity {
     private void addItem(OrderItem orderItem) {
         this.orderItems.add(orderItem);
         orderItem.assignOrder(this);
+    }
+
+    public void validateCancelableTime(LocalDateTime now, Duration cancelLimit) {
+        if (orderedAt.plus(cancelLimit).isBefore(now)) {
+            throw new OrderCancelTimeExpiredException();
+        }
+    }
+
+    private static void validateOrderItems(List<OrderItem> orderItems) {
+        if (orderItems == null || orderItems.isEmpty()) {
+            throw new InvalidOrderItemsException();
+        }
     }
 
     private Long calculateTotalPrice() {

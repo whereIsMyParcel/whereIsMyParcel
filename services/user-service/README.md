@@ -13,7 +13,10 @@
 | 회원 거절 `PATCH /api/v1/users/{userId}/reject` | ✅ 완료 |
 | 회원 단건 조회 `GET /api/v1/users/{userId}` | ✅ 완료 |
 | 회원 목록 조회 `GET /api/v1/users` | ✅ 완료 |
-| 회원 삭제 `DELETE /api/v1/users/{userId}` | 구현 예정 |
+| 회원 수정 `PATCH /api/v1/users/{userId}` | ✅ 완료 |
+| 회원 삭제 `DELETE /api/v1/users/{userId}` | ✅ 완료 |
+| 내부 회원 조회 `GET /internal/v1/users/{userId}` | ✅ 완료 |
+| 내부 사업자번호 조회 `GET /internal/v1/users/by-business-number/{businessNumber}` | ✅ 완료 |
 
 ---
 
@@ -183,6 +186,114 @@
   }
 }
 ```
+
+---
+
+### PATCH /api/v1/users/{userId} — 회원 수정
+
+`MASTER` 또는 본인만 가능
+
+**Request Body** — 전달한 필드만 수정됨 (null이면 기존 값 유지)
+
+| 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| `name` | `String` | 이름 (최대 50자) |
+| `phone` | `String` | 전화번호 (`010-1234-5678` 형식) |
+| `slackId` | `String` | Slack 사용자 ID |
+
+**Response** `200 OK`
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "errorCode": null,
+  "message": "OK",
+  "data": {
+    "userId": "9e4813b2-2642-4729-ad9c-f3f7d3abcb51",
+    "username": "user01",
+    "name": "변경된이름",
+    "email": "hong@example.com",
+    "phone": "010-9999-8888",
+    "role": "COMPANY_MANAGER",
+    "status": "APPROVED",
+    "slackId": "NEW_SLACK_ID",
+    "businessNumber": "123-45-67890",
+    "hubId": null,
+    "companyId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+  }
+}
+```
+
+---
+
+### DELETE /api/v1/users/{userId} — 회원 삭제
+
+`X-User-Role: MASTER` 필요
+
+| 파라미터 | 타입 | 설명 |
+| --- | --- | --- |
+| `userId` | `UUID` | 삭제할 회원의 ID |
+
+**Response** `200 OK`
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "errorCode": null,
+  "message": "OK",
+  "data": null
+}
+```
+
+> Soft delete 처리 (`deleted_at` 세팅) 및 Keycloak 계정 `enabled = false`로 비활성화됩니다.
+
+---
+
+## 내부 API (서비스 간 통신 전용)
+
+게이트웨이를 거치지 않고 다른 서비스가 Feign으로 직접 호출하는 엔드포인트입니다. 인증 불필요 (`/internal/**` permitAll).
+Swagger UI에 노출되지 않습니다 (`@Hidden`).
+
+### GET /internal/v1/users/{userId}
+
+| 파라미터 | 타입 | 설명 |
+| --- | --- | --- |
+| `userId` | `UUID` | 조회할 회원의 ID |
+
+**Response** `200 OK`
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "errorCode": null,
+  "message": "OK",
+  "data": {
+    "userId": "9e4813b2-2642-4729-ad9c-f3f7d3abcb51",
+    "username": "user01",
+    "name": "홍길동",
+    "email": "user01@example.com",
+    "role": "COMPANY_MANAGER",
+    "status": "APPROVED",
+    "slackId": "U012AB3CD",
+    "businessNumber": "123-45-67890",
+    "hubId": null,
+    "companyId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+  }
+}
+```
+
+### GET /internal/v1/users/by-business-number/{businessNumber}
+
+| 파라미터 | 타입 | 설명 |
+| --- | --- | --- |
+| `businessNumber` | `String` | 사업자등록번호 (`123-45-67890` 형식) |
+
+**Response** `200 OK` — 위와 동일한 `InternalUserResponse`
+
+> company-service가 COMPANY_MANAGER 검증 시 사용합니다.
 
 ---
 

@@ -9,6 +9,7 @@ import com.sparta.whereismyparcel.user.domain.exception.UserNotFoundException;
 import com.sparta.whereismyparcel.user.domain.repository.UserRepository;
 import com.sparta.whereismyparcel.user.infrastructure.keycloak.KeycloakAdminService;
 import com.sparta.whereismyparcel.user.presentation.dto.request.SignupRequest;
+import com.sparta.whereismyparcel.user.presentation.dto.request.UpdateUserRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -63,7 +64,7 @@ class UserServiceTest {
 			given(userRepository.existsByBusinessNumber("123-45-67890")).willReturn(false);
 			given(keycloakAdminService.createUser(anyString(), anyString(), anyString()))
 					.willReturn(keycloakId);
-			given(userRepository.save(any(User.class))).willAnswer(inv -> inv.getArgument(0));
+			given(userRepository.saveAndFlush(any(User.class))).willAnswer(inv -> inv.getArgument(0));
 
 			// when
 			var response = userService.signup(request);
@@ -140,7 +141,7 @@ class UserServiceTest {
 			given(userRepository.existsByEmail("hong@test.com")).willReturn(false);
 			given(keycloakAdminService.createUser(anyString(), anyString(), anyString()))
 					.willReturn(keycloakId);
-			given(userRepository.save(any(User.class))).willAnswer(inv -> inv.getArgument(0));
+			given(userRepository.saveAndFlush(any(User.class))).willAnswer(inv -> inv.getArgument(0));
 
 			// when
 			var response = userService.signup(request);
@@ -382,6 +383,94 @@ class UserServiceTest {
 			// then
 			assertThat(response.getTotalElements()).isEqualTo(0);
 			assertThat(response.getContent()).isEmpty();
+		}
+	}
+
+	@Nested
+	@DisplayName("회원 수정")
+	class UpdateUser {
+
+		@Test
+		@DisplayName("전달한 필드로 수정된다")
+		void success() {
+			// given
+			UUID userId = UUID.randomUUID();
+			User user = createUser(userId, UserStatus.APPROVED);
+			UpdateUserRequest request = new UpdateUserRequest("변경된이름", "010-1111-2222", "NEW_SLACK");
+			given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+			// when
+			var response = userService.updateUser(userId, request);
+
+			// then
+			assertThat(response.name()).isEqualTo("변경된이름");
+			assertThat(response.phone()).isEqualTo("010-1111-2222");
+			assertThat(response.slackId()).isEqualTo("NEW_SLACK");
+		}
+
+		@Test
+		@DisplayName("null인 필드는 기존 값을 유지한다")
+		void nullFieldsKeepExistingValues() {
+			// given
+			UUID userId = UUID.randomUUID();
+			User user = createUser(userId, UserStatus.APPROVED);
+			UpdateUserRequest request = new UpdateUserRequest("변경된이름", null, null);
+			given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+			// when
+			var response = userService.updateUser(userId, request);
+
+			// then
+			assertThat(response.name()).isEqualTo("변경된이름");
+			assertThat(response.phone()).isEqualTo("010-0000-0000");
+			assertThat(response.slackId()).isEqualTo("SLACK_ID");
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 사용자는 수정할 수 없다")
+		void userNotFound() {
+			// given
+			UUID userId = UUID.randomUUID();
+			UpdateUserRequest request = new UpdateUserRequest("변경된이름", null, null);
+			given(userRepository.findById(userId)).willReturn(Optional.empty());
+
+			// when // then
+			assertThatThrownBy(() -> userService.updateUser(userId, request))
+					.isInstanceOf(UserNotFoundException.class);
+		}
+	}
+
+	@Nested
+	@DisplayName("회원 삭제")
+	class DeleteUser {
+
+		@Test
+		@DisplayName("회원을 삭제하면 soft delete 처리되고 Keycloak 계정이 비활성화된다")
+		void success() {
+			// given
+			UUID userId = UUID.randomUUID();
+			User user = createUser(userId, UserStatus.APPROVED);
+			given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+			// when
+			userService.deleteUser(userId, "master-id");
+
+			// then
+			assertThat(user.isDeleted()).isTrue();
+			then(keycloakAdminService).should().disableUser(userId);
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 사용자는 삭제할 수 없다")
+		void userNotFound() {
+			// given
+			UUID userId = UUID.randomUUID();
+			given(userRepository.findById(userId)).willReturn(Optional.empty());
+
+			// when // then
+			assertThatThrownBy(() -> userService.deleteUser(userId, "master-id"))
+					.isInstanceOf(UserNotFoundException.class);
+			then(keycloakAdminService).should(never()).disableUser(any());
 		}
 	}
 

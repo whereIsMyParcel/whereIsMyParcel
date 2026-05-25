@@ -3,6 +3,7 @@ package com.sparta.whereismyparcel.order.domain.entity;
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -38,6 +39,7 @@ public class OrderItem extends BaseEntity {
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
+    @Builder(access = AccessLevel.PRIVATE)
     private OrderItem(
             UUID productVariantId,
             String productNameSnapshot,
@@ -59,13 +61,13 @@ public class OrderItem extends BaseEntity {
             Long unitPrice,
             Integer quantity
     ) {
-        return new OrderItem(
-                productVariantId,
-                productNameSnapshot,
-                productOptionSnapshot,
-                unitPrice,
-                quantity
-        );
+        return OrderItem.builder()
+                .productVariantId(productVariantId)
+                .productNameSnapshot(productNameSnapshot)
+                .productOptionSnapshot(productOptionSnapshot)
+                .unitPrice(unitPrice)
+                .quantity(quantity)
+                .build();
     }
 
     void assignOrder(Order order) {

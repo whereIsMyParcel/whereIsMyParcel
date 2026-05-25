@@ -3,12 +3,15 @@ package com.sparta.whereismyparcel.order.presentation.controller;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.order.application.service.OrderService;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -24,5 +27,13 @@ public class OrderController {
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(orderService.createOrder(userId, request)));
+    }
+
+    @PatchMapping("/{orderId}/cancel")
+    public ResponseEntity<ApiResponse<OrderCancelResponse>> cancelOrder(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable UUID orderId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(orderService.cancelOrder(userId, orderId)));
     }
 }
