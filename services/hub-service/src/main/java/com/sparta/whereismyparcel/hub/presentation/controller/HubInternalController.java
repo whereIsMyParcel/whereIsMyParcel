@@ -14,6 +14,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/internal/v1")
 @RequiredArgsConstructor
+/**
+ * 타 마이크로서비스(Order, Company, Delivery 등)와의 내부 통신을 전담하는 Controller.
+ * 외부(클라이언트) 노출을 막기 위해 Gateway에서 JWT 필터를 타지 않도록 구성
+ */
 public class HubInternalController {
 
     private final HubService hubService;

@@ -20,6 +20,10 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+/**
+ * 다익스트라(Dijkstra) 알고리즘 기반 최단 경로 탐색 서비스.
+ * 알고리즘 최적화(인접 리스트) 및 Redis 캐시(Jitter를 통한 캐시 스탬피드 방지)가 적용되어 있습니다.
+ */
 public class ShortestPathService {
 
     private final HubRepository hubRepository;
