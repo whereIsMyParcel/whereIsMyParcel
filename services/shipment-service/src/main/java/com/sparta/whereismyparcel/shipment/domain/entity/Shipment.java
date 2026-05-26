@@ -81,7 +81,8 @@ public class Shipment extends BaseEntity {
             String recipientSlackId,
             LocalDateTime estimatedDeliveryAt,
             LocalDateTime shippedAt,
-            LocalDateTime deliveredAt
+            LocalDateTime deliveredAt,
+            List<ShipmentHistory> histories
     ) {
         this.orderId = orderId;
         this.originHubId = originHubId;
@@ -96,6 +97,7 @@ public class Shipment extends BaseEntity {
         this.estimatedDeliveryAt = estimatedDeliveryAt;
         this.shippedAt = shippedAt;
         this.deliveredAt = deliveredAt;
+        this.histories = histories;
     }
 
     public static Shipment create(
@@ -150,9 +152,14 @@ public class Shipment extends BaseEntity {
             throw new ShipmentCannotBeDeliveredException();
         }
         this.shipmentStatus = ShipmentStatus.DELIVERED;
+        this.deliveredAt = LocalDateTime.now();
     }
 
     public boolean isDelivered() {
         return this.shipmentStatus == ShipmentStatus.DELIVERED;
+    }
+
+    public void addHistories(List<ShipmentHistory> histories){
+        this.histories = histories;
     }
 }
