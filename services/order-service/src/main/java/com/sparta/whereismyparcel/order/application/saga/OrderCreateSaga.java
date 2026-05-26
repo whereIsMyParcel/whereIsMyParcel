@@ -36,6 +36,7 @@ public class OrderCreateSaga {
             context.applyReservation(reservations.stream()
                     .map(r -> new OrderCreateSagaContext.StockReservation(r.skuId(), null, r.reservedQuantity()))
                     .toList());
+            order.reserveStock();
         } catch (Exception e) {
             log.error("[Saga] 재고 예약 실패. orderId={}", context.getOrderId(), e);
             order.fail();

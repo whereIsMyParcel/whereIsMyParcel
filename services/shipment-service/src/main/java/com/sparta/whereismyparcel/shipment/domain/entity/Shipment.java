@@ -1,11 +1,14 @@
 package com.sparta.whereismyparcel.shipment.domain.entity;
 
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
+import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentAlreadyStartedException;
+import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentCannotBeDeliveredException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -16,6 +19,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "p_shipments")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SQLRestriction("deleted_at IS NULL")
 public class Shipment extends BaseEntity {
 
     @Id
@@ -100,6 +104,7 @@ public class Shipment extends BaseEntity {
             UUID destinationHubId,
             UUID companyDeliveryManagerId,
             String shipmentNumber,
+            ShipmentStatus status,
             String deliveryAddress,
             String recipientName,
             String recipientSlackId
@@ -111,10 +116,43 @@ public class Shipment extends BaseEntity {
                 .destinationHubId(destinationHubId)
                 .companyDeliveryManagerId(companyDeliveryManagerId)
                 .shipmentNumber(shipmentNumber)
-                .shipmentStatus(ShipmentStatus.HUB_WAITING)
+                .shipmentStatus(status)
                 .deliveryAddress(deliveryAddress)
                 .recipientName(recipientName)
                 .recipientSlackId(recipientSlackId)
                 .build();
+    }
+
+    public void cancel() {
+        if (!canCancel()) {
+            throw new ShipmentAlreadyStartedException();
+        }
+
+        this.shipmentStatus = ShipmentStatus.CANCELLED;
+    }
+
+    public boolean canCancel() {
+        return this.shipmentStatus.canCancel();
+    }
+
+    public boolean isAssignedDeliveryManager(UUID managerId) {
+
+        boolean companyMatch = companyDeliveryManagerId.equals(managerId);
+
+        boolean hubMatch = histories.stream()
+                .anyMatch(h -> managerId.equals(h.getHubDeliveryManagerId()));
+
+        return companyMatch || hubMatch;
+    }
+
+    public void delivered() {
+        if (this.shipmentStatus != ShipmentStatus.COMPANY_MOVING) {
+            throw new ShipmentCannotBeDeliveredException();
+        }
+        this.shipmentStatus = ShipmentStatus.DELIVERED;
+    }
+
+    public boolean isDelivered() {
+        return this.shipmentStatus == ShipmentStatus.DELIVERED;
     }
 }

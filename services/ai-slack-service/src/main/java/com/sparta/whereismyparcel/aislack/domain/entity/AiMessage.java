@@ -3,6 +3,7 @@ package com.sparta.whereismyparcel.aislack.domain.entity;
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -38,6 +39,7 @@ public class AiMessage extends BaseEntity {
     @Column(name = "final_dispatch_deadline",nullable = false)
     private LocalDateTime finalDispatchDeadline; // ai가 계산한 최종 발송 시한.
 
+    @Builder(access = AccessLevel.PRIVATE)
     private AiMessage(
             UUID orderId,
             String requestContent,
@@ -51,11 +53,22 @@ public class AiMessage extends BaseEntity {
         this.finalDispatchDeadline = finalDispatchDeadline;
     }
 
-    //TODO: 생성 메서드
+    public static AiMessage create(
+            UUID orderId,
+            String requestContent,
+            String responseContent,
+            LocalDateTime finalDispatchDeadline
 
-    // 비지니스 로직
+    ){
+        return AiMessage.builder()
+                .orderId(orderId)
+                .requestContent(requestContent)
+                .responseContent(responseContent)
+                .finalDispatchDeadline(finalDispatchDeadline)
+                .build();
+    }
 
-    // TODO: 상태 전이 메서드 구현
+
 
 
 
