@@ -25,7 +25,7 @@ public class ProductController {
 
     // 상품 등록
     @PostMapping
-    @PreAuthorize("hasRole('COMPANY_MENAGER')")
+    @PreAuthorize("hasRole('COMPANY_MANAGER')")
     public ResponseEntity<ApiResponse<ProductResponse>> registerProduct(
             @RequestBody @Valid ProductRegisterRequest registerRequest) {
         ProductResponse response = productService.registerProduct(registerRequest);
@@ -67,7 +67,7 @@ public class ProductController {
     }
 
     // 상품 상태 변경
-    @PatchMapping("/{productId}")
+    @PatchMapping("/{productId}/status")
     @PreAuthorize("hasRole('COMPANY_MANAGER')")
     public ResponseEntity<ApiResponse<ProductStatusResponse>> updateProductStatus(
             @PathVariable UUID productId,
@@ -77,7 +77,7 @@ public class ProductController {
     }
 
     // 상품 옵션 상태 변경
-    @PatchMapping("/{productId}/optionValues/{optionValueId}")
+    @PatchMapping("/{productId}/optionValues/{optionValueId}/status")
     @PreAuthorize("hasRole('COMPANY_MANAGER')")
     public ResponseEntity<ApiResponse<List<VariantResponse>>> updateOptionStatus(
             @PathVariable UUID productId,
@@ -98,7 +98,7 @@ public class ProductController {
     }
 
     // 상품 옵션 삭제
-    @DeleteMapping("/{productId}/optionValuses/{optionValueId}")
+    @DeleteMapping("/{productId}/optionValues/{optionValueId}")
     @PreAuthorize("hasRole('COMPANY_MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deleteOption(
             @PathVariable UUID productId,

@@ -109,7 +109,7 @@ public class Inventory extends BaseEntity {
     }
 
     public void autoIncreaseQuantity() {
-        if (this.safetyStockQuantity < 5) {
+        if (this.quantity < this.safetyStockQuantity) {
             this.quantity += 100;
         }
     }

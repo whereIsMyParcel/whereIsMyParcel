@@ -77,7 +77,7 @@ public class CompanyController {
     }
 
     @Operation(summary = "업체 멤버 등록", description = "업체 멤버 등록")
-    @PostMapping("/{companyId}/member}")
+    @PostMapping("/{companyId}/member")
     @PreAuthorize("hasRole('COMPANY_MANAGER')")
     public ResponseEntity<ApiResponse<CompanyMemberResponse>> registerCompanyMember(
             @PathVariable UUID companyId,
@@ -97,7 +97,7 @@ public class CompanyController {
     }
 
     @Operation(summary = "업체 멤버 삭제", description = "업체 멤버 삭제")
-    @DeleteMapping("/{companyId}/member/{memberId}")
+    @DeleteMapping("/{companyId}/member")
     @PreAuthorize("hasRole('COMPANY_MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deleteCompanyMember(
             @PathVariable UUID companyId,

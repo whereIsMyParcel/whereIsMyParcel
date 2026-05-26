@@ -14,10 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +42,23 @@ public class ProductService {
         // 2. 최상위 상품을 명시적 영속화
         // 상품 기본정보를 영속성 1차 캐시에 저장[대대장] -> 이때 UUID가 발급되어 저장 쓰기지연으로 저장
         Product savedProduct = productRepository.save(product);
+
+        // 옵션이 없는 경우
+        if (request.options() == null || request.options().isEmpty()) {
+            String skuCode = "SKU-" + savedProduct.getId().toString().substring(0, 8).toUpperCase() + "-001";
+
+            ProductVariant defaultVariant = ProductVariant.addVariant(
+                    savedProduct,
+                    skuCode,
+                    savedProduct.getName(),
+                    savedProduct.getPrice()
+            );
+            ProductVariant savedVariant = productVariantRepository.save(defaultVariant);
+
+            List<OptionResponse> emptyOptions = Collections.emptyList();
+            List<VariantResponse> variants = List.of(VariantResponse.from(savedVariant));
+            return ProductResponse.from(savedProduct, emptyOptions, variants);
+        }
 
         // 3. 최종 API응답을 계층형 구조로 빌드하기 위해 빈 리스트 생성
         List<OptionResponse> optionResponses = new ArrayList<>(); // 최종 옵션

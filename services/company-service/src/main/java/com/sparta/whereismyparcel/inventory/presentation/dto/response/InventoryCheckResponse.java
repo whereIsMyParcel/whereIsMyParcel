@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public record InventoryCheckResponse(
         UUID inventoryId,
-        UUID hunId,
+        UUID hubId,
         UUID productVariantId,
         Integer availableQuantity
 ) {

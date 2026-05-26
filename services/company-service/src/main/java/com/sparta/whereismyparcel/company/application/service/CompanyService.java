@@ -1,6 +1,5 @@
 package com.sparta.whereismyparcel.company.application.service;
 
-import com.sparta.whereismyparcel.common.dto.HubValidateRequest;
 import com.sparta.whereismyparcel.common.infrastructure.client.HubFeignClient;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.company.domain.entity.Company;
@@ -39,7 +38,6 @@ public class CompanyService {
     // 업체 등록
     @Transactional
     public CompanyResponse registerCompany(CompanyRegisterRequest request) {
-        // 해당 허브가 존재하는지 검증
         ApiResponse<Boolean> hubCheck = hubFeignClient.isHubExists(request.hubId());
         if (hubCheck == null || !hubCheck.success() || Boolean.FALSE.equals(hubCheck.data())) {
             throw new HubNotFoundException();
@@ -66,7 +64,6 @@ public class CompanyService {
 
         Company savedCompany = companyRepository.save(company);
 
-        // TODO : 리퀘스트를 만들어서 등록할 유저의 아이디를 입력을 하고 유저서비스에 해당 아이디의 유저에 컴퍼니아이디를 내가 주는걸로 넣어라
         ApiResponse<Void> updateUserResponse = userFeignClient.updateUserCompanyId(managerId, savedCompany.getCompanyId());
         if (updateUserResponse == null || !updateUserResponse.success()) {
             throw new UserSyncFailedException();
@@ -79,10 +76,8 @@ public class CompanyService {
 
     // 업체 조회
     public CompanyResponse getCompany(UUID companyId) {
-        // TODO : 만약 허브 상태가 활성상태가 아닐시 검증 필요하면 작성
-
         Company company = companyRepository.findByCompanyIdAndStatus(companyId, CompanyStatus.ACTIVE)
-                .orElseThrow(() -> new IllegalArgumentException("해당 업체를 찾을 수 없습니다"));
+                .orElseThrow(CompanyNotFoundException::new);
         return CompanyResponse.from(company);
     }
 
@@ -97,7 +92,7 @@ public class CompanyService {
     @Transactional
     public CompanyResponse updateCompanyDetails(UUID companyId, CompanyUpdateRequest request) {
         Company company = companyRepository.findByCompanyIdAndStatus(companyId, CompanyStatus.ACTIVE)
-                .orElseThrow(() -> new IllegalArgumentException("해당 업체를 찾을 수 없습니다"));
+                .orElseThrow(CompanyNotFoundException::new);
 
         company.updateDetails(
                 request.companyType(),
@@ -119,12 +114,11 @@ public class CompanyService {
                 .orElseThrow(CompanyNotFoundException::new);
 
         company.delete(hubManagerOrMasterId);
-        // TODO : feign으로 유저에게 해당 컴퍼니 아이디를 가진 유저들의 컴퍼니 아이디를 지워달라고 요청 (아예 유저를 지워도 될것 같습니다)
+
         ApiResponse<Void> userDeleteResponse = userFeignClient.deleteAllUsersInCompany(companyId);
 
-        // 4. 유저 서비스 쪽에서 처리하다가 에러가 났거나 통신 실패 시 방어 코드
-        if (userDeleteResponse == null || !userDeleteResponse.success()) { // 또는 .isSuccess() 등 프로젝트 공통 포맷에 맞춤
-            throw new UserNotFoundException();
+        if (userDeleteResponse == null || !userDeleteResponse.success()) {
+            throw new UserSyncFailedException();
         }
     }
 
@@ -134,18 +128,17 @@ public class CompanyService {
         Company company = companyRepository.findByCompanyIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
 
-        Boolean isExistsMember = companyMemberRepository.existsByUserId(request.userId());
+        Boolean isExistsMember = companyMemberRepository.existsByUserId(request.companyMemberId());
         if (isExistsMember) {
             throw new AlreadyRegisterMemberException();
         }
 
-        // TODO : 리퀘스트를 만들어서 등록할 유저의 아이디를 입력을 하고 유저서비스에 해당 아이디의 유저에 컴퍼니아이디를 내가 주는걸로 넣어라
-        ApiResponse<Void> updateUserResponse = userFeignClient.updateUserCompanyId(request.userId(), companyId);
+        ApiResponse<Void> updateUserResponse = userFeignClient.updateUserCompanyId(request.companyMemberId(), companyId);
         if (updateUserResponse == null || !updateUserResponse.success()) {
             throw new UserSyncFailedException();
         }
 
-        CompanyMember companyMember = CompanyMember.addMember(request.userId(), company);
+        CompanyMember companyMember = CompanyMember.addMember(request.companyMemberId(), company);
         companyMemberRepository.save(companyMember);
         return CompanyMemberResponse.from(companyMember);
     }
@@ -165,11 +158,10 @@ public class CompanyService {
         Company company = companyRepository.findByCompanyIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
 
-        CompanyMember companyMember = companyMemberRepository.findByCompanyMemberIdAndStatus(request.userId(), CompanyMemberStatus.ACTIVE)
+        CompanyMember companyMember = companyMemberRepository.findByCompanyMemberIdAndStatus(request.companyMemberId(), CompanyMemberStatus.ACTIVE)
                 .orElseThrow(CompanyMemberNotFoundException::new);
 
-        // TODO : 유저 서비스에서 해당 유저를 지워달라고 요청
-        ApiResponse<Void> updateUserResponse = userFeignClient.deleteUserOrClearCompany(request.userId());
+        ApiResponse<Void> updateUserResponse = userFeignClient.deleteUserOrClearCompany(request.companyMemberId());
         if (updateUserResponse == null || !updateUserResponse.success()) {
             throw new UserSyncFailedException();
         }
