@@ -32,7 +32,7 @@ public class ProductVariant extends BaseEntity {
     @Column(name = "sku_code", nullable = false, updatable = false, unique = true)
     private String skuCode;
 
-    @Column(name = "variant_name", nullable = false, updatable = false)
+    @Column(name = "variant_name", nullable = false)
     private String variantName;
 
     @Column(name = "variant_price", nullable = false)

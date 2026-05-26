@@ -29,7 +29,7 @@ public class CompanyController {
 
     private final CompanyService companyService;
 
-    @Operation(summary = "업체 등록", description = "가입 시 사업자번호를 가진 유저가 최초 매니저로 지정됩니다.")
+    @Operation(summary = "업체 등록", description = "MASTER, HUB_MANAGER")
     @PostMapping
     @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER')")
     public ResponseEntity<ApiResponse<CompanyResponse>> registerCompany(
@@ -39,13 +39,13 @@ public class CompanyController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(response));
     }
 
-    @Operation(summary = "업체 조회", description = "해당 업체의 정보를 조회합니다")
+    @Operation(summary = "업체 조회", description = "ALL")
     @GetMapping("/{companyId}")
     public ResponseEntity<ApiResponse<CompanyResponse>> getCompany(@PathVariable UUID companyId) {
         return ResponseEntity.ok(ApiResponse.success(companyService.getCompany(companyId)));
     }
 
-    @Operation(summary = "업체 목록 조회", description = "업체 목록을 조회합니다")
+    @Operation(summary = "업체 목록 조회", description = "ALL")
     @GetMapping
     public ResponseEntity<ApiResponse<Page<CompanyListResponse>>> getCompanies (
             @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
@@ -54,7 +54,7 @@ public class CompanyController {
         return ResponseEntity.ok(ApiResponse.success(companies));
     }
 
-    @Operation(summary = "업체 수정", description = "업체 수정")
+    @Operation(summary = "업체 수정", description = "COMPANY_MANAGER")
     @PatchMapping("/{companyId}")
     @PreAuthorize("hasRole('COMPANY_MANAGER')")
     public ResponseEntity<ApiResponse<CompanyResponse>> updateCompany(
@@ -65,7 +65,7 @@ public class CompanyController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    @Operation(summary = "업체 삭제", description = "업체 삭제")
+    @Operation(summary = "업체 삭제", description = "MASTER, HUB_MANAGER")
     @DeleteMapping("/{companyId}")
     @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deleteCompany(
@@ -76,7 +76,7 @@ public class CompanyController {
         return ResponseEntity.ok(ApiResponse.ok());
     }
 
-    @Operation(summary = "업체 멤버 등록", description = "업체 멤버 등록")
+    @Operation(summary = "업체 멤버 등록",description = "COMPANY_MANAGER")
     @PostMapping("/{companyId}/member")
     @PreAuthorize("hasRole('COMPANY_MANAGER')")
     public ResponseEntity<ApiResponse<CompanyMemberResponse>> registerCompanyMember(
@@ -87,7 +87,7 @@ public class CompanyController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(response));
     }
 
-    @Operation(summary = "업체 멤버 조회", description = "해당 업체 멤버의 정보를 조회합니다")
+    @Operation(summary = "업체 멤버 조회",description = "ALL")
     @GetMapping("/{companyId}/member/{memberId}")
     public ResponseEntity<ApiResponse<CompanyMemberResponse>> getCompanyMember(
             @PathVariable UUID companyId,
@@ -96,7 +96,7 @@ public class CompanyController {
         return ResponseEntity.ok(ApiResponse.success(companyService.getCompanyMember(companyId, memberId)));
     }
 
-    @Operation(summary = "업체 멤버 삭제", description = "업체 멤버 삭제")
+    @Operation(summary = "업체 멤버 삭제", description = "COMPANY_MANAGER")
     @DeleteMapping("/{companyId}/member")
     @PreAuthorize("hasRole('COMPANY_MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deleteCompanyMember(
