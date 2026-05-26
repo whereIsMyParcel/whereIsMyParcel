@@ -16,6 +16,7 @@ import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient
 import com.sparta.whereismyparcel.order.infrastructure.client.ShipmentFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
+import com.sparta.whereismyparcel.order.presentation.dto.request.OrderUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -343,6 +344,98 @@ class OrderServiceTest {
                 endDate,
                 pageable
         )).isInstanceOf(InvalidOrderSearchDateRangeException.class);
+    }
+
+    @Test
+    @DisplayName("주문자는 PENDING 상태 주문의 요청 정보를 수정할 수 있다")
+    void updatePendingOrderByOwner() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderUpdateResponse response = orderService.updateOrder(userId, "COMPANY_MANAGER", orderId, request);
+
+        // then
+        assertThat(response.requestMemo()).isEqualTo(request.requestMemo());
+        assertThat(response.deliveryDeadline()).isEqualTo(request.deliveryDeadline());
+        assertThat(order.getRequestMemo()).isEqualTo(request.requestMemo());
+        assertThat(order.getDeliveryDeadline()).isEqualTo(request.deliveryDeadline());
+    }
+
+    @Test
+    @DisplayName("MASTER는 STOCK_RESERVED 상태 주문의 요청 정보를 수정할 수 있다")
+    void updateStockReservedOrderByMaster() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(UUID.randomUUID().toString());
+        order.reserveStock();
+        OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderUpdateResponse response = orderService.updateOrder(userId, "MASTER", orderId, request);
+
+        // then
+        assertThat(response.orderStatus()).isEqualTo(OrderStatus.STOCK_RESERVED);
+        assertThat(response.requestMemo()).isEqualTo(request.requestMemo());
+        assertThat(response.deliveryDeadline()).isEqualTo(request.deliveryDeadline());
+    }
+
+    @Test
+    @DisplayName("주문자가 아닌 사용자는 주문 요청 정보를 수정할 수 없다")
+    void updateOrderByNonOwnerThrowsException() {
+        // given
+        String ownerId = UUID.randomUUID().toString();
+        String otherUserId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(ownerId);
+        OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.updateOrder(otherUserId, "COMPANY_MANAGER", orderId, request))
+                .isInstanceOf(OrderNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("CONFIRMED 상태 주문은 요청 정보를 수정할 수 없다")
+    void updateConfirmedOrderThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        order.reserveStock();
+        order.confirm();
+        OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.updateOrder(userId, "COMPANY_MANAGER", orderId, request))
+                .isInstanceOf(InvalidOrderStatusException.class);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주문은 요청 정보를 수정할 수 없다")
+    void updateOrderNotFoundThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> orderService.updateOrder(userId, "MASTER", orderId, request))
+                .isInstanceOf(OrderNotFoundException.class);
     }
 
     @Test

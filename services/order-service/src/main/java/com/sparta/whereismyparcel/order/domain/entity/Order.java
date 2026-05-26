@@ -178,6 +178,18 @@ public class Order extends BaseEntity {
         this.orderItems.forEach(item -> item.softDelete(userId));
     }
 
+    public void updateRequestInfo(String requestMemo, LocalDateTime deliveryDeadline) {
+        if (
+                this.orderStatus != OrderStatus.PENDING
+                        && this.orderStatus != OrderStatus.STOCK_RESERVED
+        ) {
+            throw new InvalidOrderStatusException();
+        }
+
+        this.requestMemo = requestMemo;
+        this.deliveryDeadline = deliveryDeadline;
+    }
+
     public boolean isDeletable() {
         return this.orderStatus == OrderStatus.CANCELLED
                 || this.orderStatus == OrderStatus.COMPLETED
