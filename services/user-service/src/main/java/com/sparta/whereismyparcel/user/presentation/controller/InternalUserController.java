@@ -32,4 +32,9 @@ public class InternalUserController {
 			@PathVariable String businessNumber) {
 		return ResponseEntity.ok(ApiResponse.success(userService.getInternalUserByBusinessNumber(businessNumber)));
 	}
+
+	@GetMapping("/by-slack/{slackId}")
+	public ResponseEntity<ApiResponse<InternalUserResponse>> getUserBySlackId(@PathVariable String slackId) {
+		return ResponseEntity.ok(ApiResponse.success(userService.getInternalUserBySlackId(slackId)));
+	}
 }

@@ -13,6 +13,7 @@ public enum UserErrorCode implements ErrorCode {
 	USER_ALREADY_EXISTS(HttpStatus.CONFLICT, "USER-002", "이미 존재하는 사용자입니다."),
 	USER_NOT_APPROVED(HttpStatus.FORBIDDEN, "USER-003", "승인되지 않은 사용자입니다."),
 	INVALID_APPROVAL_STATUS(HttpStatus.BAD_REQUEST, "USER-004", "승인할 수 없는 상태입니다."),
+	SLACK_ID_ALREADY_EXISTS(HttpStatus.CONFLICT, "USER-005", "이미 사용 중인 Slack ID입니다."),
 	KEYCLOAK_USER_CREATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "USER-900", "Keycloak 계정 생성에 실패했습니다.");
 
 	private final HttpStatus status;

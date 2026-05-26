@@ -15,7 +15,7 @@ dependencies {
 	compileOnly 'org.springframework.security:spring-security-web'
 	compileOnly 'org.springframework.security:spring-security-config'
 	compileOnly 'org.springframework.data:spring-data-jpa'
-	compileOnly 'org.springdoc:springdoc-openapi-starter-common:3.0.3'
+	compileOnly 'org.springdoc:springdoc-openapi-starter-common:2.8.9'
 	compileOnly 'io.github.openfeign:feign-core'
 	compileOnly 'com.fasterxml.jackson.core:jackson-databind'
 
