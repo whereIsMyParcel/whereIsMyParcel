@@ -4,6 +4,7 @@ import com.sparta.whereismyparcel.shipment.domain.entity.Shipment;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentAlreadyStartedException;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentUpdateDeniedException;
 import com.sparta.whereismyparcel.shipment.domain.repository.ShipmentRepository;
+import com.sparta.whereismyparcel.shipment.infrastructure.client.OrderClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
@@ -20,6 +20,7 @@ class ShipmentServiceTest {
 
     private ShipmentRepository shipmentRepository;
     private ShipmentService shipmentService;
+    private OrderClient orderClient;
 
     private UUID orderId;
     private UUID managerId;
@@ -27,7 +28,8 @@ class ShipmentServiceTest {
     @BeforeEach
     void setUp() {
         shipmentRepository = mock(ShipmentRepository.class);
-        shipmentService = new ShipmentService(shipmentRepository);
+        orderClient = mock(OrderClient.class);
+        shipmentService = new ShipmentService(shipmentRepository, orderClient);
 
         orderId = UUID.randomUUID();
         managerId = UUID.randomUUID();
@@ -85,6 +87,105 @@ class ShipmentServiceTest {
 
         verify(shipment1, never()).cancel();
         verify(shipment2, never()).cancel();
+    }
+
+    @DisplayName("담당 배송 관리자는 배송 완료 처리할 수 있다")
+    @Test
+    void delivered() {
+        // given
+        UUID shipmentId = UUID.randomUUID();
+
+        Shipment shipment1 = mock(Shipment.class);
+        Shipment shipment2 = mock(Shipment.class);
+
+        given(shipmentRepository.findById(shipmentId))
+                .willReturn(java.util.Optional.of(shipment1));
+
+        given(shipment1.isAssignedDeliveryManager(managerId))
+                .willReturn(true);
+
+        given(shipment1.getOrderId())
+                .willReturn(orderId);
+
+        given(shipmentRepository.findAllByOrderId(orderId))
+                .willReturn(List.of(shipment1, shipment2));
+
+        given(shipment1.isDelivered())
+                .willReturn(true);
+
+        given(shipment2.isDelivered())
+                .willReturn(true);
+
+        // when
+        shipmentService.delivered(managerId.toString(), shipmentId);
+
+        // then
+        verify(shipment1).delivered();
+
+        verify(orderClient)
+                .complete(managerId.toString(), orderId);
+    }
+
+    @DisplayName("담당 배송 관리자가 아니면 배송 완료 시 예외가 발생한다")
+    @Test
+    void delivered_fail_permission() {
+        // given
+        UUID shipmentId = UUID.randomUUID();
+
+        Shipment shipment = mock(Shipment.class);
+
+        given(shipmentRepository.findById(shipmentId))
+                .willReturn(java.util.Optional.of(shipment));
+
+        given(shipment.isAssignedDeliveryManager(managerId))
+                .willReturn(false);
+
+        // when & then
+        assertThatThrownBy(() ->
+                shipmentService.delivered(managerId.toString(), shipmentId)
+        ).isInstanceOf(ShipmentUpdateDeniedException.class);
+
+        verify(shipment, never()).delivered();
+
+        verify(orderClient, never())
+                .complete(anyString(), any(UUID.class));
+    }
+
+    @DisplayName("주문에 속한 배송 중 완료되지 않은 배송이 존재하면 주문 완료 요청하지 않는다")
+    @Test
+    void delivered_not_all_delivered() {
+        // given
+        UUID shipmentId = UUID.randomUUID();
+
+        Shipment shipment1 = mock(Shipment.class);
+        Shipment shipment2 = mock(Shipment.class);
+
+        given(shipmentRepository.findById(shipmentId))
+                .willReturn(java.util.Optional.of(shipment1));
+
+        given(shipment1.isAssignedDeliveryManager(managerId))
+                .willReturn(true);
+
+        given(shipment1.getOrderId())
+                .willReturn(orderId);
+
+        given(shipmentRepository.findAllByOrderId(orderId))
+                .willReturn(List.of(shipment1, shipment2));
+
+        given(shipment1.isDelivered())
+                .willReturn(true);
+
+        given(shipment2.isDelivered())
+                .willReturn(false);
+
+        // when
+        shipmentService.delivered(managerId.toString(), shipmentId);
+
+        // then
+        verify(shipment1).delivered();
+
+        verify(orderClient, never())
+                .complete(anyString(), any(UUID.class));
     }
 
     private Shipment cancelableShipment(boolean canCancel) {
