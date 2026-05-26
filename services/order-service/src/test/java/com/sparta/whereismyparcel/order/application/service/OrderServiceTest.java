@@ -5,6 +5,7 @@ import com.sparta.whereismyparcel.order.application.saga.OrderCreateSaga;
 import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
 import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
+import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderSearchDateRangeException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
 import com.sparta.whereismyparcel.order.domain.exception.OrderErrorCode;
 import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
@@ -321,6 +322,94 @@ class OrderServiceTest {
         assertThatThrownBy(() -> orderService.completeOrder(orderId))
                 .isInstanceOf(InvalidOrderStatusException.class);
         assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("검색 시작일이 종료일보다 이후이면 주문 목록을 조회할 수 없다")
+    void getOrdersWithInvalidDateRangeThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        LocalDateTime startDate = LocalDateTime.now().plusDays(1);
+        LocalDateTime endDate = LocalDateTime.now();
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.getOrders(
+                userId,
+                "MASTER",
+                null,
+                null,
+                startDate,
+                endDate,
+                pageable
+        )).isInstanceOf(InvalidOrderSearchDateRangeException.class);
+    }
+
+    @Test
+    @DisplayName("MASTER는 주문을 삭제할 수 있다")
+    void deleteOrderByMaster() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        order.fail();
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        orderService.deleteOrder(userId, "MASTER", orderId);
+
+        // then
+        assertThat(order.getDeletedAt()).isNotNull();
+        assertThat(order.getDeletedBy()).isEqualTo(userId);
+        assertThat(order.getOrderItems())
+                .allSatisfy(item -> {
+                    assertThat(item.getDeletedAt()).isNotNull();
+                    assertThat(item.getDeletedBy()).isEqualTo(userId);
+                });
+    }
+
+    @Test
+    @DisplayName("PENDING 상태 주문은 삭제할 수 없다")
+    void deletePendingOrderThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.deleteOrder(userId, "MASTER", orderId))
+                .isInstanceOf(InvalidOrderStatusException.class);
+        assertThat(order.getDeletedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("MASTER가 아닌 사용자는 주문을 삭제할 수 없다")
+    void deleteOrderByNonMasterThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+
+        // when & then
+        assertThatThrownBy(() -> orderService.deleteOrder(userId, "COMPANY_MANAGER", orderId))
+                .isInstanceOf(OrderNotFoundException.class);
+        then(orderRepository).should(never()).findByOrderIdAndDeletedAtIsNull(any());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주문은 삭제할 수 없다")
+    void deleteOrderNotFoundThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> orderService.deleteOrder(userId, "MASTER", orderId))
+                .isInstanceOf(OrderNotFoundException.class);
     }
 
     private OrderCreateRequest createRequest() {

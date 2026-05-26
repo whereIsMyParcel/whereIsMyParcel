@@ -178,6 +178,12 @@ public class Order extends BaseEntity {
         this.orderItems.forEach(item -> item.softDelete(userId));
     }
 
+    public boolean isDeletable() {
+        return this.orderStatus == OrderStatus.CANCELLED
+                || this.orderStatus == OrderStatus.COMPLETED
+                || this.orderStatus == OrderStatus.FAILED;
+    }
+
     private void addItem(OrderItem orderItem) {
         this.orderItems.add(orderItem);
         orderItem.assignOrder(this);

@@ -80,4 +80,14 @@ public class OrderController {
     ) {
         return ResponseEntity.ok(ApiResponse.success(orderService.cancelOrder(userId, orderId)));
     }
+
+    @DeleteMapping("/{orderId}")
+    public ResponseEntity<ApiResponse<Void>> deleteOrder(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String role,
+            @PathVariable UUID orderId
+    ) {
+        orderService.deleteOrder(userId, role, orderId);
+        return ResponseEntity.ok(ApiResponse.ok());
+    }
 }
