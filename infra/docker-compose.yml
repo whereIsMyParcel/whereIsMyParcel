@@ -207,6 +207,8 @@ services:
       HUB_DB_URL: ${HUB_DB_URL:-jdbc:postgresql://postgres:5432/sparta_logistics?currentSchema=hub_db}
       DB_USERNAME: ${DB_USERNAME:-sparta}
       DB_PASSWORD: ${DB_PASSWORD:-sparta1234}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis1234}
       ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
     restart: unless-stopped
     networks:
