@@ -8,6 +8,8 @@ public record ShipmentResponse(
         UUID orderId,
         String deliveryAddress,
         String recipientName,
-        String recipientSlackId
+        String recipientSlackId,
+        int shipmentNumber
+
 ) {
 }

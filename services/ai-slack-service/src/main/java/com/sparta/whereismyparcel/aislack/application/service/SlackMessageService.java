@@ -58,7 +58,7 @@ public class SlackMessageService {
     @Transactional
     public void retrySlackMessage(UUID messageId) {
         SlackMessage slackMessage = getSlackMessage(messageId);
-        slackMessage.retry(); // SlackMessage 엔티티의 retry 로직 호출
+        slackMessage.canRetry(); // SlackMessage 엔티티의 retry 로직 호출
         slackMessageRepository.save(slackMessage);
     }
 }
