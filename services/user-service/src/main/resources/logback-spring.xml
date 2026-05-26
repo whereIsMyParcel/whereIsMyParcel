@@ -11,6 +11,11 @@
         </encoder>
     </appender>
 
+    <appender name="SENTRY" class="io.sentry.logback.SentryAppender">
+        <minimumEventLevel>OFF</minimumEventLevel>
+        <minimumBreadcrumbLevel>INFO</minimumBreadcrumbLevel>
+    </appender>
+
     <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
         <http>
             <url>${LOKI_URL:-http://localhost:3100}/loki/api/v1/push</url>
@@ -20,7 +25,7 @@
                 <pattern>app=${appName},level=%level,host=${HOSTNAME}</pattern>
             </label>
             <message>
-                <pattern>level=%level traceId=%X{traceId} spanId=%X{spanId} message="%msg"%n%ex</pattern>
+                <pattern>level=%level traceId=%X{traceId} spanId=%X{spanId} userId=%X{userId} username=%X{username} message="%msg"%n%ex</pattern>
             </message>
         </format>
     </appender>
@@ -28,5 +33,6 @@
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="LOKI"/>
+        <appender-ref ref="SENTRY"/>
     </root>
 </configuration>

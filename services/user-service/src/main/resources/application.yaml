@@ -5,7 +5,9 @@ spring:
   application:
     name: user-service
   config:
-    import: "optional:configserver:"
+    import:
+      - "optional:configserver:"
+      - "optional:file:.env[.properties]"
   cloud:
     config:
       enabled: ${SPRING_CLOUD_CONFIG_ENABLED:false}
@@ -51,3 +53,9 @@ keycloak:
   admin:
     client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:user-service-admin}
     client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:user-service-admin-secret}
+
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SPRING_PROFILES_ACTIVE:local}
+  traces-sample-rate: 1.0
+  send-default-pii: false

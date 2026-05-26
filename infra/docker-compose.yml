@@ -226,6 +226,7 @@ services:
       KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID}
       KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
       ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+      SENTRY_DSN: ${SENTRY_DSN}
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
