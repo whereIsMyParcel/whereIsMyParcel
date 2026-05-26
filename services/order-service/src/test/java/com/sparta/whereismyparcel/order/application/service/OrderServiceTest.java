@@ -345,6 +345,56 @@ class OrderServiceTest {
         )).isInstanceOf(InvalidOrderSearchDateRangeException.class);
     }
 
+    @Test
+    @DisplayName("MASTER는 주문을 삭제할 수 있다")
+    void deleteOrderByMaster() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        orderService.deleteOrder(userId, "MASTER", orderId);
+
+        // then
+        assertThat(order.getDeletedAt()).isNotNull();
+        assertThat(order.getDeletedBy()).isEqualTo(userId);
+        assertThat(order.getOrderItems())
+                .allSatisfy(item -> {
+                    assertThat(item.getDeletedAt()).isNotNull();
+                    assertThat(item.getDeletedBy()).isEqualTo(userId);
+                });
+    }
+
+    @Test
+    @DisplayName("MASTER가 아닌 사용자는 주문을 삭제할 수 없다")
+    void deleteOrderByNonMasterThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+
+        // when & then
+        assertThatThrownBy(() -> orderService.deleteOrder(userId, "COMPANY_MANAGER", orderId))
+                .isInstanceOf(OrderNotFoundException.class);
+        then(orderRepository).should(never()).findByOrderIdAndDeletedAtIsNull(any());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주문은 삭제할 수 없다")
+    void deleteOrderNotFoundThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> orderService.deleteOrder(userId, "MASTER", orderId))
+                .isInstanceOf(OrderNotFoundException.class);
+    }
+
     private OrderCreateRequest createRequest() {
         return new OrderCreateRequest(
                 UUID.randomUUID(),

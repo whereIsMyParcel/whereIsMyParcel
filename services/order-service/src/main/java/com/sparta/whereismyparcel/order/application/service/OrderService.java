@@ -189,6 +189,18 @@ public class OrderService {
         return OrderCompleteResponse.from(order);
     }
 
+    @Transactional
+    public void deleteOrder(String userId, String role, UUID orderId) {
+        if (!isMaster(role)) {
+            throw new OrderNotFoundException();
+        }
+
+        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+                .orElseThrow(OrderNotFoundException::new);
+
+        order.delete(userId);
+    }
+
     private void validateOrderOwner(Order order, String userId) {
         if (!order.getOrderedBy().equals(userId)) {
             throw new OrderNotFoundException();
