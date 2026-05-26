@@ -15,7 +15,8 @@ public enum ShipmentErrorCode implements ErrorCode {
     SHIPMENT_ALREADY_STARTED(HttpStatus.CONFLICT, "SHIPMENT-004", "배송을 시작하여 취소할 수 없습니다."),
     SHIPMENT_UPDATE_DENIED(HttpStatus.CONFLICT, "SHIPMENT-005", "배송 수정 권한이 없습니다."),
     SHIPMENT_CAN_NOT_DELIVERED(HttpStatus.CONFLICT, "SHIPMENT-006", "업체 이동 후, 배송 완료 가능합니다."),
-    SHIPMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "SHIPMENT-007", "배송이 존재하지 않습니다");
+    SHIPMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "SHIPMENT-007", "배송이 존재하지 않습니다"),
+    NO_AVAILABLE_DELIVERY_MANAGER(HttpStatus.CONFLICT, "SHIPMENT-008", "배정가능한 배송담당자가 없습니다.");
 
     private final HttpStatus status;
     private final String code;
