@@ -1,16 +1,24 @@
 package com.sparta.whereismyparcel.shipment.infrastructure.client;
 
+import com.sparta.whereismyparcel.common.response.ApiResponse;
+import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShortestPathResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.UUID;
 
-@RequestMapping("/internal/v1/hubs")
-@FeignClient(name = "hub-service")
+@FeignClient(name = "hub-service", path = "/internal/v1")
 public interface HubClient {
 
-    @GetMapping("/{hubId}/exists")
-    boolean exists(@PathVariable UUID hubId);
+    @GetMapping("/hubs/{hubId}/validate")
+    ApiResponse<Boolean> exists(@PathVariable UUID hubId);
+
+    @GetMapping("/hub-routes/shortest-path")
+    ApiResponse<ShortestPathResponse> getShortestPath(
+            @RequestParam UUID originHubId,
+            @RequestParam UUID destinationHubId
+    );
 }

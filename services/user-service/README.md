@@ -17,6 +17,7 @@
 | 회원 삭제 `DELETE /api/v1/users/{userId}` | ✅ 완료 |
 | 내부 회원 조회 `GET /internal/v1/users/{userId}` | ✅ 완료 |
 | 내부 사업자번호 조회 `GET /internal/v1/users/by-business-number/{businessNumber}` | ✅ 완료 |
+| 내부 Slack ID 조회 `GET /internal/v1/users/by-slack/{slackId}` | ✅ 완료 |
 
 ---
 
@@ -35,7 +36,7 @@
 | `email` | `String` | ✅ | 이메일 형식 |
 | `password` | `String` | ✅ | 8~15자, 대소문자·숫자·특수문자 포함 |
 | `phone` | `String` | ❌ | `010-1234-5678` 형식 (하이픈 생략 가능) |
-| `slackId` | `String` | ✅ | Slack 사용자 ID |
+| `slackId` | `String` | ✅ | Slack 사용자 ID (시스템 내 고유값) |
 | `role` | `UserRole` | ✅ | `MASTER` \| `HUB_MANAGER` \| `DELIVERY_MANAGER` \| `COMPANY_MANAGER` |
 | `businessNumber` | `String` | ❌ | `123-45-67890` 형식, COMPANY_MANAGER만 사용 |
 | `hubId` | `UUID` | ❌ | HUB_MANAGER용 허브 ID |
@@ -178,7 +179,7 @@
   "errorCode": null,
   "message": "OK",
   "data": {
-    "content": [ ... ],
+    "content": [  ],
     "totalElements": 42,
     "totalPages": 5,
     "size": 10,
@@ -295,6 +296,17 @@ Swagger UI에 노출되지 않습니다 (`@Hidden`).
 
 > company-service가 COMPANY_MANAGER 검증 시 사용합니다.
 
+### GET /internal/v1/users/by-slack/{slackId}
+
+| 파라미터 | 타입 | 설명 |
+| --- | --- | --- |
+| `slackId` | `String` | Slack 사용자 ID |
+
+**Response** `200 OK` — 위와 동일한 `InternalUserResponse`
+
+> shipment-service가 배송담당자 등록 시 Slack ID 유효성 검증 용도로 사용합니다.
+> `status`, `role` 필터링은 하지 않으며, 호출하는 서비스에서 반환된 응답의 `status`, `role`을 검증합니다.
+
 ---
 
 ## 에러 코드
@@ -305,6 +317,7 @@ Swagger UI에 노출되지 않습니다 (`@Hidden`).
 | `USER-002` | `409` | 이미 존재하는 사용자입니다 (username·email·사업자등록번호 중복) |
 | `USER-003` | `403` | 승인되지 않은 사용자입니다 |
 | `USER-004` | `400` | 승인할 수 없는 상태입니다 (PENDING이 아닌 경우) |
+| `USER-005` | `409` | 이미 사용 중인 Slack ID입니다 |
 | `USER-900` | `500` | Keycloak 계정 생성 실패 |
 
 ---
@@ -342,6 +355,7 @@ services/user-service/src/main/java/com/sparta/whereismyparcel/user/
 │   │   ├── UserErrorCode.java
 │   │   ├── UserNotFoundException.java
 │   │   ├── UserAlreadyExistsException.java
+│   │   ├── SlackIdAlreadyExistsException.java
 │   │   ├── InvalidApprovalStatusException.java
 │   │   ├── UserNotApprovedException.java
 │   │   ├── ForbiddenException.java
@@ -356,14 +370,17 @@ services/user-service/src/main/java/com/sparta/whereismyparcel/user/
 │       └── KeycloakAdminService.java
 └── presentation/
     ├── controller/
-    │   └── UserController.java
+    │   ├── UserController.java
+    │   └── InternalUserController.java
     └── dto/
         ├── request/
-        │   └── SignupRequest.java
+        │   ├── SignupRequest.java
+        │   └── UpdateUserRequest.java
         └── response/
             ├── SignupResponse.java
             ├── ApproveResponse.java
-            └── UserResponse.java
+            ├── UserResponse.java
+            └── InternalUserResponse.java
 ```
 
 ---

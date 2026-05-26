@@ -5,6 +5,7 @@ import com.sparta.whereismyparcel.order.application.saga.OrderCreateSaga;
 import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
 import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
+import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderSearchDateRangeException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
 import com.sparta.whereismyparcel.order.domain.exception.OrderErrorCode;
 import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
@@ -15,15 +16,14 @@ import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient
 import com.sparta.whereismyparcel.order.infrastructure.client.ShipmentFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
-import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
-import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCompleteResponse;
-import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -324,6 +324,94 @@ class OrderServiceTest {
         assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
     }
 
+    @Test
+    @DisplayName("검색 시작일이 종료일보다 이후이면 주문 목록을 조회할 수 없다")
+    void getOrdersWithInvalidDateRangeThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        LocalDateTime startDate = LocalDateTime.now().plusDays(1);
+        LocalDateTime endDate = LocalDateTime.now();
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.getOrders(
+                userId,
+                "MASTER",
+                null,
+                null,
+                startDate,
+                endDate,
+                pageable
+        )).isInstanceOf(InvalidOrderSearchDateRangeException.class);
+    }
+
+    @Test
+    @DisplayName("MASTER는 주문을 삭제할 수 있다")
+    void deleteOrderByMaster() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        order.fail();
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        orderService.deleteOrder(userId, "MASTER", orderId);
+
+        // then
+        assertThat(order.getDeletedAt()).isNotNull();
+        assertThat(order.getDeletedBy()).isEqualTo(userId);
+        assertThat(order.getOrderItems())
+                .allSatisfy(item -> {
+                    assertThat(item.getDeletedAt()).isNotNull();
+                    assertThat(item.getDeletedBy()).isEqualTo(userId);
+                });
+    }
+
+    @Test
+    @DisplayName("PENDING 상태 주문은 삭제할 수 없다")
+    void deletePendingOrderThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.deleteOrder(userId, "MASTER", orderId))
+                .isInstanceOf(InvalidOrderStatusException.class);
+        assertThat(order.getDeletedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("MASTER가 아닌 사용자는 주문을 삭제할 수 없다")
+    void deleteOrderByNonMasterThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+
+        // when & then
+        assertThatThrownBy(() -> orderService.deleteOrder(userId, "COMPANY_MANAGER", orderId))
+                .isInstanceOf(OrderNotFoundException.class);
+        then(orderRepository).should(never()).findByOrderIdAndDeletedAtIsNull(any());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주문은 삭제할 수 없다")
+    void deleteOrderNotFoundThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> orderService.deleteOrder(userId, "MASTER", orderId))
+                .isInstanceOf(OrderNotFoundException.class);
+    }
+
     private OrderCreateRequest createRequest() {
         return new OrderCreateRequest(
                 UUID.randomUUID(),
@@ -366,5 +454,128 @@ class OrderServiceTest {
                         2
                 ))
         );
+    }
+
+    @Test
+    @DisplayName("MASTER는 전체 주문 목록을 조회할 수 있다")
+    void getOrdersByMaster() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Order order = createOrder(userId);
+        LocalDateTime startDate = LocalDateTime.now().minusDays(1);
+        LocalDateTime endDate = LocalDateTime.now().plusDays(1);
+
+        given(orderRepository.searchOrders(
+                eq(userId),
+                eq(true),
+                eq(OrderStatus.PENDING),
+                eq("ORD"),
+                eq(startDate),
+                eq(endDate),
+                eq(pageable)
+        )).willReturn(new PageImpl<>(List.of(order), pageable, 1));
+
+        // when
+        Page<OrderListResponse> response = orderService.getOrders(
+                userId,
+                "MASTER",
+                OrderStatus.PENDING,
+                "ORD",
+                startDate,
+                endDate,
+                pageable
+        );
+
+        // then
+        assertThat(response.getTotalElements()).isEqualTo(1);
+        assertThat(response.getContent().get(0).orderStatus()).isEqualTo(OrderStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("MASTER가 아닌 사용자는 본인 주문 목록만 조회한다")
+    void getOrdersByNonMaster() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Order order = createOrder(userId);
+
+        given(orderRepository.searchOrders(
+                eq(userId),
+                eq(false),
+                eq(null),
+                eq(null),
+                eq(null),
+                eq(null),
+                eq(pageable)
+        )).willReturn(new PageImpl<>(List.of(order), pageable, 1));
+
+        // when
+        Page<OrderListResponse> response = orderService.getOrders(
+                userId,
+                "COMPANY_MANAGER",
+                null,
+                null,
+                null,
+                null,
+                pageable
+        );
+
+        // then
+        assertThat(response.getTotalElements()).isEqualTo(1);
+        assertThat(response.getContent().get(0).orderNumber()).isEqualTo(order.getOrderNumber());
+    }
+
+    @Test
+    @DisplayName("MASTER는 주문 단건 상세를 조회할 수 있다")
+    void getOrderByMaster() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+
+        given(orderRepository.findDetailByOrderId(orderId, userId, true))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderDetailResponse response = orderService.getOrder(userId, "MASTER", orderId);
+
+        // then
+        assertThat(response.orderNumber()).isEqualTo(order.getOrderNumber());
+        assertThat(response.items()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("MASTER가 아닌 사용자는 본인 주문 단건 상세만 조회할 수 있다")
+    void getOrderByNonMaster() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+
+        given(orderRepository.findDetailByOrderId(orderId, userId, false))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderDetailResponse response = orderService.getOrder(userId, "COMPANY_MANAGER", orderId);
+
+        // then
+        assertThat(response.orderNumber()).isEqualTo(order.getOrderNumber());
+        assertThat(response.orderedBy()).isEqualTo(userId);
+    }
+
+    @Test
+    @DisplayName("조회 권한이 없는 주문 단건 상세는 조회할 수 없다")
+    void getOrderWithoutPermissionThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+
+        given(orderRepository.findDetailByOrderId(orderId, userId, false))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> orderService.getOrder(userId, "COMPANY_MANAGER", orderId))
+                .isInstanceOf(OrderNotFoundException.class);
     }
 }

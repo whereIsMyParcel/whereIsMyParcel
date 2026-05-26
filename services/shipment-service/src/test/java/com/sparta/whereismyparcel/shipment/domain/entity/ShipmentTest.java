@@ -1,13 +1,16 @@
 package com.sparta.whereismyparcel.shipment.domain.entity;
 
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentAlreadyStartedException;
+import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentCannotBeDeliveredException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -18,7 +21,7 @@ class ShipmentTest {
 
     @DisplayName("배송 취소")
     @Nested
-    class cancel {
+    class Cancel {
 
         @DisplayName("배송이 시작되기 전 상태에서만 배송 취소가 가능하다")
         @ParameterizedTest
@@ -92,7 +95,7 @@ class ShipmentTest {
                     "test"
             );
 
-            shipment.getHistories().add(history);
+            shipment.addHistories(List.of(history));
 
             // when
             boolean result = shipment.isAssignedDeliveryManager(requestManagerId);
@@ -108,6 +111,85 @@ class ShipmentTest {
                     Arguments.of(true, assignedManagerId, assignedManagerId),
                     Arguments.of(false, assignedManagerId, UUID.randomUUID())
             );
+        }
+    }
+
+    @Nested
+    @DisplayName("배송완료")
+    class Delivered {
+
+        @ParameterizedTest
+        @EnumSource(value = ShipmentStatus.class, names = "COMPANY_MOVING")
+        @DisplayName("배송상태가 업체 이동중(COMPANY_MOVING)이면 DELIVERED로 변경된다")
+        void success(ShipmentStatus status) {
+            // given
+            Shipment shipment = Shipment.create(
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    "배송번호 1",
+                    ShipmentStatus.COMPANY_MOVING,
+                    "배송지",
+                    "수령인",
+                    "slack"
+            );
+
+            // when
+            shipment.delivered();
+
+            // then
+            assertThat(shipment.getShipmentStatus())
+                    .isEqualTo(ShipmentStatus.DELIVERED);
+        }
+
+        @DisplayName("배송 상태가 업체 이동중(COMPANY_MOVING) 상태가 아니면 배송 완료 시 예외가 발생한다")
+        @ParameterizedTest
+        @EnumSource(value = ShipmentStatus.class, mode = EnumSource.Mode.EXCLUDE, names = "COMPANY_MOVING")
+        void delivered_fail(ShipmentStatus status) {
+            // given
+            Shipment shipment = Shipment.create(
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    "배송번호 1",
+                    status,
+                    "배송지",
+                    "수령인",
+                    "slack"
+            );
+
+            // when & then
+            assertThatThrownBy(shipment::delivered)
+                    .isInstanceOf(ShipmentCannotBeDeliveredException.class);
+        }
+
+        @DisplayName("배송 완료 상태 여부를 확인한다")
+        @ParameterizedTest
+        @CsvSource({
+                "DELIVERED, true",
+                "HUB_WAITING, false"
+        })
+        void isDelivered(ShipmentStatus status, boolean expected) {
+            // given
+            Shipment shipment = Shipment.create(
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    "배송번호 1",
+                    status,
+                    "배송지",
+                    "수령인",
+                    "slack"
+            );
+
+            // when
+            boolean result = shipment.isDelivered();
+
+            // then
+            assertThat(result).isEqualTo(expected);
         }
     }
 }

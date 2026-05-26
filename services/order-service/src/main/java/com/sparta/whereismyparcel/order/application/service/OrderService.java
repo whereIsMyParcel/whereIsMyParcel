@@ -7,6 +7,7 @@ import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
 import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsException;
+import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderSearchDateRangeException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
 import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedException;
@@ -21,8 +22,12 @@ import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequ
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCompleteResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDetailResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderListResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +43,8 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class OrderService {
+
+    private static final String MASTER_ROLE = "MASTER";
 
     private static final DateTimeFormatter ORDER_NUMBER_DATE_FORMAT =
             DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -109,6 +116,35 @@ public class OrderService {
         return OrderCreateResponse.from(order);
     }
 
+    public Page<OrderListResponse> getOrders(
+            String userId,
+            String role,
+            OrderStatus status,
+            String keyword,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            Pageable pageable
+    ) {
+        validateSearchDateRange(startDate, endDate);
+
+        return orderRepository.searchOrders(
+                userId,
+                isMaster(role),
+                status,
+                keyword,
+                startDate,
+                endDate,
+                pageable
+        ).map(OrderListResponse::from);
+    }
+
+    public OrderDetailResponse getOrder(String userId, String role, UUID orderId) {
+        Order order = orderRepository.findDetailByOrderId(orderId, userId, isMaster(role))
+                .orElseThrow(OrderNotFoundException::new);
+
+        return OrderDetailResponse.from(order);
+    }
+
     @Transactional
     public OrderCancelResponse cancelOrder(String userId, UUID orderId) {
         Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
@@ -153,6 +189,22 @@ public class OrderService {
         return OrderCompleteResponse.from(order);
     }
 
+    @Transactional
+    public void deleteOrder(String userId, String role, UUID orderId) {
+        if (!isMaster(role)) {
+            throw new OrderNotFoundException();
+        }
+
+        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+                .orElseThrow(OrderNotFoundException::new);
+
+        if (!order.isDeletable()) {
+            throw new InvalidOrderStatusException();
+        }
+
+        order.delete(userId);
+    }
+
     private void validateOrderOwner(Order order, String userId) {
         if (!order.getOrderedBy().equals(userId)) {
             throw new OrderNotFoundException();
@@ -163,6 +215,16 @@ public class OrderService {
         return orderStatus == OrderStatus.PENDING
                 || orderStatus == OrderStatus.STOCK_RESERVED
                 || orderStatus == OrderStatus.CONFIRMED;
+    }
+
+    private boolean isMaster(String role) {
+        return MASTER_ROLE.equals(role);
+    }
+
+    private void validateSearchDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new InvalidOrderSearchDateRangeException();
+        }
     }
 
     private void cancelStockReservation(String userId, Order order) {
