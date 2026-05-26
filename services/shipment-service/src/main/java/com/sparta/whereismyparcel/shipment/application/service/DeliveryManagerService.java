@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -165,6 +166,9 @@ public class DeliveryManagerService {
      */
     private void validateHubPermission(UUID userId, DeliveryManager manager, Supplier<BusinessException> exceptionSupplier) {
         UserResponse user = userClient.getUser(userId).data();
+
+        Objects.requireNonNull(user, "user 정보가 존재하지 않습니다.");
+
         if (!user.hubId().equals(manager.getHubId())) {
             throw exceptionSupplier.get();
         }
