@@ -33,7 +33,7 @@ public class DeliveryManagerPolicy {
 
     //slack id 존재하는지 확인
     private void validateSlackId(String slackId) {
-        if (!userClient.exists(slackId)) {
+        if (!userClient.exists(slackId).data()) {
             throw new SlackIdNotFoundException();
         }
     }
@@ -43,7 +43,7 @@ public class DeliveryManagerPolicy {
         if (type == DeliveryType.HUB_DELIVERY) return;
 
         Objects.requireNonNull(hubId, "업체 배송 담당자는 hub id 존재해야 합니다");
-        if (!hubClient.exists(hubId)) {
+        if (!hubClient.exists(hubId).data()) {
             throw new HubNotFoundException();
         }
     }
