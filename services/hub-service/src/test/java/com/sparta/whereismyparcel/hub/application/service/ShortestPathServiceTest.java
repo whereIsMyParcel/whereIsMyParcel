@@ -69,7 +69,6 @@ class ShortestPathServiceTest {
         
         given(hubRepository.existsById(hubA.getHubId())).willReturn(true);
         given(hubRepository.existsById(hubD.getHubId())).willReturn(true);
-        given(hubRepository.findAll()).willReturn(allHubs);
         given(hubRouteRepository.findAll()).willReturn(allRoutes);
 
         // when
@@ -91,8 +90,6 @@ class ShortestPathServiceTest {
         
         given(hubRepository.existsById(hubA.getHubId())).willReturn(true);
         given(hubRepository.existsById(hubIsolated.getHubId())).willReturn(true);
-        // Isolated 허브를 포함한 전체 허브 목록 제공
-        given(hubRepository.findAll()).willReturn(List.of(hubA, hubB, hubC, hubD, hubIsolated));
         given(hubRouteRepository.findAll()).willReturn(allRoutes);
 
         // when & then

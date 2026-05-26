@@ -12,27 +12,22 @@ import com.sparta.whereismyparcel.hub.presentation.dto.response.HubRouteResponse
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
-public class HubRouteService {
+@Transactional
+public class HubRouteCommandService {
 
     private final HubRouteRepository hubRouteRepository;
     private final HubRepository hubRepository;
     private final RedisTemplate<String, Object> redisTemplate;
 
-    @Transactional
     public HubRouteResponse createHubRoute(CreateHubRouteRequest request) {
         Hub originHub = hubRepository.findById(request.originHubId())
                 .orElseThrow(HubNotFoundException::new);
@@ -47,19 +42,6 @@ public class HubRouteService {
         return HubRouteResponse.from(hubRouteRepository.save(route));
     }
 
-    @Cacheable(cacheNames = "hubRoute", key = "#hubRouteId")
-    public HubRouteResponse getHubRoute(UUID hubRouteId) {
-        HubRoute route = hubRouteRepository.findById(hubRouteId)
-                .orElseThrow(HubRouteNotFoundException::new);
-        return HubRouteResponse.from(route);
-    }
-
-    public Page<HubRouteResponse> getHubRoutes(Pageable pageable) {
-        return hubRouteRepository.findAll(pageable)
-                .map(HubRouteResponse::from);
-    }
-
-    @Transactional
     @CachePut(cacheNames = "hubRoute", key = "#hubRouteId")
     public HubRouteResponse updateHubRoute(UUID hubRouteId, UpdateHubRouteRequest request) {
         HubRoute route = hubRouteRepository.findById(hubRouteId)
@@ -71,7 +53,6 @@ public class HubRouteService {
         return HubRouteResponse.from(route);
     }
 
-    @Transactional
     @CacheEvict(cacheNames = "hubRoute", key = "#hubRouteId")
     public void deleteHubRoute(UUID hubRouteId, String userId) {
         HubRoute route = hubRouteRepository.findById(hubRouteId)
@@ -82,9 +63,6 @@ public class HubRouteService {
     }
 
     private void evictAllPathCache() {
-        // SCAN 대신, 허브 수가 적고 정합성이 중요하므로 prefix 기반 전체 삭제를 권장함 (또는 버전 관리)
-        // 여기서는 keys() 대신 connection 수준의 작업을 고려하거나, 
-        // Small dataset 이므로 명확하게 전체 삭제를 수행함.
         redisTemplate.execute((RedisCallback<Object>) connection -> {
             try (org.springframework.data.redis.core.Cursor<byte[]> cursor = connection.scan(org.springframework.data.redis.core.ScanOptions.scanOptions().match("path:*").count(100).build())) {
                 while (cursor.hasNext()) {
