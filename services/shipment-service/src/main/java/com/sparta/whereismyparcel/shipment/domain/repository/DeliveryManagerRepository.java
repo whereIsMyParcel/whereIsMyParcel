@@ -2,6 +2,8 @@ package com.sparta.whereismyparcel.shipment.domain.repository;
 
 import com.sparta.whereismyparcel.shipment.domain.entity.DeliveryManager;
 import com.sparta.whereismyparcel.shipment.domain.entity.DeliveryType;
+import com.sparta.whereismyparcel.shipment.presentation.dto.request.DeliveryManagerSearchRequest;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -62,4 +64,16 @@ public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager
             Pageable pageable
     );
     //endregion
+
+    @Query("""
+                SELECT d
+                FROM DeliveryManager d
+                WHERE (:#{#req.hubId} IS NULL OR d.hubId = :#{#req.hubId})
+                  AND (:#{#req.type} IS NULL OR d.type = :#{#req.type})
+                  AND (:#{#req.slackId} IS NULL OR d.slackId LIKE %:#{#req.slackId}%)
+            """)
+    Page<DeliveryManager> search(
+            @Param("req") DeliveryManagerSearchRequest req,
+            Pageable pageable
+    );
 }
