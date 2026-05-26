@@ -2,6 +2,7 @@ package com.sparta.whereismyparcel.shipment.domain.entity;
 
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentAlreadyStartedException;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentCannotBeDeliveredException;
+import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentCannotBeStartedException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -240,7 +241,7 @@ class ShipmentTest {
 
             // when & then
             assertThatThrownBy(shipment::start)
-                    .isInstanceOf(ShipmentCannotBeDeliveredException.class);
+                    .isInstanceOf(ShipmentCannotBeStartedException.class);
         }
     }
 }
