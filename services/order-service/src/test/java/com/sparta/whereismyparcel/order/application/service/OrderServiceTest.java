@@ -5,6 +5,7 @@ import com.sparta.whereismyparcel.order.application.saga.OrderCreateSaga;
 import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
 import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
+import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderSearchDateRangeException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
 import com.sparta.whereismyparcel.order.domain.exception.OrderErrorCode;
 import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
@@ -321,6 +322,27 @@ class OrderServiceTest {
         assertThatThrownBy(() -> orderService.completeOrder(orderId))
                 .isInstanceOf(InvalidOrderStatusException.class);
         assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("검색 시작일이 종료일보다 이후이면 주문 목록을 조회할 수 없다")
+    void getOrdersWithInvalidDateRangeThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        LocalDateTime startDate = LocalDateTime.now().plusDays(1);
+        LocalDateTime endDate = LocalDateTime.now();
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.getOrders(
+                userId,
+                "MASTER",
+                null,
+                null,
+                startDate,
+                endDate,
+                pageable
+        )).isInstanceOf(InvalidOrderSearchDateRangeException.class);
     }
 
     private OrderCreateRequest createRequest() {

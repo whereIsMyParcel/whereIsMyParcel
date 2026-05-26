@@ -7,6 +7,7 @@ import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
 import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsException;
+import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderSearchDateRangeException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
 import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedException;
@@ -124,6 +125,8 @@ public class OrderService {
             LocalDateTime endDate,
             Pageable pageable
     ) {
+        validateSearchDateRange(startDate, endDate);
+
         return orderRepository.searchOrders(
                 userId,
                 isMaster(role),
@@ -200,6 +203,12 @@ public class OrderService {
 
     private boolean isMaster(String role) {
         return MASTER_ROLE.equals(role);
+    }
+
+    private void validateSearchDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new InvalidOrderSearchDateRangeException();
+        }
     }
 
     private void cancelStockReservation(String userId, Order order) {
