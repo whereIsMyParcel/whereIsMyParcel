@@ -1,8 +1,8 @@
 package com.sparta.whereismyparcel.aislack.infrastructure.client;
 
 import com.sparta.whereismyparcel.aislack.domain.exception.AiSlackErrorCode;
-import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.GeminiRequest; // infrastructure.client.dto 임포트
-import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.GeminiResponse; // infrastructure.client.dto 임포트
+import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.request.GeminiRequest; // infrastructure.client.dto 임포트
+import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.GeminiResponse; // infrastructure.client.dto 임포트
 import com.sparta.whereismyparcel.common.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

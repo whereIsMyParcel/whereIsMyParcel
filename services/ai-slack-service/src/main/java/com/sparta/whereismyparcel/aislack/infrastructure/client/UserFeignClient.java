@@ -1,7 +1,7 @@
 package com.sparta.whereismyparcel.aislack.infrastructure.client;
 
 import com.sparta.whereismyparcel.common.response.ApiResponse;
-import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.UserResponse;
+import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.UserResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;

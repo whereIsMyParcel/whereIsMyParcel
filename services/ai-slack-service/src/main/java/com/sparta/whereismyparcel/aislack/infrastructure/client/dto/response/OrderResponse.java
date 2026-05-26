@@ -1,4 +1,4 @@
-package com.sparta.whereismyparcel.aislack.infrastructure.client.dto;
+package com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

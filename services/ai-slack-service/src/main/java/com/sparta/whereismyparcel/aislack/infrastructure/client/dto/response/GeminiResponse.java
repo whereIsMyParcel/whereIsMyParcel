@@ -1,6 +1,4 @@
-package com.sparta.whereismyparcel.aislack.presentation.dto.response;
-
-import com.google.genai.types.Candidate;
+package com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response;
 
 import java.util.List;
 import java.util.Optional;

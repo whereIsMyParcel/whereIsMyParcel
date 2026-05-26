@@ -1,4 +1,3 @@
-/*
 package com.sparta.whereismyparcel.aislack.application.service;
 
 import com.sparta.whereismyparcel.aislack.domain.entity.AiMessage;
@@ -9,11 +8,11 @@ import com.sparta.whereismyparcel.aislack.infrastructure.client.GeminiClient;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.OrderFeignClient;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.ShipmentFeignClient;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.UserFeignClient;
-import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.GeminiRequest; // infrastructure.client.dto 임포트
-import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.GeminiResponse; // infrastructure.client.dto 임포트
-import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.OrderResponse;
-import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.ShipmentResponse;
-import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.UserResponse;
+import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.request.GeminiRequest;
+import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.GeminiResponse;
+import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.OrderResponse;
+import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.ShipmentResponse;
+import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.UserResponse;
 import com.sparta.whereismyparcel.common.exception.BusinessException;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +26,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -40,25 +38,24 @@ public class AiMessageService {
     private final ShipmentFeignClient shipmentFeignClient;
     private final UserFeignClient userFeignClient;
     private final GeminiClient geminiClient;
+    private final PromptGenerator promptGenerator;
 
-    */
-/**
+    /**
      * AI 분석 요청을 생성하고 초기 상태로 저장합니다.
      * 이 메서드는 주문/배송 정보 생성 시 호출되어 AI 분석을 위한 초기 데이터를 준비합니다.
      * @param orderId 분석할 주문 ID
-     * @param callerUserId 요청을 시작한 사용자 ID (Feign Client 호출 시 필요)
+     * @param UserId 요청을 시작한 사용자 ID (Feign Client 호출 시 필요)
      * @return 생성된 AiMessage의 ID
-     *//*
-
+     */
     @Transactional
-    public UUID createAiAnalysisRequest(UUID orderId, String callerUserId) {
+    public UUID createAiAnalysisRequest(UUID orderId, String UserId) {
         // 1. 주문, 배송, 사용자 정보 가져오기
-        OrderResponse order = getOrderDetails(orderId, callerUserId);
-        List<ShipmentResponse> shipments = getShipmentDetails(orderId, callerUserId);
-        UserResponse recipientUser = getUserDetails(order.recipientName(), callerUserId); // 예시: 주문의 수령인 이름으로 사용자 조회
+        OrderResponse order = getOrderDetails(orderId, UserId);
+        List<ShipmentResponse> shipments = getShipmentDetails(orderId, UserId);
+        UserResponse recipientUser = getUserDetails(order.recipientName(), UserId); // 예시: 주문의 수령인 이름으로 사용자 조회
 
         // 2. Gemini AI 프롬프트 생성
-        String prompt = createGeminiPrompt(order, shipments, recipientUser);
+        String prompt = promptGenerator.createGeminiPrompt(order, shipments, recipientUser);
 
         // 3. AiMessage 엔티티 생성 및 REQUESTED 상태로 저장
         AiMessage aiMessage = AiMessage.create(orderId, prompt);
@@ -68,13 +65,11 @@ public class AiMessageService {
         return aiMessage.getAiId();
     }
 
-    */
-/**
+    /**
      * 특정 AiMessage에 대해 Gemini AI 분석을 수행하고 결과를 업데이트합니다.
      * 이 메서드는 스케줄러나 메시지 큐 리스너에 의해 호출될 수 있습니다.
      * @param aiMessageId 분석을 수행할 AiMessage의 ID
-     *//*
-
+     */
     @Transactional
     public void analyzeAiMessage(UUID aiMessageId) {
         AiMessage aiMessage = aiMessageRepository.findById(aiMessageId)
@@ -82,7 +77,7 @@ public class AiMessageService {
 
         // 이미 처리되었거나 영구 실패한 메시지는 다시 분석하지 않음 (멱등성)
         if (aiMessage.getAnalysisStatus() == AnalysisStatus.AI_SUCCESS) {
-            log.info("AiMessage {}는 이미 AI_SUCCESS 상태입니다. 분석을 건너뛰습니다.", aiMessageId);
+            log.info("AiMessage {}는 이미 AI_SUCCESS 상태입니다. 분석 하지않습니다..", aiMessageId);
             return;
         }
 
@@ -115,92 +110,48 @@ public class AiMessageService {
         }
     }
 
-    private OrderResponse getOrderDetails(UUID orderId,String callerUserId) {
-        ApiResponse<OrderResponse> orderResponse = orderFeignClient.getOrder(callerUserId, orderId);
+    private OrderResponse getOrderDetails(UUID orderId, String UserId) {
+        ApiResponse<OrderResponse> orderResponse = orderFeignClient.getOrder(UserId, orderId);
         if (!orderResponse.success() || orderResponse.data() == null) {
             throw new BusinessException(AiSlackErrorCode.INVALID_AI_REQUEST_DATA, "주문 정보를 가져오지 못했습니다: " + orderResponse.message());
         }
         return orderResponse.data();
     }
 
-    private List<ShipmentResponse> getShipmentDetails(UUID orderId, String callerUserId) {
-        ApiResponse<List<ShipmentResponse>> shipmentResponse = shipmentFeignClient.getShipmentByOrderId(callerUserId, orderId);
+    private List<ShipmentResponse> getShipmentDetails(UUID orderId, String UserId) {
+        ApiResponse<List<ShipmentResponse>> shipmentResponse = shipmentFeignClient.getShipmentByOrderId(UserId, orderId);
         if (!shipmentResponse.success() || shipmentResponse.data() == null || shipmentResponse.data().isEmpty()) {
             throw new BusinessException(AiSlackErrorCode.INVALID_AI_REQUEST_DATA, "배송 정보를 가져오지 못했습니다: " + shipmentResponse.message());
         }
         return shipmentResponse.data();
     }
 
-    private UserResponse getUserDetails(String recipientName, String callerUserId) {
-        //  실제로는 recipientName으로 사용자 ID를 조회하는 API가 필요할 수 있습니다.
+    private UserResponse getUserDetails(String recipientName, String UserId) {
+        // TODO: 실제로는 recipientName으로 사용자 ID를 조회하는 API가 필요할 수 있습니다.
         // 현재는 임시로 callerUserId를 사용하여 UserResponse를 가져오는 것으로 가정합니다.
         // UserFeignClient는 userId로만 조회 가능하므로, 이 부분은 실제 API에 맞춰 수정이 필요합니다.
-        ApiResponse<UserResponse> userResponse = userFeignClient.getUser(callerUserId);
+        ApiResponse<UserResponse> userResponse = userFeignClient.getUser(UserId);
         if (!userResponse.success() || userResponse.data() == null) {
             throw new BusinessException(AiSlackErrorCode.SLACK_ID_NOT_FOUND, "수령인 사용자 정보를 가져오지 못했습니다: " + userResponse.message());
         }
         return userResponse.data();
     }
 
-
-    private String createGeminiPrompt(OrderResponse order, List<ShipmentResponse> shipments, UserResponse recipientUser) {
-        StringBuilder promptBuilder = new StringBuilder();
-        promptBuilder.append("Given the following order and shipment details, calculate the final dispatch deadline by reversing from the requested delivery time and estimated transit time. Also, generate a concise Slack message for the delivery manager including order company, destination, and the calculated final dispatch deadline. Output the final dispatch deadline in 'YYYY-MM-DDTHH:MM:SS' format at the end of the message, prefixed with 'DEADLINE:'.\n\n");
-
-        promptBuilder.append("Order Details:\n");
-        promptBuilder.append("  - Order ID: ").append(order.orderId()).append("\n");
-        promptBuilder.append("  - Order Number: ").append(order.orderNumber()).append("\n");
-        promptBuilder.append("  - Recipient Name: ").append(order.recipientName()).append("\n");
-        promptBuilder.append("  - Recipient Address: ").append(order.recipientAddress()).append("\n");
-        promptBuilder.append("  - Requested Delivery At: ").append(order.requestedDeliveryAt()).append("\n");
-        promptBuilder.append("  - Order Status: ").append(order.orderStatus()).append("\n\n");
-
-        promptBuilder.append("Shipment Details:\n");
-        shipments.forEach(shipment -> {
-            promptBuilder.append("  - Shipment ID: ").append(shipment.id()).append("\n");
-            promptBuilder.append("  - Shipment Number: ").append(shipment.shipmentNumber()).append("\n");
-            promptBuilder.append("  - Origin Hub : ").append(shipment.originHub()).append("\n");
-            promptBuilder.append("  - Destination Hub: ").append(shipment.destinationHub()).append("\n");
-            promptBuilder.append("  - Delivery Address: ").append(shipment.deliveryAddress()).append("\n");
-            promptBuilder.append("  - Estimated Delivery At: ").append(shipment.estimatedDeliveryAt()).append("\n");
-            promptBuilder.append("  - Shipment Status: ").append(shipment.shipmentStatus()).append("\n");
-            promptBuilder.append("  - Recipient Slack ID: ").append(shipment.recipientSlackId()).append("\n");
-            promptBuilder.append("  - Company Delivery Manager ID: ").append(shipment.companyDeliveryManagerId()).append("\n");
-            promptBuilder.append("---\n");
-        });
-
-        promptBuilder.append("\n");
-
-        promptBuilder.append("Recipient User Details (for Slack message):\n");
-        promptBuilder.append("  - User ID: ").append(recipientUser.userId()).append("\n");
-        promptBuilder.append("  - Username: ").append(recipientUser.username()).append("\n");
-        promptBuilder.append("  - Slack ID: ").append(recipientUser.slackId()).append("\n\n");
-
-        promptBuilder.append("Please provide the Slack message and the final dispatch deadline.\n");
-
-        return promptBuilder.toString();
-    }
-
     private GeminiResponse callGeminiApi(String prompt) {
-        GeminiRequest.Content.Part part = new GeminiRequest.Content.Part(prompt);
+        GeminiRequest.Part part = new GeminiRequest.Part(prompt); // <-- 이 부분을 수정했습니다.
         GeminiRequest.Content content = new GeminiRequest.Content(List.of(part));
         GeminiRequest.GenerationConfig config = new GeminiRequest.GenerationConfig(
                 0.7, 1, 1, 2048, List.of()
         );
         GeminiRequest request = new GeminiRequest(List.of(content), config);
 
-        return geminiClient.generateText(request); // 반환 타입 수정
+        return geminiClient.generateText(request);
     }
 
     private String extractTextFromGeminiResponse(GeminiResponse geminiResponse) {
-        // infrastructure.client.dto.GeminiResponse에서 직접 텍스트 파싱
-        if (geminiResponse != null && !geminiResponse.candidates().isEmpty()) {
-            GeminiResponse.Candidate firstCandidate = geminiResponse.candidates().get(0);
-            if (firstCandidate.content() != null && !firstCandidate.content().parts().isEmpty()) {
-                return firstCandidate.content().parts().get(0).text();
-            }
-        }
-        throw new BusinessException(AiSlackErrorCode.AI_RESPONSE_PARSING_FAILED, "Gemini AI 응답에서 텍스트를 추출할 수 없습니다.");
+        // presentation.dto.response.GeminiResponse의 getResponseText()를 활용
+        return geminiResponse.getResponseText()
+                .orElseThrow(() -> new BusinessException(AiSlackErrorCode.AI_RESPONSE_PARSING_FAILED, "Gemini AI 응답에서 텍스트를 추출할 수 없습니다."));
     }
 
     private LocalDateTime extractFinalDispatchDeadline(String aiResponseContent) {
@@ -219,4 +170,3 @@ public class AiMessageService {
         throw new BusinessException(AiSlackErrorCode.AI_RESPONSE_PARSING_FAILED, "Gemini AI 응답에서 최종 발송 시한을 찾을 수 없습니다.");
     }
 }
-*/
