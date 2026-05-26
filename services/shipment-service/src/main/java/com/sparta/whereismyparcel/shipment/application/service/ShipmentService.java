@@ -1,10 +1,12 @@
 package com.sparta.whereismyparcel.shipment.application.service;
 
+import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.shipment.domain.entity.Shipment;
 import com.sparta.whereismyparcel.shipment.domain.entity.ShipmentHistory;
 import com.sparta.whereismyparcel.shipment.domain.entity.ShipmentStatus;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentAlreadyStartedException;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentNotFoundException;
+import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentRouteNotFoundException;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentUpdateDeniedException;
 import com.sparta.whereismyparcel.shipment.domain.repository.ShipmentRepository;
 import com.sparta.whereismyparcel.shipment.domain.util.ShipmentNumberGenerator;
@@ -21,10 +23,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.*;
@@ -162,10 +161,13 @@ public class ShipmentService {
     ) {
 
         // 허브 간 최단 경로 조회
-        List<ShortestPathResponse.RouteSegmentResponse> routes =
-                hubClient.getShortestPath(originHubId, destinationHubId)
-                        .data()
-                        .routes();
+        var shortestPath = Optional.ofNullable(
+                        hubClient.getShortestPath(originHubId, destinationHubId)
+                )
+                .map(ApiResponse::data)
+                .orElseThrow(ShipmentRouteNotFoundException::new);
+
+        List<ShortestPathResponse.RouteSegmentResponse> routes = shortestPath.routes();
 
         // 업체 배송 담당자 배정
         UUID companyManagerId =

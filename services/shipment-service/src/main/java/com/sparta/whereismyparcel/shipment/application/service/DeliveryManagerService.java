@@ -70,10 +70,12 @@ public class DeliveryManagerService {
                             Pageable.ofSize(count)
                     );
         };
-        // 배정 가능한 배송 담당자가 없는 경우 예외 발생
-        if (deliveryManagers.isEmpty()) {
+
+        // 배정 가능한 배송 담당자 수가 필요한 수보다 적은 경우 예외 발생
+        if (deliveryManagers.size() < count) {
             throw new NoAvailableDeliveryManagerException();
         }
+
         // 배송 담당자 ID 목록 반환
         return deliveryManagers.stream()
                 .map(DeliveryManager::getId)
