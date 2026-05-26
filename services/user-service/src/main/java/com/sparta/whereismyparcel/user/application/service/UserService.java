@@ -3,6 +3,7 @@ package com.sparta.whereismyparcel.user.application.service;
 import com.sparta.whereismyparcel.user.domain.entity.User;
 import com.sparta.whereismyparcel.user.domain.UserRole;
 import com.sparta.whereismyparcel.user.domain.UserStatus;
+import com.sparta.whereismyparcel.user.domain.exception.SlackIdAlreadyExistsException;
 import com.sparta.whereismyparcel.user.domain.exception.UserAlreadyExistsException;
 import com.sparta.whereismyparcel.user.domain.exception.UserNotFoundException;
 import com.sparta.whereismyparcel.user.domain.repository.UserRepository;
@@ -76,6 +77,12 @@ public class UserService {
 		return InternalUserResponse.from(findUserById(userId));
 	}
 
+	public InternalUserResponse getInternalUserBySlackId(String slackId) {
+		User user = userRepository.findBySlackId(slackId)
+				.orElseThrow(UserNotFoundException::new);
+		return InternalUserResponse.from(user);
+	}
+
 	public InternalUserResponse getInternalUserByBusinessNumber(String businessNumber) {
 		User user = userRepository.findByBusinessNumber(businessNumber)
 				.orElseThrow(UserNotFoundException::new);
@@ -89,6 +96,10 @@ public class UserService {
 	@Transactional
 	public UserResponse updateUser(UUID userId, UpdateUserRequest request) {
 		User user = findUserById(userId);
+		if (request.slackId() != null
+				&& userRepository.existsBySlackIdAndUserIdNot(request.slackId(), userId)) {
+			throw new SlackIdAlreadyExistsException();
+		}
 		user.update(request.name(), request.phone(), request.slackId());
 		return UserResponse.from(user);
 	}
@@ -126,6 +137,9 @@ public class UserService {
 		if (request.businessNumber() != null
 				&& userRepository.existsByBusinessNumber(request.businessNumber())) {
 			throw new UserAlreadyExistsException();
+		}
+		if (userRepository.existsBySlackId(request.slackId())) {
+			throw new SlackIdAlreadyExistsException();
 		}
 	}
 

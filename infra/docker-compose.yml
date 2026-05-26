@@ -118,8 +118,9 @@ services:
       timeout: 5s
       retries: 10
       start_period: 20s
+    env_file: ../.env
     environment:
-      EUREKA_URL: ${EUREKA_URL}
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
@@ -139,12 +140,13 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+    env_file: ../.env
     environment:
-      EUREKA_URL: ${EUREKA_URL}
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
       SPRING_CLOUD_CONFIG_ENABLED: true
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
-      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
-      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-http://keycloak:8080/realms/sparta-logistics}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
@@ -166,17 +168,18 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+    env_file: ../.env
     environment:
-      EUREKA_URL: ${EUREKA_URL}
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
       SPRING_CLOUD_CONFIG_ENABLED: true
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
-      DB_URL: ${USER_DB_URL}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
-      KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID}
-      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
-      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      DB_URL: ${USER_DB_URL:-jdbc:postgresql://postgres:5432/sparta_logistics?currentSchema=user_db}
+      DB_USERNAME: ${DB_USERNAME:-sparta}
+      DB_PASSWORD: ${DB_PASSWORD:-sparta1234}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-http://keycloak:8080/realms/sparta-logistics}
+      KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID:-user-service-admin}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-user-service-admin-secret}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
@@ -196,14 +199,15 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+    env_file: ../.env
     environment:
-      EUREKA_URL: ${EUREKA_URL}
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
       SPRING_CLOUD_CONFIG_ENABLED: true
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
-      HUB_DB_URL: ${HUB_DB_URL}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      HUB_DB_URL: ${HUB_DB_URL:-jdbc:postgresql://postgres:5432/sparta_logistics?currentSchema=hub_db}
+      DB_USERNAME: ${DB_USERNAME:-sparta}
+      DB_PASSWORD: ${DB_PASSWORD:-sparta1234}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
@@ -223,14 +227,15 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+    env_file: ../.env
     environment:
-      EUREKA_URL: ${EUREKA_URL}
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
       SPRING_CLOUD_CONFIG_ENABLED: true
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
-      COMPANY_DB_URL: ${COMPANY_DB_URL}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      COMPANY_DB_URL: ${COMPANY_DB_URL:-jdbc:postgresql://postgres:5432/sparta_logistics?currentSchema=company_db}
+      DB_USERNAME: ${DB_USERNAME:-sparta}
+      DB_PASSWORD: ${DB_PASSWORD:-sparta1234}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
@@ -250,14 +255,15 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+    env_file: ../.env
     environment:
-      EUREKA_URL: ${EUREKA_URL}
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
       SPRING_CLOUD_CONFIG_ENABLED: true
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
-      ORDER_DB_URL: ${ORDER_DB_URL}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      ORDER_DB_URL: ${ORDER_DB_URL:-jdbc:postgresql://postgres:5432/sparta_logistics?currentSchema=order_db}
+      DB_USERNAME: ${DB_USERNAME:-sparta}
+      DB_PASSWORD: ${DB_PASSWORD:-sparta1234}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
@@ -277,14 +283,15 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+    env_file: ../.env
     environment:
-      EUREKA_URL: ${EUREKA_URL}
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
       SPRING_CLOUD_CONFIG_ENABLED: true
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
-      SHIPMENT_DB_URL: ${SHIPMENT_DB_URL}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SHIPMENT_DB_URL: ${SHIPMENT_DB_URL:-jdbc:postgresql://postgres:5432/sparta_logistics?currentSchema=shipment_db}
+      DB_USERNAME: ${DB_USERNAME:-sparta}
+      DB_PASSWORD: ${DB_PASSWORD:-sparta1234}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
@@ -304,14 +311,15 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+    env_file: ../.env
     environment:
-      EUREKA_URL: ${EUREKA_URL}
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
       SPRING_CLOUD_CONFIG_ENABLED: true
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
-      NOTIFICATION_DB_URL: ${NOTIFICATION_DB_URL}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      NOTIFICATION_DB_URL: ${NOTIFICATION_DB_URL:-jdbc:postgresql://postgres:5432/sparta_logistics?currentSchema=notification_db}
+      DB_USERNAME: ${DB_USERNAME:-sparta}
+      DB_PASSWORD: ${DB_PASSWORD:-sparta1234}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network

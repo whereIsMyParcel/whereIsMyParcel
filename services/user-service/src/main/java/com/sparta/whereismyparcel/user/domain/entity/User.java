@@ -49,7 +49,7 @@ public class User extends BaseEntity {
 	@Column(nullable = false)
 	private UserStatus status;
 
-	@Column(name = "slack_id")
+	@Column(name = "slack_id", unique = true)
 	private String slackId;
 
 	// COMPANY_MANAGER만 사용, 나머지 역할은 null
