@@ -117,6 +117,7 @@ class ShipmentTest {
     @DisplayName("배송완료")
     class Delivered {
 
+        @ParameterizedTest
         @EnumSource(value = ShipmentStatus.class, names = "COMPANY_MOVING")
         @DisplayName("배송상태가 업체 이동중(COMPANY_MOVING)이면 DELIVERED로 변경된다")
         void success(ShipmentStatus status) {
