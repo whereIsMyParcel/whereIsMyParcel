@@ -8,6 +8,7 @@ import com.sparta.whereismyparcel.shipment.presentation.dto.request.ShipmentCanc
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,11 +26,11 @@ public class ShipmentInternalController {
     )
     @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER', 'DELIVERY_MANAGER')")
     @PostMapping("/cancel")
-    public ApiResponse<Void> cancelShipments(
+    public ResponseEntity<ApiResponse<Void>> cancelShipments(
             @RequestHeader("X-User-Id") String userId,
             @RequestBody ShipmentCancelRequest request
     ) {
         shipmentService.cancel(userId, request.orderId());
-        return ApiResponse.ok();
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 }
