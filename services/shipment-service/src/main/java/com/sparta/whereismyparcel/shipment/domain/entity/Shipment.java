@@ -2,6 +2,7 @@ package com.sparta.whereismyparcel.shipment.domain.entity;
 
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentAlreadyStartedException;
+import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentCannotBeDeliveredException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -142,5 +143,16 @@ public class Shipment extends BaseEntity {
                 .anyMatch(h -> managerId.equals(h.getHubDeliveryManagerId()));
 
         return companyMatch || hubMatch;
+    }
+
+    public void delivered() {
+        if (this.shipmentStatus != ShipmentStatus.COMPANY_MOVING) {
+            throw new ShipmentCannotBeDeliveredException();
+        }
+        this.shipmentStatus = ShipmentStatus.DELIVERED;
+    }
+
+    public boolean isDelivered() {
+        return this.shipmentStatus == ShipmentStatus.DELIVERED;
     }
 }

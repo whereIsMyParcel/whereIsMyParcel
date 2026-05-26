@@ -1,5 +1,6 @@
 package com.sparta.whereismyparcel.shipment.application.service;
 
+import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.shipment.domain.entity.DeliveryType;
 import com.sparta.whereismyparcel.shipment.domain.exception.DeliveryManagerCapacityExceededException;
 import com.sparta.whereismyparcel.shipment.domain.exception.HubNotFoundException;
@@ -53,7 +54,7 @@ class DeliveryManagerPolicyTest {
         @Test
         @DisplayName("Slack ID가 존재하지 않으면 예외가 발생한다")
         void checkCreate_fail_slackIdNotFound() {
-            when(userClient.exists(slackId)).thenReturn(false);
+            when(userClient.exists(slackId)).thenReturn(ApiResponse.success(false));
 
             assertThrows(
                     SlackIdNotFoundException.class,
@@ -68,8 +69,8 @@ class DeliveryManagerPolicyTest {
         @Test
         @DisplayName("업체 배송 담당자의 경우, 허브가 존재하지 않으면 예외가 발생한다")
         void checkCreate_fail_hubNotFound() {
-            when(userClient.exists(slackId)).thenReturn(true);
-            when(hubClient.exists(hubId)).thenReturn(false);
+            when(userClient.exists(slackId)).thenReturn(ApiResponse.success(true));
+            when(hubClient.exists(hubId)).thenReturn(ApiResponse.success(false));
 
             assertThrows(
                     HubNotFoundException.class,
@@ -84,8 +85,8 @@ class DeliveryManagerPolicyTest {
         @Test
         @DisplayName("배송 담당자 등록 시 최대 인원을 초과하면 예외가 발생한다")
         void checkCreate_fail_capacityExceeded() {
-            when(userClient.exists(slackId)).thenReturn(true);
-            when(hubClient.exists(hubId)).thenReturn(true);
+            when(userClient.exists(slackId)).thenReturn(ApiResponse.success(true));
+            when(hubClient.exists(hubId)).thenReturn(ApiResponse.success(true));
             when(deliveryManagerRepository.countByHubIdAndType(hubId, DeliveryType.COMPANY_DELIVERY)).thenReturn(10L);
 
             assertThrows(
@@ -101,8 +102,8 @@ class DeliveryManagerPolicyTest {
         @Test
         @DisplayName("Slack ID, 허브, 인원 제한 조건을 모두 만족하면 생성 정책 검증을 통과한다")
         void checkCreate_success() {
-            when(userClient.exists(slackId)).thenReturn(true);
-            when(hubClient.exists(hubId)).thenReturn(true);
+            when(userClient.exists(slackId)).thenReturn(ApiResponse.success(true));
+            when(hubClient.exists(hubId)).thenReturn(ApiResponse.success(true));
             when(deliveryManagerRepository.countByHubIdAndType(hubId, DeliveryType.COMPANY_DELIVERY)).thenReturn(5L);
 
             assertDoesNotThrow(() ->
