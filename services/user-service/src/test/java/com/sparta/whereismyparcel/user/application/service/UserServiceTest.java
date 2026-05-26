@@ -387,6 +387,39 @@ class UserServiceTest {
 	}
 
 	@Nested
+	@DisplayName("Slack ID로 내부 유저 조회")
+	class GetInternalUserBySlackId {
+
+		@Test
+		@DisplayName("존재하는 slackId로 조회하면 InternalUserResponse를 반환한다")
+		void success() {
+			// given
+			UUID userId = UUID.randomUUID();
+			User user = createUser(userId, UserStatus.APPROVED);
+			given(userRepository.findBySlackId("SLACK_ID")).willReturn(Optional.of(user));
+
+			// when
+			var response = userService.getInternalUserBySlackId("SLACK_ID");
+
+			// then
+			assertThat(response.userId()).isEqualTo(userId);
+			assertThat(response.slackId()).isEqualTo("SLACK_ID");
+			assertThat(response.status()).isEqualTo(UserStatus.APPROVED);
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 slackId로 조회하면 UserNotFoundException이 발생한다")
+		void slackIdNotFound() {
+			// given
+			given(userRepository.findBySlackId("NOT_EXIST")).willReturn(Optional.empty());
+
+			// when // then
+			assertThatThrownBy(() -> userService.getInternalUserBySlackId("NOT_EXIST"))
+					.isInstanceOf(UserNotFoundException.class);
+		}
+	}
+
+	@Nested
 	@DisplayName("회원 수정")
 	class UpdateUser {
 
