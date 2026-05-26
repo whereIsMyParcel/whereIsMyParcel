@@ -27,6 +27,10 @@ public class HubQueryService {
         return HubResponse.from(hub);
     }
 
+    public boolean existsHub(UUID hubId) {
+        return hubRepository.existsById(hubId);
+    }
+
     public Page<HubResponse> getHubs(Pageable pageable) {
         return hubRepository.findAll(pageable)
                 .map(HubResponse::from);
