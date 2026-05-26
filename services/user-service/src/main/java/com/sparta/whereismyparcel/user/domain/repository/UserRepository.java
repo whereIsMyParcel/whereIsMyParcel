@@ -19,6 +19,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
 	boolean existsByBusinessNumber(String businessNumber);
 
+	boolean existsBySlackId(String slackId);
+
+	boolean existsBySlackIdAndUserIdNot(String slackId, UUID userId);
+
 	Optional<User> findBySlackId(String slackId);
 
 	Optional<User> findByBusinessNumber(String businessNumber);
