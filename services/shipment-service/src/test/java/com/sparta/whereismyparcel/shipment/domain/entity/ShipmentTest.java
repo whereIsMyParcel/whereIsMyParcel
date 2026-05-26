@@ -10,6 +10,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -94,7 +95,7 @@ class ShipmentTest {
                     "test"
             );
 
-            shipment.getHistories().add(history);
+            shipment.addHistories(List.of(history));
 
             // when
             boolean result = shipment.isAssignedDeliveryManager(requestManagerId);
