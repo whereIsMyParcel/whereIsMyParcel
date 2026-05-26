@@ -389,6 +389,27 @@ class OrderServiceTest {
     }
 
     @Test
+    @DisplayName("요청 정보 일부만 수정하면 나머지 값은 유지된다")
+    void updateOrderPartiallyKeepsExistingValue() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        LocalDateTime originalDeliveryDeadline = order.getDeliveryDeadline();
+        OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", null);
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderUpdateResponse response = orderService.updateOrder(userId, "COMPANY_MANAGER", orderId, request);
+
+        // then
+        assertThat(response.requestMemo()).isEqualTo(request.requestMemo());
+        assertThat(response.deliveryDeadline()).isEqualTo(originalDeliveryDeadline);
+        assertThat(order.getDeliveryDeadline()).isEqualTo(originalDeliveryDeadline);
+    }
+
+    @Test
     @DisplayName("주문자가 아닌 사용자는 주문 요청 정보를 수정할 수 없다")
     void updateOrderByNonOwnerThrowsException() {
         // given

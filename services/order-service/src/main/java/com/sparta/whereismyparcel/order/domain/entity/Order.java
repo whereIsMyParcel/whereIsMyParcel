@@ -186,8 +186,12 @@ public class Order extends BaseEntity {
             throw new InvalidOrderStatusException();
         }
 
-        this.requestMemo = requestMemo;
-        this.deliveryDeadline = deliveryDeadline;
+        if (requestMemo != null) {
+            this.requestMemo = requestMemo;
+        }
+        if (deliveryDeadline != null) {
+            this.deliveryDeadline = deliveryDeadline;
+        }
     }
 
     public boolean isDeletable() {
