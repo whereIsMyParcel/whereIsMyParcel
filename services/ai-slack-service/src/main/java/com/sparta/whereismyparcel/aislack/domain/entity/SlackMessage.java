@@ -50,7 +50,7 @@ public class SlackMessage extends BaseEntity {
         this.slackId = slackId;
         this.receiverId = receiverId;
         this.message = message;
-        this.slackStatus = SlackStatus.MASSAGE_SENT; // 성공 시 생성
+        this.slackStatus = SlackStatus.MESSAGE_SENT; // 오타 수정
         this.retryCount = 0;
         this.sentAt = LocalDateTime.now();
     }
@@ -75,11 +75,15 @@ public class SlackMessage extends BaseEntity {
     public void retry() {
         if(this.retryCount < 3)  {
             this.retryCount++;
-            this.slackStatus = SlackStatus.MASSAGE_FAILED;
+            this.slackStatus = SlackStatus.MESSAGE_FAILED; // 오타 수정
         } else {
             // 최대 재시도 횟수 도달 시 알림.
             this.slackStatus = SlackStatus.PERMANENT_FAILED;
         }
     }
 
+    // 메시지 내용 업데이트 메서드 추가
+    public void updateMessage(String newMessageContent) {
+        this.message = newMessageContent;
+    }
 }
