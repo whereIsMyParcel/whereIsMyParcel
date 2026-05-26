@@ -162,4 +162,18 @@ public class Shipment extends BaseEntity {
     public void addHistories(List<ShipmentHistory> histories){
         this.histories = histories;
     }
+
+
+    public void start(){
+        if (this.shipmentStatus != ShipmentStatus.HUB_WAITING) {
+            throw new ShipmentCannotBeDeliveredException();
+        }
+        this.shipmentStatus = ShipmentStatus.HUB_MOVING;
+        this.shippedAt = LocalDateTime.now();
+    }
+
+    public void delete(String userId) {
+        softDelete(userId);
+        this.histories.forEach(item -> item.softDelete(userId));
+    }
 }
