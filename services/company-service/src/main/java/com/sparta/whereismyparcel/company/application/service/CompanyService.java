@@ -40,10 +40,9 @@ public class CompanyService {
     @Transactional
     public CompanyResponse registerCompany(CompanyRegisterRequest request) {
         // 해당 허브가 존재하는지 검증
-        ApiResponse<Void> hubCheck = hubFeignClient.validateHub(new HubValidateRequest(request.hubId()));
-        if (hubCheck == null || !hubCheck.success()) {
+        ApiResponse<Boolean> hubCheck = hubFeignClient.isHubExists(request.hubId());
+        if (hubCheck == null || !hubCheck.success() || Boolean.FALSE.equals(hubCheck.data())) {
             throw new HubNotFoundException();
-
         }
 
         ApiResponse<UserIdResponse> managerIdResponse = userFeignClient.getUserIdByBusinessNumber(request.businessNumber());
@@ -66,6 +65,12 @@ public class CompanyService {
         );
 
         Company savedCompany = companyRepository.save(company);
+
+        // TODO : 리퀘스트를 만들어서 등록할 유저의 아이디를 입력을 하고 유저서비스에 해당 아이디의 유저에 컴퍼니아이디를 내가 주는걸로 넣어라
+        ApiResponse<Void> updateUserResponse = userFeignClient.updateUserCompanyId(managerId, savedCompany.getCompanyId());
+        if (updateUserResponse == null || !updateUserResponse.success()) {
+            throw new UserSyncFailedException();
+        }
         CompanyMember initialMember = CompanyMember.addMember(managerId, savedCompany);
         companyMemberRepository.save(initialMember);
 

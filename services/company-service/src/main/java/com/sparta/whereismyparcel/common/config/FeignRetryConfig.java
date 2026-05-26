@@ -1,4 +1,4 @@
-package com.sparta.whereismyparcel.company.infrastructure.feign.config;
+package com.sparta.whereismyparcel.common.config;
 
 import feign.Retryer;
 import org.springframework.context.annotation.Bean;

@@ -1,6 +1,9 @@
 package com.sparta.whereismyparcel.product.application.service;
 
 import com.sparta.whereismyparcel.product.domain.entity.*;
+import com.sparta.whereismyparcel.product.domain.exception.ProductNotFoundException;
+import com.sparta.whereismyparcel.product.domain.exception.ProductOptionValueNotFoundException;
+import com.sparta.whereismyparcel.product.domain.exception.UnsupportedProductStatus;
 import com.sparta.whereismyparcel.product.domain.repository.ProductOptionRepository;
 import com.sparta.whereismyparcel.product.domain.repository.ProductOptionValueRepository;
 import com.sparta.whereismyparcel.product.domain.repository.ProductRepository;
@@ -147,7 +150,7 @@ public class ProductService {
     // TODO : 어떻게 하면 좋을까요?
     public ProductResponse getProduct(UUID productId) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(()-> new IllegalArgumentException("Product not found"));
+                .orElseThrow(ProductNotFoundException::new);
 
         List<OptionResponse> optionResponses =
                 product.getOptions().stream()
@@ -170,7 +173,7 @@ public class ProductService {
     // 상품 아이디를 기반으로 모든 베리언트 조회
     public List<VariantResponse> getVariants(UUID productId) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+                .orElseThrow(ProductNotFoundException::new);
 
         return  product.getVariants().stream()
                 .map(VariantResponse::from)
@@ -181,7 +184,7 @@ public class ProductService {
     @Transactional
     public ProductUpdateResponse updateProduct(UUID productId, ProductUpdateRequest request) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+                .orElseThrow(ProductNotFoundException::new);
 
         product.updateDetails(request.name(), request.description(), request.price());
         product.getVariants().forEach(ProductVariant::syncVariants);
@@ -193,13 +196,13 @@ public class ProductService {
     @Transactional
     public List<VariantResponse> updateOptionValue(UUID productId, UUID optionValueId, OptionValueUpdateRequest request) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+                .orElseThrow(ProductNotFoundException::new);
 
         ProductOptionValue targetValue = product.getOptions().stream()
                 .flatMap(option -> option.getOptionValues().stream())
                 .filter(value -> value.getId().equals(optionValueId))
                 .findFirst()
-                .orElseThrow(()-> new IllegalArgumentException("Option value not found"));
+                .orElseThrow(ProductOptionValueNotFoundException::new);
 
         targetValue.updateValueDetails(request.value(), request.additionalPrice());
 
@@ -216,11 +219,11 @@ public class ProductService {
     @Transactional
     public ProductStatusResponse updateProductStatus(UUID productId, ProductStatusRequest request) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+                .orElseThrow(ProductNotFoundException::new);
 
         if (request.status() == ProductStatus.INACTIVE) {
             if (product.getStatus() == ProductStatus.INACTIVE || product.getStatus() == ProductStatus.DELETED) {
-                throw new IllegalArgumentException("Product inactive status not supported");
+                throw new UnsupportedProductStatus();
             }
             product.stopSelling();
 
@@ -230,7 +233,7 @@ public class ProductService {
 
         } else if (request.status() == ProductStatus.ACTIVE) {
             if (product.getStatus() == ProductStatus.ACTIVE || product.getStatus() == ProductStatus.DELETED) {
-                throw new IllegalArgumentException("Product active status not supported");
+                throw new UnsupportedProductStatus();
             }
             product.resumeSelling();
 
@@ -246,20 +249,20 @@ public class ProductService {
     @Transactional
     public List<VariantResponse> updateOptionStatus(UUID productId, UUID optionValueId ,OptionValueStatusRequest request) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+                .orElseThrow(ProductNotFoundException::new);
 
         ProductOptionValue targetValue = product.getOptions().stream()
                 .flatMap(option -> option.getOptionValues().stream())
                 .filter(value -> value.getId().equals(optionValueId))
                 .findFirst()
-                .orElseThrow(()-> new IllegalArgumentException("Option value not found"));
+                .orElseThrow(ProductOptionValueNotFoundException::new);
 
         if (request.status() == ProductStatus.INACTIVE) {
             if (product.getStatus() == ProductStatus.INACTIVE || product.getStatus() == ProductStatus.DELETED) {
-                throw new IllegalArgumentException("해당 상품은 판매중지 또는 삭제 상태로 옵션의 상태를 변경 할 수 없습니다");
+                throw new UnsupportedProductStatus();
             }
             if (targetValue.getStatus() == ProductStatus.INACTIVE) {
-                throw new IllegalArgumentException("Option value inactive status not supported");
+                throw new UnsupportedProductStatus();
             }
             targetValue.stopSelling();
 
@@ -269,10 +272,10 @@ public class ProductService {
 
         } else if (request.status() == ProductStatus.ACTIVE) {
             if (product.getStatus() == ProductStatus.ACTIVE || product.getStatus() == ProductStatus.DELETED) {
-                throw new IllegalArgumentException("해당 상품은 판매중지 상태로 옵션의 상태를 변경할 수 없습니다");
+                throw new UnsupportedProductStatus();
             }
             if (targetValue.getStatus() == ProductStatus.ACTIVE) {
-                throw new IllegalArgumentException("Option value active status not supported");
+                throw new UnsupportedProductStatus();
             }
             targetValue.resumeSelling();
 
@@ -290,7 +293,7 @@ public class ProductService {
     @Transactional
     public void deleteProduct(UUID productId, String companyMemberId) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+                .orElseThrow(ProductNotFoundException::new);
 
         product.delete(companyMemberId);
     }
@@ -299,19 +302,19 @@ public class ProductService {
     @Transactional
     public void deleteOption(UUID productId, UUID optionValueId, String companyMemberId, OptionValueStatusRequest request) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+                .orElseThrow(ProductNotFoundException::new);
 
         ProductOptionValue targetValue = product.getOptions().stream()
                 .flatMap(option -> option.getOptionValues().stream())
                 .filter(value -> value.getId().equals(optionValueId))
                 .findFirst()
-                .orElseThrow(()-> new IllegalArgumentException("Option value not found"));
+                .orElseThrow(ProductOptionValueNotFoundException::new);
 
 
         if (product.getStatus() == ProductStatus.DELETED) {
-            throw new IllegalArgumentException("해당 상품은 이미 삭제상태입니다");
+            throw new UnsupportedProductStatus();
         } else if (targetValue.getStatus() == ProductStatus.DELETED) {
-            throw new IllegalArgumentException("해당 상품 옵션은 이미 삭제상태입니다");
+            throw new UnsupportedProductStatus();
         }
 
         targetValue.delete(companyMemberId);

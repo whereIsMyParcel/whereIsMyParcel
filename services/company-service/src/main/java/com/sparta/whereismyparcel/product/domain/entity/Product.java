@@ -97,13 +97,12 @@ public class Product extends BaseEntity {
     public void stopSelling() {
         this.status = ProductStatus.INACTIVE;
 
-        this.variants.forEach(variants->variants.stopSelling());
+        this.variants.forEach(ProductVariant::stopSelling);
     }
 
     public void resumeSelling() {
         this.status = ProductStatus.ACTIVE;
-//        this.options.forEach(option->{option.resumeSelling();});
-        this.variants.forEach(variants->variants.resumeSelling());
+        this.variants.forEach(ProductVariant::resumeSelling);
     }
 
     public void delete(String userId) {

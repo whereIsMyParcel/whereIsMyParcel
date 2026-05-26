@@ -37,8 +37,8 @@ public class InventoryService {
     @Transactional
     public AddInventoryResponse addStock(AddInventoryRequest request) {
         // 허브 존재 확인 feign 요청
-        ApiResponse<Void> hubCheck = hubFeignClient.validateHub(new HubValidateRequest(request.hubId()));
-        if (hubCheck == null || !hubCheck.success()) {
+        ApiResponse<Boolean> hubCheck = hubFeignClient.isHubExists(request.hubId());
+        if (hubCheck == null || !hubCheck.success() || Boolean.FALSE.equals(hubCheck.data())) {
             throw new HubNotFoundException();
         }
 

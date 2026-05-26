@@ -68,7 +68,7 @@ public class ProductVariant extends BaseEntity {
 
     public void syncVariants() {
         int totalAdditionalPrice = this.variantOptions.stream()
-                .map(variantOptions -> variantOptions.getOptionValues())
+                .map(ProductVariantOption::getOptionValues)
                 .mapToInt(ProductOptionValue::getAdditionalPrice)
                 .sum();
         this.variantPrice = this.product.getPrice() + totalAdditionalPrice;

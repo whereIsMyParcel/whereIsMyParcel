@@ -30,19 +30,19 @@ public class InventoryFeignController {
     }
 
     /**
-     * 배송 시작 시 출고 확정
-     */
-    @PostMapping("/confirm")
-    public void confirmDeliveryLaunch(@RequestBody InventoryStockRequest request) {
-        inventoryService.confirmDeliveryLaunch(request);
-    }
-
-    /**
      * 주문 취소 시 재고 복구
      */
     @PostMapping("/cancel")
     public ApiResponse<Void> cancelReservation(@RequestBody StockCancelRequest request) {
         inventoryService.cancelOrderReservation(request);
         return ApiResponse.success(null);
+    }
+
+    /**
+     * 배송 시작 시 출고 확정
+     */
+    @PostMapping("/confirm")
+    public void confirmDeliveryLaunch(@RequestBody InventoryStockRequest request) {
+        inventoryService.confirmDeliveryLaunch(request);
     }
 }

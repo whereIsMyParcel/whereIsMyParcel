@@ -26,5 +26,4 @@ public class InventoryController {
         AddInventoryResponse response = inventoryService.addStock(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(response));
     }
-
 }
