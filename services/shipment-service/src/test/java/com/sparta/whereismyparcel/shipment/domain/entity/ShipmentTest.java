@@ -20,7 +20,7 @@ class ShipmentTest {
 
     @DisplayName("배송 취소")
     @Nested
-    class cancel {
+    class Cancel {
 
         @DisplayName("배송이 시작되기 전 상태에서만 배송 취소가 가능하다")
         @ParameterizedTest
@@ -115,7 +115,7 @@ class ShipmentTest {
 
     @Nested
     @DisplayName("배송완료")
-    class delivered {
+    class Delivered {
 
         @EnumSource(value = ShipmentStatus.class, names = "COMPANY_MOVING")
         @DisplayName("배송상태가 업체 이동중(COMPANY_MOVING)이면 DELIVERED로 변경된다")
