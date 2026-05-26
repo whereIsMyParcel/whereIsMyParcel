@@ -34,16 +34,4 @@ public class ShipmentController {
         shipmentService.delivered(userId, shipmentId);
         return ResponseEntity.ok(ApiResponse.ok());
     }
-
-    @Operation(
-            summary = "배송 생성",
-            description = "주문 정보를 기반으로 배송 정보와 배송 경로를 생성 및 저장한다"
-    )
-    @PreAuthorize("hasAnyRole('MASTER')")
-    @PostMapping()
-    public ResponseEntity<ApiResponse<List<ShipmentCreateResponse>>> create(@RequestHeader("X-User-Id") String userId,
-                                                                            @RequestBody ShipmentCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(shipmentService.create(userId, request)));
-    }
 }
