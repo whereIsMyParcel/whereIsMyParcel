@@ -352,6 +352,7 @@ class OrderServiceTest {
         String userId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(userId);
+        order.fail();
         given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
                 .willReturn(Optional.of(order));
 
@@ -366,6 +367,22 @@ class OrderServiceTest {
                     assertThat(item.getDeletedAt()).isNotNull();
                     assertThat(item.getDeletedBy()).isEqualTo(userId);
                 });
+    }
+
+    @Test
+    @DisplayName("PENDING 상태 주문은 삭제할 수 없다")
+    void deletePendingOrderThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.deleteOrder(userId, "MASTER", orderId))
+                .isInstanceOf(InvalidOrderStatusException.class);
+        assertThat(order.getDeletedAt()).isNull();
     }
 
     @Test

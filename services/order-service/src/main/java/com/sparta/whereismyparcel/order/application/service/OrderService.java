@@ -198,6 +198,10 @@ public class OrderService {
         Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
+        if (!order.isDeletable()) {
+            throw new InvalidOrderStatusException();
+        }
+
         order.delete(userId);
     }
 
