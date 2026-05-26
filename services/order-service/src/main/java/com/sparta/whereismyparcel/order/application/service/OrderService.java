@@ -19,6 +19,7 @@ import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.StockC
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCompleteResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -136,6 +137,20 @@ public class OrderService {
         }
 
         return OrderCancelResponse.from(order);
+    }
+
+    @Transactional
+    public OrderCompleteResponse completeOrder(UUID orderId) {
+        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+                .orElseThrow(OrderNotFoundException::new);
+
+        if (order.getOrderStatus() == OrderStatus.COMPLETED) {
+            return OrderCompleteResponse.from(order);
+        }
+
+        order.complete();
+
+        return OrderCompleteResponse.from(order);
     }
 
     private void validateOrderOwner(Order order, String userId) {
