@@ -27,6 +27,9 @@ public class OrderItem extends BaseEntity {
     @Column(name = "product_variant_id", nullable = false)
     private UUID productVariantId;
 
+    @Column(name = "sku_code", nullable = false, length = 100)
+    private String skuCode;
+
     @Column(name = "product_name_snapshot", nullable = false, length = 150)
     private String productNameSnapshot;
 
@@ -42,12 +45,14 @@ public class OrderItem extends BaseEntity {
     @Builder(access = AccessLevel.PRIVATE)
     private OrderItem(
             UUID productVariantId,
+            String skuCode,
             String productNameSnapshot,
             String productOptionSnapshot,
             Long unitPrice,
             Integer quantity
     ) {
         this.productVariantId = productVariantId;
+        this.skuCode = skuCode;
         this.productNameSnapshot = productNameSnapshot;
         this.productOptionSnapshot = productOptionSnapshot;
         this.unitPrice = unitPrice;
@@ -56,6 +61,7 @@ public class OrderItem extends BaseEntity {
 
     public static OrderItem create(
             UUID productVariantId,
+            String skuCode,
             String productNameSnapshot,
             String productOptionSnapshot,
             Long unitPrice,
@@ -63,6 +69,7 @@ public class OrderItem extends BaseEntity {
     ) {
         return OrderItem.builder()
                 .productVariantId(productVariantId)
+                .skuCode(skuCode)
                 .productNameSnapshot(productNameSnapshot)
                 .productOptionSnapshot(productOptionSnapshot)
                 .unitPrice(unitPrice)

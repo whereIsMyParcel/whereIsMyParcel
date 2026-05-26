@@ -429,7 +429,7 @@ class OrderServiceTest {
     private SkuValidationResponse createValidationResponse(OrderCreateRequest request) {
         List<SkuValidationResponse.Item> items = request.items().stream()
                 .map(i -> new SkuValidationResponse.Item(
-                        i.productVariantId(), "상품명", "옵션명", 10_000L))
+                        i.productVariantId(), "SKU-001", "옵션명", 10_000, "ON_SALE"))
                 .toList();
         return new SkuValidationResponse(items);
     }
@@ -448,6 +448,7 @@ class OrderServiceTest {
                 orderedBy,
                 List.of(OrderItem.create(
                         UUID.randomUUID(),
+                        "SKU-001",
                         "상품명",
                         "옵션명",
                         10_000L,

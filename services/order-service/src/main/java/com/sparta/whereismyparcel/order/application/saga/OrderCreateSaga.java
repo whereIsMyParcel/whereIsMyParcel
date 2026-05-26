@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -27,14 +29,14 @@ public class OrderCreateSaga {
             var request = new StockReservationRequest(
                     context.getOrderId(),
                     context.getItems().stream()
-                            .map(i -> new StockReservationRequest.Item(i.productVariantId(), i.quantity()))
+                            .map(i -> new StockReservationRequest.Item(i.skuCode(), i.quantity()))
                             .toList()
             );
             var reservations = resolveSagaResponse(
                     companyFeignClient.reserveStock(context.getUserId(), request)
             );
             context.applyReservation(reservations.stream()
-                    .map(r -> new OrderCreateSagaContext.StockReservation(r.skuId(), null, r.reservedQuantity()))
+                    .map(r -> new OrderCreateSagaContext.StockReservation(r.variantId(), findSkuCode(context, r.variantId()), r.reservedQuantity()))
                     .toList());
             order.reserveStock();
         } catch (Exception e) {
@@ -57,7 +59,9 @@ public class OrderCreateSaga {
             );
             var shipmentIds = resolveSagaResponse(
                     shipmentFeignClient.createShipments(context.getUserId(), request)
-            );
+            ).stream()
+                    .map(response -> response.shipmentId())
+                    .toList();
             context.applyShipmentIds(shipmentIds);
         } catch (Exception e) {
             log.error("[Saga] 배송 생성 실패. orderId={}", context.getOrderId(), e);
@@ -74,7 +78,7 @@ public class OrderCreateSaga {
             var request = new StockCancelRequest(
                     context.getOrderId(),
                     context.getReservations().stream()
-                            .map(r -> new StockCancelRequest.Item(r.skuId(), r.quantity()))
+                            .map(r -> new StockCancelRequest.Item(r.skuCode(), r.quantity()))
                             .toList()
             );
             ensureCompensationSuccess(companyFeignClient.cancelReservation(context.getUserId(), request));
@@ -95,5 +99,13 @@ public class OrderCreateSaga {
         if (response == null || !response.success()) {
             throw new SagaCompensationFailedException();
         }
+    }
+
+    private String findSkuCode(OrderCreateSagaContext context, UUID variantId) {
+        return context.getItems().stream()
+                .filter(item -> item.productVariantId().equals(variantId))
+                .map(OrderCreateSagaContext.OrderItemInfo::skuCode)
+                .findFirst()
+                .orElseThrow(SagaFailedException::new);
     }
 }
