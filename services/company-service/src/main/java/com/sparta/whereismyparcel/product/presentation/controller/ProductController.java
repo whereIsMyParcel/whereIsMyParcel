@@ -103,9 +103,8 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Void>> deleteOption(
             @PathVariable UUID productId,
             @PathVariable UUID optionValueId,
-            @RequestHeader("X-User-Id") String companyMemberId,
-            @RequestBody @Valid OptionValueStatusRequest request) {
-        productService.deleteOption(productId, optionValueId, companyMemberId, request);
+            @RequestHeader("X-User-Id") String companyMemberId) {
+        productService.deleteOption(productId, optionValueId, companyMemberId);
         return ResponseEntity.ok(ApiResponse.ok());
     }
 

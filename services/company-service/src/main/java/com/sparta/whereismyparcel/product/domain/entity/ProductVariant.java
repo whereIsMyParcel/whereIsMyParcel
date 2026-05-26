@@ -73,6 +73,11 @@ public class ProductVariant extends BaseEntity {
                 .sum();
         this.variantPrice = this.product.getPrice() + totalAdditionalPrice;
 
+        if (this.variantOptions.isEmpty()) {
+            this.variantName = this.product.getName();
+            return;
+        }
+
         StringBuilder sb = new StringBuilder(this.product.getName()).append(" (");
 
         for (int i = 0; i < this.variantOptions.size(); i++) {

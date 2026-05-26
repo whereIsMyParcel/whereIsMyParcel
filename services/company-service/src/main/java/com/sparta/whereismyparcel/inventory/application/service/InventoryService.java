@@ -1,6 +1,5 @@
 package com.sparta.whereismyparcel.inventory.application.service;
 
-import com.sparta.whereismyparcel.common.dto.HubValidateRequest;
 import com.sparta.whereismyparcel.common.infrastructure.client.HubFeignClient;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.inventory.domain.entity.Inventory;
@@ -17,13 +16,11 @@ import com.sparta.whereismyparcel.inventory.presentation.dto.response.AddInvento
 import com.sparta.whereismyparcel.inventory.presentation.dto.response.StockReservationResponse;
 import com.sparta.whereismyparcel.product.domain.entity.ProductVariant;
 import com.sparta.whereismyparcel.product.domain.repository.ProductVariantRepository;
-import com.sparta.whereismyparcel.inventory.presentation.dto.response.InventoryCheckResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor

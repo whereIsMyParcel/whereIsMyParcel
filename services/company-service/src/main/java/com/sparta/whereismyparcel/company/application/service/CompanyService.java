@@ -146,9 +146,9 @@ public class CompanyService {
     // 직원 조회
     public CompanyMemberResponse getCompanyMember(UUID companyId, UUID memberId) {
         Company company = companyRepository.findByCompanyIdAndStatus(companyId, CompanyStatus.ACTIVE)
-                .orElseThrow(() -> new IllegalArgumentException("해당 업체를 찾을 수 없습니다"));
+                .orElseThrow(CompanyNotFoundException::new);
         CompanyMember companyMember = companyMemberRepository.findByCompanyMemberIdAndStatus(memberId, CompanyMemberStatus.ACTIVE)
-                .orElseThrow(() -> new IllegalArgumentException("해당 직원을 찾을 수 없습니다"));
+                .orElseThrow(CompanyNotFoundException::new);
         return CompanyMemberResponse.from(companyMember);
     }
 
@@ -160,8 +160,11 @@ public class CompanyService {
 
         CompanyMember companyMember = companyMemberRepository.findByCompanyMemberIdAndStatus(request.companyMemberId(), CompanyMemberStatus.ACTIVE)
                 .orElseThrow(CompanyMemberNotFoundException::new);
+        if (!companyMember.getCompany().getCompanyId().equals(companyId)) {
+            throw new CompanyMemberNotFoundException();
+        }
 
-        ApiResponse<Void> updateUserResponse = userFeignClient.deleteUserOrClearCompany(request.companyMemberId());
+        ApiResponse<Void> updateUserResponse = userFeignClient.deleteUserOrClearCompany(companyMember.getUserId());
         if (updateUserResponse == null || !updateUserResponse.success()) {
             throw new UserSyncFailedException();
         }

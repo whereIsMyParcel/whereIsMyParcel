@@ -55,9 +55,9 @@ public class CompanyController {
     }
 
     @Operation(summary = "업체 수정", description = "업체 수정")
-    @PostMapping("/{companyId}")
+    @PatchMapping("/{companyId}")
     @PreAuthorize("hasRole('COMPANY_MANAGER')")
-    public ResponseEntity<ApiResponse<CompanyResponse>> registerCompany(
+    public ResponseEntity<ApiResponse<CompanyResponse>> updateCompany(
             @PathVariable UUID companyId,
             @RequestBody @Valid CompanyUpdateRequest request
     ) {

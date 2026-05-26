@@ -314,7 +314,7 @@ public class ProductService {
 
     // 상품 옵션 삭제(softDelete)
     @Transactional
-    public void deleteOption(UUID productId, UUID optionValueId, String companyMemberId, OptionValueStatusRequest request) {
+    public void deleteOption(UUID productId, UUID optionValueId, String companyMemberId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(ProductNotFoundException::new);
 
@@ -342,12 +342,10 @@ public class ProductService {
      * ③ 주문 생성 전 상품 상태 확인 (Order ➡️ Product)
      */
     public List<VariantResponse> validateVariantById(List<UUID> productVariantIds){
-        return productVariantIds.stream()
-                .map(variantId -> {
-                   return productVariantRepository.findById(variantId)
-                           .orElse(null);
-                })
-                .filter(Objects::nonNull)
+        if (productVariantIds == null || productVariantIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        return productVariantRepository.findAllById(productVariantIds).stream()
                 .filter(variant -> variant.getStatus() == ProductStatus.ACTIVE)
                 .map(VariantResponse::from)
                 .toList();

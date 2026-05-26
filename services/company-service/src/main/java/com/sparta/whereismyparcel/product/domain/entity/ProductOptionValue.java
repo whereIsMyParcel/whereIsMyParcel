@@ -32,7 +32,7 @@ public class ProductOptionValue extends BaseEntity {
     @Column(name = "option_value", nullable = false)
     private String value;
 
-    @Column(name = "option_additional_prive", nullable = false)
+    @Column(name = "option_additional_price", nullable = false)
     private Integer additionalPrice;
 
     @Enumerated(EnumType.STRING)
@@ -66,8 +66,12 @@ public class ProductOptionValue extends BaseEntity {
     }
 
     public void updateValueDetails(String newValue, Integer newAdditionalPrice) {
-        this.value = newValue;
-        this.additionalPrice = newAdditionalPrice;
+        if (newValue != null && !newValue.trim().isEmpty()) {
+            this.value = newValue;
+        }
+        if (newAdditionalPrice != null) {
+            this.additionalPrice = newAdditionalPrice;
+        }
     }
 
     public void stopSelling() {
