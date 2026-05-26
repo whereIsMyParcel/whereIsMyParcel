@@ -38,7 +38,7 @@ public class SlackMessage extends BaseEntity {
     @Column(name = "retry_count")
     private int retryCount = 0;
 
-    @Column(name = "sent_at", nullable = false)
+    @Column(name = "sent_at") // nullable = false 제거
     private LocalDateTime sentAt; // 발송 시간
 
     @Builder(access = AccessLevel.PRIVATE)
@@ -50,9 +50,9 @@ public class SlackMessage extends BaseEntity {
         this.slackId = slackId;
         this.receiverId = receiverId;
         this.message = message;
-        this.slackStatus = SlackStatus.MESSAGE_SENT; // 오타 수정
+        this.slackStatus = SlackStatus.READY_TO_SEND; // 초기 상태 READY_TO_SEND
         this.retryCount = 0;
-        this.sentAt = LocalDateTime.now();
+        // sentAt은 초기에는 null
     }
 
     public static SlackMessage create(
@@ -67,23 +67,53 @@ public class SlackMessage extends BaseEntity {
                 .build();
     }
 
-    // 비지니스 로직
+    // Business logic for state transitions
 
-    /*
-    발송 실패시 재시도 횟수 증가 및 상태 관리
+    /**
+     * Slack 메시지 전송 성공 시 상태를 MESSAGE_SENT로 변경합니다.
      */
-    public void retry() {
-        if(this.retryCount < 3)  {
-            this.retryCount++;
-            this.slackStatus = SlackStatus.MESSAGE_FAILED; // 오타 수정
-        } else {
-            // 최대 재시도 횟수 도달 시 알림.
-            this.slackStatus = SlackStatus.PERMANENT_FAILED;
+    public void succeedSending() {
+        if (this.slackStatus == SlackStatus.MESSAGE_SENT) {
+            // 이미 성공 상태이므로 추가 처리 없음 (멱등성 보장)
+            return;
         }
+        this.slackStatus = SlackStatus.MESSAGE_SENT;
+        this.sentAt = LocalDateTime.now();
     }
 
-    // 메시지 내용 업데이트 메서드 추가
+    /**
+     * Slack 메시지 전송 실패 시 상태를 MESSAGE_FAILED로 변경하고 재시도 횟수를 증가시킵니다.
+     */
+    public void failSending() {
+        if (this.slackStatus == SlackStatus.PERMANENT_FAILED) {
+            // 이미 영구 실패 상태이므로 더 이상 재시도 불가
+            return;
+        }
+        this.slackStatus = SlackStatus.MESSAGE_FAILED;
+        this.retryCount++;
+    }
+
+    /**
+     * 최대 재시도 횟수 초과 시 상태를 PERMANENT_FAILED로 변경합니다.
+     */
+    public void permanentFailSending() {
+        this.slackStatus = SlackStatus.PERMANENT_FAILED;
+    }
+
+    /**
+     * PERMANENT_FAILED 상태의 메시지를 재전송하기 위해 READY_TO_SEND 상태로 변경하고 재시도 횟수를 초기화합니다.
+     */
+    public void requeueForSending() {
+        this.slackStatus = SlackStatus.READY_TO_SEND;
+        this.retryCount = 0;
+        this.sentAt = null; // 재전송을 위해 발송 시간 초기화
+    }
+
     public void updateMessage(String newMessageContent) {
         this.message = newMessageContent;
+    }
+
+    public boolean canRetry() {
+        return this.retryCount < 3; // 최대 재시도 횟수 3번으로 가정
     }
 }
