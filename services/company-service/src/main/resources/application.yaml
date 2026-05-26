@@ -13,17 +13,17 @@ spring:
         enabled: true
         service-id: config-server
   datasource:
-    url: ${COMPANY_DB_URL:jdbc:postgresql://localhost:5432/sparta_logistics?currentSchema=company_db}
+    url: ${COMPANY_DB_URL:jdbc:postgresql://localhost:5432/sparta_logistics?currentSchema=company_db,product_db,inventory_db}
     username: ${DB_USERNAME:sparta}
     password: ${DB_PASSWORD:sparta1234}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        default_schema: company_db
+#        default_schema: company_db
     show-sql: false
     open-in-view: false
 

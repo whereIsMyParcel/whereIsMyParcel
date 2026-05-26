@@ -12,15 +12,15 @@ import java.util.UUID;
 
 @Entity
 @Getter
-@Table(name = "p_company_members")
+@Table(name = "p_company_members", schema = "company_db")
 @SQLRestriction("deleted_at IS NULL")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CompanyMember extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "companyMember_id",nullable = false, updatable = false)
-    private UUID id;
+    @Column(name = "company_member_id",nullable = false, updatable = false)
+    private UUID companyMemberId;
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
@@ -30,27 +30,33 @@ public class CompanyMember extends BaseEntity {
     private Company company;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false, length = 30)
-    private CompanyRole role;
+    @Column(name = "status", nullable = false, length = 30)
+    private CompanyMemberStatus status;
 
     @Builder(access = AccessLevel.PRIVATE)
-    private CompanyMember(UUID userId, Company company, CompanyRole role) {
+    private CompanyMember(
+            UUID userId,
+            Company company
+    ) {
         this.userId = userId;
         this.company = company;
-        this.role = role;
+        this.status = CompanyMemberStatus.ACTIVE;
     }
 
-    public static CompanyMember addMember(UUID userId, Company company, CompanyRole role) {
-        CompanyMember companyMember = new CompanyMember(userId, company, role);
-        company.addMember(companyMember);
+    public static CompanyMember addMember(
+            UUID userId,
+            Company company
+    ) {
+        CompanyMember companyMember = CompanyMember.builder()
+                .userId(userId)
+                .company(company)
+                .build();
+
         return companyMember;
-    }
-
-    public void updateDetails(CompanyRole role) {
-        this.role = role;
     }
 
     public void delete(String userId) {
         super.softDelete(userId);
+        this.status = CompanyMemberStatus.INACTIVE;
     }
 }
