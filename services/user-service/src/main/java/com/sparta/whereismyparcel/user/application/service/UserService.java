@@ -76,6 +76,12 @@ public class UserService {
 		return InternalUserResponse.from(findUserById(userId));
 	}
 
+	public InternalUserResponse getInternalUserBySlackId(String slackId) {
+		User user = userRepository.findBySlackId(slackId)
+				.orElseThrow(UserNotFoundException::new);
+		return InternalUserResponse.from(user);
+	}
+
 	public InternalUserResponse getInternalUserByBusinessNumber(String businessNumber) {
 		User user = userRepository.findByBusinessNumber(businessNumber)
 				.orElseThrow(UserNotFoundException::new);

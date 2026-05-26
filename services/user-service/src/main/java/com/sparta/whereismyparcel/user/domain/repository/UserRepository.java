@@ -19,6 +19,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
 	boolean existsByBusinessNumber(String businessNumber);
 
+	Optional<User> findBySlackId(String slackId);
+
 	Optional<User> findByBusinessNumber(String businessNumber);
 
 	@Query("SELECT u FROM User u WHERE (:role IS NULL OR u.role = :role) AND (:status IS NULL OR u.status = :status)")
