@@ -217,6 +217,8 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-http://keycloak:8080/realms/sparta-logistics}
       ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+      LOKI_URL: http://loki:3100
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
@@ -250,8 +252,8 @@ services:
       KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID:-user-service-admin}
       KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-user-service-admin-secret}
       ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
-      SENTRY_DSN: ${SENTRY_DSN:-}
       LOKI_URL: http://loki:3100
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
@@ -282,6 +284,8 @@ services:
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis1234}
       ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+      LOKI_URL: http://loki:3100
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
@@ -310,6 +314,8 @@ services:
       DB_USERNAME: ${DB_USERNAME:-sparta}
       DB_PASSWORD: ${DB_PASSWORD:-sparta1234}
       ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+      LOKI_URL: http://loki:3100
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
@@ -338,6 +344,8 @@ services:
       DB_USERNAME: ${DB_USERNAME:-sparta}
       DB_PASSWORD: ${DB_PASSWORD:-sparta1234}
       ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+      LOKI_URL: http://loki:3100
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
@@ -366,6 +374,8 @@ services:
       DB_USERNAME: ${DB_USERNAME:-sparta}
       DB_PASSWORD: ${DB_PASSWORD:-sparta1234}
       ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+      LOKI_URL: http://loki:3100
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
@@ -394,6 +404,8 @@ services:
       DB_USERNAME: ${DB_USERNAME:-sparta}
       DB_PASSWORD: ${DB_PASSWORD:-sparta1234}
       ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+      LOKI_URL: http://loki:3100
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
