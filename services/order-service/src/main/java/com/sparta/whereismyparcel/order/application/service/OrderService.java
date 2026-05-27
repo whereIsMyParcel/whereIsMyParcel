@@ -70,14 +70,15 @@ public class OrderService {
         List<OrderItem> orderItems = request.items().stream()
                 .map(i -> {
                     SkuValidationResponse.Item skuInfo = validation.items().stream()
-                            .filter(v -> v.skuId().equals(i.productVariantId()))
+                            .filter(v -> v.id().equals(i.productVariantId()))
                             .findFirst()
                             .orElseThrow(InvalidOrderItemsException::new);
                     return OrderItem.create(
                             i.productVariantId(),
-                            skuInfo.productName(),
-                            skuInfo.optionName(),
-                            skuInfo.unitPrice(),
+                            skuInfo.skuCode(),
+                            skuInfo.variantName(),
+                            skuInfo.variantName(),
+                            skuInfo.variantPrice().longValue(),
                             i.quantity()
                     );
                 })
@@ -99,8 +100,12 @@ public class OrderService {
 
         orderRepository.save(order);
 
-        List<OrderCreateSagaContext.OrderItemInfo> itemInfos = request.items().stream()
-                .map(i -> new OrderCreateSagaContext.OrderItemInfo(i.productVariantId(), i.quantity()))
+        List<OrderCreateSagaContext.OrderItemInfo> itemInfos = orderItems.stream()
+                .map(item -> new OrderCreateSagaContext.OrderItemInfo(
+                        item.getProductVariantId(),
+                        item.getSkuCode(),
+                        item.getQuantity()
+                ))
                 .toList();
         OrderCreateSagaContext context = new OrderCreateSagaContext(
                 order.getOrderId(), userId, itemInfos);
@@ -253,7 +258,7 @@ public class OrderService {
                 order.getOrderId(),
                 order.getOrderItems().stream()
                         .map(item -> new StockCancelRequest.Item(
-                                item.getProductVariantId(),
+                                item.getSkuCode(),
                                 item.getQuantity()
                         ))
                         .toList()

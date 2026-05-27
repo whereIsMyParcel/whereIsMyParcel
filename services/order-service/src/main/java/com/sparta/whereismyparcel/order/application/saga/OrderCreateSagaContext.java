@@ -34,6 +34,6 @@ public class OrderCreateSagaContext {
         return !reservations.isEmpty();
     }
 
-    public record OrderItemInfo(UUID productVariantId, Integer quantity) {}
-    public record StockReservation(UUID skuId, UUID hubId, Integer quantity) {}
+    public record OrderItemInfo(UUID productVariantId, String skuCode, Integer quantity) {}
+    public record StockReservation(UUID variantId, String skuCode, Integer quantity) {}
 }

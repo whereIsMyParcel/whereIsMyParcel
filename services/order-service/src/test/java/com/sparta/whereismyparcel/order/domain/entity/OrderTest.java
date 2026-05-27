@@ -298,6 +298,7 @@ class OrderTest {
     private OrderItem createOrderItem(Long unitPrice, Integer quantity) {
         return OrderItem.create(
                 UUID.randomUUID(),
+                "SKU-001",
                 "상품명",
                 "옵션명",
                 unitPrice,
