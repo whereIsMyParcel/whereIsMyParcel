@@ -34,13 +34,14 @@ public class GeminiClientImpl implements GeminiClient {
     public GeminiResponse generateText(GeminiRequest request) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("x-goog-api-key", geminiApiKey); // Gemini API Key 헤더 설정
+        headers.set("x-goog-api-key", geminiApiKey); // ✅ Gemini API Key를 헤더에만 설정
 
         HttpEntity<GeminiRequest> entity = new HttpEntity<>(request, headers);
 
         try {
-            String fullUrl = geminiApiUrl + "?key=" + geminiApiKey; // URL에 API Key 포함 (Gemini API 문서 참조)
-            GeminiResponse response = restTemplate.postForObject(fullUrl, entity, GeminiResponse.class);
+            // ✅ URL에서 "?key=" + geminiApiKey 부분을 제거하고 순수 API URL만 사용
+            GeminiResponse response = restTemplate.postForObject(geminiApiUrl, entity, GeminiResponse.class);
+
             if (response == null || response.candidates().isEmpty() || response.candidates().get(0).content().parts().isEmpty()) {
                 log.warn("Gemini AI 응답이 비어있거나 유효하지 않습니다.");
                 throw new BusinessException(AiSlackErrorCode.AI_RESPONSE_PARSING_FAILED);
