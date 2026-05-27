@@ -33,8 +33,10 @@ import com.sparta.whereismyparcel.order.presentation.dto.response.OrderListRespo
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderUpdateResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -44,6 +46,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -146,15 +149,66 @@ public class OrderService {
     ) {
         validateSearchDateRange(startDate, endDate);
 
-        return orderRepository.searchOrders(
-                userId,
-                isMaster(role),
-                status,
-                keyword,
-                startDate,
-                endDate,
+        return orderRepository.findAll(
+                orderSearchSpecification(
+                        userId,
+                        isMaster(role),
+                        status,
+                        normalizeKeyword(keyword),
+                        startDate,
+                        endDate
+                ),
                 pageable
         ).map(OrderListResponse::from);
+    }
+
+    private Specification<Order> orderSearchSpecification(
+            String userId,
+            boolean isMaster,
+            OrderStatus status,
+            String keyword,
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    ) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            predicates.add(cb.isNull(root.get("deletedAt")));
+
+            if (!isMaster) {
+                predicates.add(cb.equal(root.get("orderedBy"), userId));
+            }
+
+            if (status != null) {
+                predicates.add(cb.equal(root.get("orderStatus"), status));
+            }
+
+            if (keyword != null) {
+                String keywordPattern = "%" + keyword.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("orderNumber")), keywordPattern),
+                        cb.like(cb.lower(root.get("recipientName")), keywordPattern),
+                        cb.like(root.get("recipientPhone"), "%" + keyword + "%")
+                ));
+            }
+
+            if (startDate != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("orderedAt"), startDate));
+            }
+
+            if (endDate != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("orderedAt"), endDate));
+            }
+
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+    }
+
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return keyword.trim();
     }
 
     public OrderDetailResponse getOrder(String userId, String role, UUID orderId) {
