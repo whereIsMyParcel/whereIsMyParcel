@@ -11,6 +11,9 @@ public record SlackResponse(
         String resultMessage,           // 성공 메시지 또는 에러 로그 메시지
         LocalDateTime timestamp         // 발송 처리 완료 일시
 ) {
+
+
+
     /**
      * 슬랙 발송 성공 시 응답 객체를 생성하는 팩토리 메서드
      */

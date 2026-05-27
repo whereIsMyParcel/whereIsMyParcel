@@ -1,7 +1,7 @@
 package com.sparta.whereismyparcel.aislack.presentation.dto.request;
 
+import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.request.OrderInternalRequest;
 import jakarta.validation.constraints.NotBlank;
-import org.aspectj.bridge.IMessage;
 
 /*
  * 슬랙 메시지 발송 요청

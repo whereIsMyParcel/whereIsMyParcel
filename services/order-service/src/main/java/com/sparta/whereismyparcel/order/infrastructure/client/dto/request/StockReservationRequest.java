@@ -7,5 +7,5 @@ public record StockReservationRequest(
         UUID orderId,
         List<Item> items
 ) {
-    public record Item(UUID skuId, Integer quantity) {}
+    public record Item(String skuCode, Integer quantity) {}
 }

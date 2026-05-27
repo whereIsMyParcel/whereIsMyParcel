@@ -105,6 +105,24 @@ public class UserService {
 	}
 
 	@Transactional
+	public void updateUserCompanyId(UUID userId, UUID companyId) {
+		User user = findUserById(userId);
+		user.updateCompanyId(companyId);
+	}
+
+	@Transactional
+	public void disconnectCompany(UUID userId) {
+		User user = findUserById(userId);
+		user.clearCompanyId();
+	}
+
+	@Transactional
+	public void disconnectCompanyFromAllUsers(UUID companyId) {
+		userRepository.findAllByCompanyId(companyId)
+				.forEach(User::clearCompanyId);
+	}
+
+	@Transactional
 	public void deleteUser(UUID userId, String requestedBy) {
 		User user = findUserById(userId);
 		user.softDelete(requestedBy);

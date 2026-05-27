@@ -7,7 +7,9 @@ import io.swagger.v3.oas.annotations.Hidden;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,5 +38,24 @@ public class InternalUserController {
 	@GetMapping("/by-slack/{slackId}")
 	public ResponseEntity<ApiResponse<InternalUserResponse>> getUserBySlackId(@PathVariable String slackId) {
 		return ResponseEntity.ok(ApiResponse.success(userService.getInternalUserBySlackId(slackId)));
+	}
+
+	@PatchMapping("/{userId}/companies/{companyId}")
+	public ResponseEntity<ApiResponse<Void>> updateUserCompanyId(
+			@PathVariable UUID userId, @PathVariable UUID companyId) {
+		userService.updateUserCompanyId(userId, companyId);
+		return ResponseEntity.ok(ApiResponse.ok());
+	}
+
+	@DeleteMapping("/{userId}")
+	public ResponseEntity<ApiResponse<Void>> disconnectCompany(@PathVariable UUID userId) {
+		userService.disconnectCompany(userId);
+		return ResponseEntity.ok(ApiResponse.ok());
+	}
+
+	@DeleteMapping("/companies/{companyId}")
+	public ResponseEntity<ApiResponse<Void>> disconnectCompanyFromAllUsers(@PathVariable UUID companyId) {
+		userService.disconnectCompanyFromAllUsers(companyId);
+		return ResponseEntity.ok(ApiResponse.ok());
 	}
 }

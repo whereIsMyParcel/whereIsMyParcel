@@ -8,6 +8,7 @@ import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedE
 import com.sparta.whereismyparcel.order.domain.exception.SagaFailedException;
 import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.ShipmentFeignClient;
+import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.ShipmentCreateResponse;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.StockReservationResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -44,14 +45,16 @@ class OrderCreateSagaTest {
 
     private Order order;
     private OrderCreateSagaContext context;
+    private UUID productVariantId;
 
     @BeforeEach
     void setUp() {
         order = createOrder();
+        productVariantId = UUID.randomUUID();
         context = new OrderCreateSagaContext(
                 order.getOrderId(),
                 UUID.randomUUID().toString(),
-                List.of(new OrderCreateSagaContext.OrderItemInfo(UUID.randomUUID(), 10))
+                List.of(new OrderCreateSagaContext.OrderItemInfo(productVariantId, "SKU-001", 10))
         );
     }
 
@@ -60,9 +63,9 @@ class OrderCreateSagaTest {
     void executeSuccess() {
         // given
         given(companyFeignClient.reserveStock(any(), any()))
-                .willReturn(ApiResponse.success(List.of(new StockReservationResponse(UUID.randomUUID(), 10))));
+                .willReturn(ApiResponse.success(List.of(new StockReservationResponse(productVariantId, 10))));
         given(shipmentFeignClient.createShipments(any(), any()))
-                .willReturn(ApiResponse.success(List.of(UUID.randomUUID())));
+                .willReturn(ApiResponse.success(List.of(createShipmentCreateResponse())));
 
         // when
         orderCreateSaga.execute(order, context);
@@ -90,7 +93,7 @@ class OrderCreateSagaTest {
     void executeFailOnShipmentCreation() {
         // given
         given(companyFeignClient.reserveStock(any(), any()))
-                .willReturn(ApiResponse.success(List.of(new StockReservationResponse(UUID.randomUUID(), 10))));
+                .willReturn(ApiResponse.success(List.of(new StockReservationResponse(productVariantId, 10))));
         given(shipmentFeignClient.createShipments(any(), any()))
                 .willThrow(new RuntimeException("배송 생성 실패"));
         given(companyFeignClient.cancelReservation(any(), any()))
@@ -108,7 +111,7 @@ class OrderCreateSagaTest {
     void executeFailOnCompensation() {
         // given
         given(companyFeignClient.reserveStock(any(), any()))
-                .willReturn(ApiResponse.success(List.of(new StockReservationResponse(UUID.randomUUID(), 10))));
+                .willReturn(ApiResponse.success(List.of(new StockReservationResponse(productVariantId, 10))));
         given(shipmentFeignClient.createShipments(any(), any()))
                 .willThrow(new RuntimeException("배송 생성 실패"));
         given(companyFeignClient.cancelReservation(any(), any()))
@@ -131,7 +134,22 @@ class OrderCreateSagaTest {
                 "문 앞에 놓아주세요",
                 LocalDateTime.now().plusDays(3),
                 UUID.randomUUID().toString(),
-                List.of(OrderItem.create(UUID.randomUUID(), "상품명", "옵션명", 10_000L, 2))
+                List.of(OrderItem.create(UUID.randomUUID(), "SKU-001", "상품명", "옵션명", 10_000L, 2))
+        );
+    }
+
+    private ShipmentCreateResponse createShipmentCreateResponse() {
+        return new ShipmentCreateResponse(
+                UUID.randomUUID(),
+                order.getOrderId(),
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "READY",
+                "SHP-001",
+                "서울시 강남구",
+                "홍길동",
+                "010-1234-5678",
+                List.of()
         );
     }
 }

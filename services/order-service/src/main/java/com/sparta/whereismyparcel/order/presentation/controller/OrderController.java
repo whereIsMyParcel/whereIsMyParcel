@@ -5,10 +5,12 @@ import com.sparta.whereismyparcel.common.util.PageableUtils;
 import com.sparta.whereismyparcel.order.application.service.OrderService;
 import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
+import com.sparta.whereismyparcel.order.presentation.dto.request.OrderUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDetailResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderListResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderUpdateResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -73,11 +75,31 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orderService.getOrder(userId, role, orderId)));
     }
 
+    @PatchMapping("/{orderId}")
+    public ResponseEntity<ApiResponse<OrderUpdateResponse>> updateOrder(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String role,
+            @PathVariable UUID orderId,
+            @RequestBody @Valid OrderUpdateRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(orderService.updateOrder(userId, role, orderId, request)));
+    }
+
     @PatchMapping("/{orderId}/cancel")
     public ResponseEntity<ApiResponse<OrderCancelResponse>> cancelOrder(
             @RequestHeader("X-User-Id") String userId,
             @PathVariable UUID orderId
     ) {
         return ResponseEntity.ok(ApiResponse.success(orderService.cancelOrder(userId, orderId)));
+    }
+
+    @DeleteMapping("/{orderId}")
+    public ResponseEntity<ApiResponse<Void>> deleteOrder(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String role,
+            @PathVariable UUID orderId
+    ) {
+        orderService.deleteOrder(userId, role, orderId);
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 }

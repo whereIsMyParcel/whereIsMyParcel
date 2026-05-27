@@ -3,6 +3,7 @@ package com.sparta.whereismyparcel.order.infrastructure.client;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.ShipmentCancelRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.ShipmentCreateRequest;
+import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.ShipmentCreateResponse;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.ShipmentStatusResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +14,7 @@ import java.util.UUID;
 @FeignClient(name = "shipment-service")
 public interface ShipmentFeignClient {
     @PostMapping("/internal/v1/shipments")
-    ApiResponse<List<UUID>> createShipments(
+    ApiResponse<List<ShipmentCreateResponse>> createShipments(
             @RequestHeader("X-User-Id") String userId,
             @RequestBody ShipmentCreateRequest request
     );

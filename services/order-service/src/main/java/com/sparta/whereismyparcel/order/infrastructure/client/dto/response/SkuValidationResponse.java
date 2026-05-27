@@ -7,9 +7,10 @@ public record SkuValidationResponse(
         List<Item> items
 ) {
     public record Item(
-            UUID skuId,
-            String productName,
-            String optionName,
-            Long unitPrice
+            UUID id,
+            String skuCode,
+            String variantName,
+            Integer variantPrice,
+            String status
     ) {}
 }
