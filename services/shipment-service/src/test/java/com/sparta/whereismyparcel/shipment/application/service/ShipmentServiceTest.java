@@ -26,10 +26,8 @@ class ShipmentServiceTest {
     private DeliveryManagerService deliveryManagerService;
     private ShipmentService shipmentService;
     private OrderClient orderClient;
-    private ProductClient productClient;
     private CompanyClient companyClient;
     private HubClient hubClient;
-    private InventoryClient inventoryClient;
 
     private UUID orderId;
     private UUID managerId;
@@ -39,19 +37,15 @@ class ShipmentServiceTest {
         shipmentRepository = mock(ShipmentRepository.class);
         deliveryManagerService = mock(DeliveryManagerService.class);
         orderClient = mock(OrderClient.class);
-        productClient = mock(ProductClient.class);
         companyClient = mock(CompanyClient.class);
         hubClient = mock(HubClient.class);
-        inventoryClient = mock(InventoryClient.class);
 
         shipmentService = new ShipmentService(
                 shipmentRepository,
                 deliveryManagerService,
                 orderClient,
-                productClient,
                 companyClient,
-                hubClient,
-                inventoryClient
+                hubClient
         );
 
         orderId = UUID.randomUUID();
@@ -155,7 +149,7 @@ class ShipmentServiceTest {
             verify(shipment1).delivered();
 
             verify(orderClient)
-                    .complete(managerId.toString(), orderId);
+                    .complete(orderId);
         }
 
         @DisplayName("담당 배송 관리자가 아니면 배송 완료 시 예외가 발생한다")
@@ -180,7 +174,7 @@ class ShipmentServiceTest {
             verify(shipment, never()).delivered();
 
             verify(orderClient, never())
-                    .complete(anyString(), any(UUID.class));
+                    .complete(any(UUID.class));
         }
 
         @DisplayName("주문에 속한 배송 중 완료되지 않은 배송이 존재하면 주문 완료 요청하지 않는다")
@@ -217,7 +211,7 @@ class ShipmentServiceTest {
             verify(shipment1).delivered();
 
             verify(orderClient, never())
-                    .complete(anyString(), any(UUID.class));
+                    .complete(any(UUID.class));
         }
     }
 

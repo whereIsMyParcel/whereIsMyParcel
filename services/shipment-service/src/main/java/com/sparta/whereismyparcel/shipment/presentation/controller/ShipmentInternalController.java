@@ -7,6 +7,7 @@ import com.sparta.whereismyparcel.shipment.presentation.dto.request.ShipmentCanc
 import com.sparta.whereismyparcel.shipment.presentation.dto.request.ShipmentCreateRequest;
 import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShipmentCreateResponse;
 import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShipmentInfoResponse;
+import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShipmentStatusResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -62,5 +63,22 @@ public class ShipmentInternalController {
             @PathVariable UUID orderId
     ) {
         return ResponseEntity.ok(ApiResponse.success(shipmentService.getShipmentByOrderId(orderId)));
+    }
+
+    @Operation(
+            summary = "주문 ID 기반 배송 상태 목록 조회",
+            description = "주문 ID에 해당하는 배송 상태 정보를 조회한다."
+    )
+    @GetMapping()
+    public ResponseEntity<ApiResponse<List<ShipmentStatusResponse>>> getShipmentsByOrderId(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestParam UUID orderId
+    ) {
+        List<ShipmentStatusResponse> response = shipmentService.getShipmentByOrderId(orderId)
+                .stream()
+                .map(it -> new ShipmentStatusResponse(it.id(), it.shipmentStatus()))
+                .toList();
+
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

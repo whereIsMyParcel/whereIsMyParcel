@@ -39,10 +39,8 @@ public class ShipmentService {
     private final ShipmentRepository shipmentRepository;
     private final DeliveryManagerService deliveryManagerService;
     private final OrderClient orderClient;
-    private final ProductClient productClient;
     private final CompanyClient companyClient;
     private final HubClient hubClient;
-    private final InventoryClient inventoryClient;
 
     @Transactional
     public void cancel(String userId, UUID orderId) {
@@ -83,7 +81,7 @@ public class ShipmentService {
 
         //4. 모두 배송완료됐으면 주문 완료 처리 api 요청
         if (allDelivered) {
-            orderClient.complete(userId, shipment.getOrderId());
+            orderClient.complete(shipment.getOrderId());
         }
     }
 
@@ -96,7 +94,7 @@ public class ShipmentService {
 
         // 상품별 출발 허브 조회
         List<GetProductHubIdResponse> hubMappings =
-                productClient.getHubMappingsByProductIds(userId, productVariantIds)
+                companyClient.getHubMappingsByProductIds(userId, productVariantIds)
                         .data();
 
         // 배송지 기준 최종 도착 허브 조회
@@ -296,7 +294,7 @@ public class ShipmentService {
 
         shipment.start();
 
-        inventoryClient.decrease(DecreaseInventoryRequest.from(shipment.getItems()));
+        companyClient.decrease(DecreaseInventoryRequest.from(shipment.getItems()));
     }
 
     public List<ShipmentInfoResponse> getShipmentByOrderId(UUID orderId) {
