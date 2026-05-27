@@ -15,7 +15,7 @@ import java.util.UUID;
 public interface CompanyFeignClient {
 
     @GetMapping("/internal/v1/products/valid")
-    ApiResponse<SkuValidationResponse> validateProducts(
+    ApiResponse<List<SkuValidationResponse>> validateProducts(
             @RequestHeader("X-User-Id") String userId,
             @RequestParam List<UUID> productVariantIds
     );

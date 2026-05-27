@@ -74,13 +74,13 @@ public class OrderService {
         List<UUID> productVariantIds = request.items().stream()
                 .map(OrderCreateRequest.OrderItemCreateRequest::productVariantId)
                 .toList();
-        SkuValidationResponse validation = resolveSkuValidation(
+        List<SkuValidationResponse> validations = resolveSkuValidation(
                 companyFeignClient.validateProducts(userId, productVariantIds)
         );
 
         List<OrderItem> orderItems = request.items().stream()
                 .map(i -> {
-                    SkuValidationResponse.Item skuInfo = validation.items().stream()
+                    SkuValidationResponse skuInfo = validations.stream()
                             .filter(v -> v.variantId().equals(i.productVariantId()))
                             .findFirst()
                             .orElseThrow(InvalidOrderItemsException::new);
@@ -366,8 +366,8 @@ public class OrderService {
         return "ORD-" + date + "-" + suffix;
     }
 
-    private SkuValidationResponse resolveSkuValidation(ApiResponse<SkuValidationResponse> response) {
-        if (response == null || !response.success() || response.data() == null) {
+    private List<SkuValidationResponse> resolveSkuValidation(ApiResponse<List<SkuValidationResponse>> response) {
+        if (response == null || !response.success() || response.data() == null || response.data().isEmpty()) {
             throw new InvalidOrderItemsException();
         }
         return response.data();

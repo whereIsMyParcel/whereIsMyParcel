@@ -744,12 +744,11 @@ class OrderServiceTest {
         );
     }
 
-    private SkuValidationResponse createValidationResponse(OrderCreateRequest request) {
-        List<SkuValidationResponse.Item> items = request.items().stream()
-                .map(i -> new SkuValidationResponse.Item(
+    private List<SkuValidationResponse> createValidationResponse(OrderCreateRequest request) {
+        return request.items().stream()
+                .map(i -> new SkuValidationResponse(
                         i.productVariantId(), "SKU-001", "옵션명", 10_000, "ON_SALE"))
                 .toList();
-        return new SkuValidationResponse(items);
     }
 
     private Order createOrder(String orderedBy) {
