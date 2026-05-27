@@ -12,10 +12,12 @@ import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaFailedException;
 import com.sparta.whereismyparcel.order.domain.repository.OrderRepository;
+import com.sparta.whereismyparcel.order.infrastructure.client.AiSlackFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.ShipmentFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
+import com.sparta.whereismyparcel.order.presentation.dto.request.OrderDispatchDeadlineUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.*;
 import org.junit.jupiter.api.DisplayName;
@@ -49,6 +51,9 @@ class OrderServiceTest {
     private ShipmentFeignClient shipmentFeignClient;
 
     @Mock
+    private AiSlackFeignClient aiSlackFeignClient;
+
+    @Mock
     private OrderCreateSaga orderCreateSaga;
 
     @InjectMocks
@@ -69,12 +74,15 @@ class OrderServiceTest {
             order.confirm();
             return null;
         }).given(orderCreateSaga).execute(any(), any());
+        given(aiSlackFeignClient.createAiAnalysisRequest(any(), any()))
+                .willReturn(ApiResponse.success(UUID.randomUUID()));
 
         // when
         OrderCreateResponse response = orderService.createOrder(userId, request);
 
         // then
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.CONFIRMED);
+        then(aiSlackFeignClient).should().createAiAnalysisRequest(any(), any());
     }
 
     @Test
@@ -111,6 +119,33 @@ class OrderServiceTest {
 
         // then
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.FAILED);
+        then(aiSlackFeignClient).should(never()).createAiAnalysisRequest(any(), any());
+    }
+
+    @Test
+    @DisplayName("AI 분석 요청에 실패해도 주문 생성 성공 응답은 유지된다")
+    void createOrderSuccessEvenIfAiAnalysisRequestFails() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        OrderCreateRequest request = createRequest();
+        given(companyFeignClient.validateProducts(any(), any()))
+                .willReturn(ApiResponse.success(createValidationResponse(request)));
+        given(orderRepository.save(any())).willAnswer(i -> i.getArgument(0));
+        willAnswer(invocation -> {
+            Order order = invocation.getArgument(0);
+            order.reserveStock();
+            order.confirm();
+            return null;
+        }).given(orderCreateSaga).execute(any(), any());
+        given(aiSlackFeignClient.createAiAnalysisRequest(any(), any()))
+                .willThrow(new RuntimeException("AI service unavailable"));
+
+        // when
+        OrderCreateResponse response = orderService.createOrder(userId, request);
+
+        // then
+        assertThat(response.orderStatus()).isEqualTo(OrderStatus.CONFIRMED);
+        then(aiSlackFeignClient).should().createAiAnalysisRequest(any(), any());
     }
 
     @Test
@@ -362,9 +397,9 @@ class OrderServiceTest {
 
         // then
         assertThat(response.requestMemo()).isEqualTo(request.requestMemo());
-        assertThat(response.deliveryDeadline()).isEqualTo(request.deliveryDeadline());
+        assertThat(response.requestedDeliveryAt()).isEqualTo(request.requestedDeliveryAt());
         assertThat(order.getRequestMemo()).isEqualTo(request.requestMemo());
-        assertThat(order.getDeliveryDeadline()).isEqualTo(request.deliveryDeadline());
+        assertThat(order.getRequestedDeliveryAt()).isEqualTo(request.requestedDeliveryAt());
     }
 
     @Test
@@ -385,7 +420,7 @@ class OrderServiceTest {
         // then
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.STOCK_RESERVED);
         assertThat(response.requestMemo()).isEqualTo(request.requestMemo());
-        assertThat(response.deliveryDeadline()).isEqualTo(request.deliveryDeadline());
+        assertThat(response.requestedDeliveryAt()).isEqualTo(request.requestedDeliveryAt());
     }
 
     @Test
@@ -395,7 +430,7 @@ class OrderServiceTest {
         String userId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(userId);
-        LocalDateTime originalDeliveryDeadline = order.getDeliveryDeadline();
+        LocalDateTime originalRequestedDeliveryAt = order.getRequestedDeliveryAt();
         OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", null);
         given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
                 .willReturn(Optional.of(order));
@@ -405,8 +440,8 @@ class OrderServiceTest {
 
         // then
         assertThat(response.requestMemo()).isEqualTo(request.requestMemo());
-        assertThat(response.deliveryDeadline()).isEqualTo(originalDeliveryDeadline);
-        assertThat(order.getDeliveryDeadline()).isEqualTo(originalDeliveryDeadline);
+        assertThat(response.requestedDeliveryAt()).isEqualTo(originalRequestedDeliveryAt);
+        assertThat(order.getRequestedDeliveryAt()).isEqualTo(originalRequestedDeliveryAt);
     }
 
     @Test
@@ -691,6 +726,81 @@ class OrderServiceTest {
 
         // when & then
         assertThatThrownBy(() -> orderService.getOrder(userId, "COMPANY_MANAGER", orderId))
+                .isInstanceOf(OrderNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("AI 프롬프트용 주문 컨텍스트를 조회할 수 있다")
+    void getOrderAiContext() {
+        // given
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(UUID.randomUUID().toString());
+
+        given(orderRepository.findWithOrderItemsByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderAiContextResponse response = orderService.getOrderAiContext(orderId);
+
+        // then
+        assertThat(response.orderNumber()).isEqualTo(order.getOrderNumber());
+        assertThat(response.recipientName()).isEqualTo(order.getRecipientName());
+        assertThat(response.recipientAddress()).contains(order.getAddress());
+        assertThat(response.requestedDeliveryAt()).isEqualTo(order.getRequestedDeliveryAt());
+        assertThat(response.items()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주문은 AI 프롬프트용 컨텍스트를 조회할 수 없다")
+    void getOrderAiContextNotFoundThrowsException() {
+        // given
+        UUID orderId = UUID.randomUUID();
+
+        given(orderRepository.findWithOrderItemsByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> orderService.getOrderAiContext(orderId))
+                .isInstanceOf(OrderNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("AI가 계산한 최종 출고 상한을 주문에 반영할 수 있다")
+    void updateFinalDispatchDeadline() {
+        // given
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(UUID.randomUUID().toString());
+        order.reserveStock();
+        order.confirm();
+        LocalDateTime finalDispatchDeadline = LocalDateTime.now().plusDays(1);
+        OrderDispatchDeadlineUpdateRequest request =
+                new OrderDispatchDeadlineUpdateRequest(finalDispatchDeadline);
+
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderDispatchDeadlineUpdateResponse response =
+                orderService.updateFinalDispatchDeadline(orderId, request);
+
+        // then
+        assertThat(response.finalDispatchDeadline()).isEqualTo(finalDispatchDeadline);
+        assertThat(order.getFinalDispatchDeadline()).isEqualTo(finalDispatchDeadline);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주문에는 최종 출고 상한을 반영할 수 없다")
+    void updateFinalDispatchDeadlineNotFoundThrowsException() {
+        // given
+        UUID orderId = UUID.randomUUID();
+        OrderDispatchDeadlineUpdateRequest request =
+                new OrderDispatchDeadlineUpdateRequest(LocalDateTime.now().plusDays(1));
+
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> orderService.updateFinalDispatchDeadline(orderId, request))
                 .isInstanceOf(OrderNotFoundException.class);
     }
 }

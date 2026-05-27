@@ -6,28 +6,20 @@ import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record OrderListResponse(
+public record OrderDispatchDeadlineUpdateResponse(
         UUID orderId,
         String orderNumber,
         OrderStatus orderStatus,
-        Long totalPrice,
-        String recipientName,
         LocalDateTime requestedDeliveryAt,
-        LocalDateTime orderedAt,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime finalDispatchDeadline
 ) {
-    public static OrderListResponse from(Order order) {
-        return new OrderListResponse(
+    public static OrderDispatchDeadlineUpdateResponse from(Order order) {
+        return new OrderDispatchDeadlineUpdateResponse(
                 order.getOrderId(),
                 order.getOrderNumber(),
                 order.getOrderStatus(),
-                order.getTotalPrice(),
-                order.getRecipientName(),
                 order.getRequestedDeliveryAt(),
-                order.getOrderedAt(),
-                order.getCreatedAt(),
-                order.getUpdatedAt()
+                order.getFinalDispatchDeadline()
         );
     }
 }

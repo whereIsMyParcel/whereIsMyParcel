@@ -17,6 +17,9 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     Optional<Order> findByOrderIdAndDeletedAtIsNull(UUID orderId);
 
+    @EntityGraph(attributePaths = "orderItems")
+    Optional<Order> findWithOrderItemsByOrderIdAndDeletedAtIsNull(UUID orderId);
+
     @Query("""
             SELECT o
             FROM Order o

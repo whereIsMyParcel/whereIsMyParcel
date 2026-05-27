@@ -20,7 +20,7 @@ public record OrderCreateRequest(
         String requestMemo,
 
         @FutureOrPresent
-        LocalDateTime deliveryDeadline,
+        LocalDateTime requestedDeliveryAt,
 
         @NotBlank
         @Size(max = 50)

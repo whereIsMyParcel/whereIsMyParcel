@@ -8,49 +8,41 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-public record OrderDetailResponse(
+public record OrderAiContextResponse(
         UUID orderId,
-        UUID companyMemberId,
         String orderNumber,
-        OrderStatus orderStatus,
-        Long totalPrice,
         String recipientName,
-        String recipientPhone,
-        String zipCode,
-        String address,
-        String addressDetail,
-        String requestMemo,
+        String recipientAddress,
         LocalDateTime requestedDeliveryAt,
-        LocalDateTime finalDispatchDeadline,
+        OrderStatus orderStatus,
+        String requestMemo,
         LocalDateTime orderedAt,
-        String orderedBy,
-        List<OrderItemResponse> items
+        List<Item> items
 ) {
-    public static OrderDetailResponse from(Order order) {
-        return new OrderDetailResponse(
+    public static OrderAiContextResponse from(Order order) {
+        return new OrderAiContextResponse(
                 order.getOrderId(),
-                order.getCompanyMemberId(),
                 order.getOrderNumber(),
-                order.getOrderStatus(),
-                order.getTotalPrice(),
                 order.getRecipientName(),
-                order.getRecipientPhone(),
-                order.getZipCode(),
-                order.getAddress(),
-                order.getAddressDetail(),
-                order.getRequestMemo(),
+                buildRecipientAddress(order),
                 order.getRequestedDeliveryAt(),
-                order.getFinalDispatchDeadline(),
+                order.getOrderStatus(),
+                order.getRequestMemo(),
                 order.getOrderedAt(),
-                order.getOrderedBy(),
                 order.getOrderItems().stream()
-                        .map(OrderItemResponse::from)
+                        .map(Item::from)
                         .toList()
         );
     }
 
-    public record OrderItemResponse(
-            UUID orderItemId,
+    private static String buildRecipientAddress(Order order) {
+        if (order.getAddressDetail() == null || order.getAddressDetail().isBlank()) {
+            return order.getAddress();
+        }
+        return order.getAddress() + " " + order.getAddressDetail();
+    }
+
+    public record Item(
             UUID productVariantId,
             String productNameSnapshot,
             String productOptionSnapshot,
@@ -58,9 +50,8 @@ public record OrderDetailResponse(
             Integer quantity,
             Long totalPrice
     ) {
-        private static OrderItemResponse from(OrderItem orderItem) {
-            return new OrderItemResponse(
-                    orderItem.getOrderItemId(),
+        private static Item from(OrderItem orderItem) {
+            return new Item(
                     orderItem.getProductVariantId(),
                     orderItem.getProductNameSnapshot(),
                     orderItem.getProductOptionSnapshot(),

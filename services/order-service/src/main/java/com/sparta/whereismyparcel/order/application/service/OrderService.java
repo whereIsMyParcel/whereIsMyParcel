@@ -13,17 +13,22 @@ import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaFailedException;
 import com.sparta.whereismyparcel.order.domain.repository.OrderRepository;
+import com.sparta.whereismyparcel.order.infrastructure.client.AiSlackFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.ShipmentFeignClient;
+import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.AiAnalysisRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.ShipmentCancelRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.StockCancelRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
+import com.sparta.whereismyparcel.order.presentation.dto.request.OrderDispatchDeadlineUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderAiContextResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCompleteResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDetailResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDispatchDeadlineUpdateResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderListResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderUpdateResponse;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +37,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -56,6 +63,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CompanyFeignClient companyFeignClient;
     private final ShipmentFeignClient shipmentFeignClient;
+    private final AiSlackFeignClient aiSlackFeignClient;
     private final OrderCreateSaga orderCreateSaga;
 
     @Transactional
@@ -93,7 +101,7 @@ public class OrderService {
                 request.address(),
                 request.addressDetail(),
                 request.requestMemo(),
-                request.deliveryDeadline(),
+                request.requestedDeliveryAt(),
                 userId,
                 orderItems
         );
@@ -118,6 +126,10 @@ public class OrderService {
             log.error("[OrderService] Saga 실패. orderId={}", order.getOrderId(), e);
         } finally {
             orderRepository.save(order);
+        }
+
+        if (order.getOrderStatus() == OrderStatus.CONFIRMED) {
+            registerAiAnalysisAfterCommit(userId, order.getOrderId());
         }
 
         return OrderCreateResponse.from(order);
@@ -152,6 +164,26 @@ public class OrderService {
         return OrderDetailResponse.from(order);
     }
 
+    public OrderAiContextResponse getOrderAiContext(UUID orderId) {
+        Order order = orderRepository.findWithOrderItemsByOrderIdAndDeletedAtIsNull(orderId)
+                .orElseThrow(OrderNotFoundException::new);
+
+        return OrderAiContextResponse.from(order);
+    }
+
+    @Transactional
+    public OrderDispatchDeadlineUpdateResponse updateFinalDispatchDeadline(
+            UUID orderId,
+            OrderDispatchDeadlineUpdateRequest request
+    ) {
+        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+                .orElseThrow(OrderNotFoundException::new);
+
+        order.updateFinalDispatchDeadline(request.finalDispatchDeadline());
+
+        return OrderDispatchDeadlineUpdateResponse.from(order);
+    }
+
     @Transactional
     public OrderUpdateResponse updateOrder(
             String userId,
@@ -166,7 +198,7 @@ public class OrderService {
             validateOrderOwner(order, userId);
         }
 
-        order.updateRequestInfo(request.requestMemo(), request.deliveryDeadline());
+        order.updateRequestInfo(request.requestMemo(), request.requestedDeliveryAt());
 
         return OrderUpdateResponse.from(order);
     }
@@ -291,6 +323,43 @@ public class OrderService {
     private void ensureCompensationSuccess(ApiResponse<Void> response) {
         if (response == null || !response.success()) {
             throw new SagaCompensationFailedException();
+        }
+    }
+
+    private void registerAiAnalysisAfterCommit(String userId, UUID orderId) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            requestAiAnalysis(userId, orderId);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                requestAiAnalysis(userId, orderId);
+            }
+        });
+    }
+
+    private void requestAiAnalysis(String userId, UUID orderId) {
+        try {
+            ApiResponse<UUID> response = aiSlackFeignClient.createAiAnalysisRequest(
+                    userId,
+                    new AiAnalysisRequest(orderId)
+            );
+
+            if (response == null || !response.success()) {
+                log.warn(
+                        "[OrderService] AI 분석 요청 실패 응답. orderId={}, errorCode={}, message={}",
+                        orderId,
+                        response == null ? null : response.errorCode(),
+                        response == null ? null : response.message()
+                );
+                return;
+            }
+
+            log.info("[OrderService] AI 분석 요청 완료. orderId={}, aiMessageId={}", orderId, response.data());
+        } catch (Exception e) {
+            log.warn("[OrderService] AI 분석 요청 예외 발생. orderId={}", orderId, e);
         }
     }
 }
