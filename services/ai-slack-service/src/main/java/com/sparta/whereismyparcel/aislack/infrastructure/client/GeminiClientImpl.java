@@ -1,3 +1,4 @@
+/*
 package com.sparta.whereismyparcel.aislack.infrastructure.client;
 
 import com.sparta.whereismyparcel.aislack.domain.exception.AiSlackErrorCode;
@@ -53,3 +54,4 @@ public class GeminiClientImpl implements GeminiClient {
         }
     }
 }
+*/

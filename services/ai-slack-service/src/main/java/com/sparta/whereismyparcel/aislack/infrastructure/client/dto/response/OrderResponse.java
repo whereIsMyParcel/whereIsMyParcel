@@ -1,6 +1,7 @@
 package com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record OrderResponse(
@@ -9,6 +10,13 @@ public record OrderResponse(
         String recipientName,
         String recipientAddress,
         LocalDateTime requestedDeliveryAt,
-        String orderStatus
+        String orderStatus,
+        String requestMemo,
+        LocalDateTime orderedAt,
+        List<OrderShipmentItem> shipmentItems
 ) {
+    public record OrderShipmentItem(
+            UUID shipmentId,
+            List<String> items
+    ) {}
 }

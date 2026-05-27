@@ -7,6 +7,6 @@ public record UserResponse(
         String username,
         String name,
         String email,
-        UUID slackId
+        String slackId
 ) {
 }
