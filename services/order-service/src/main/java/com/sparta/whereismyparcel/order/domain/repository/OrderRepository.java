@@ -12,8 +12,6 @@ import java.util.UUID;
 
 public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecificationExecutor<Order> {
 
-    Optional<Order> findByOrderId(UUID orderId);
-
     @EntityGraph(attributePaths = "orderItems")
     Optional<Order> findWithOrderItemsByOrderId(UUID orderId);
 

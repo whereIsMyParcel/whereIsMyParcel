@@ -2,13 +2,16 @@ package com.sparta.whereismyparcel.order.infrastructure.security;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CurrentUserTest {
 
@@ -31,5 +34,21 @@ class CurrentUserTest {
         // when & then
         assertThat(CurrentUser.userId()).isEqualTo("user-1");
         assertThat(CurrentUser.role()).isEqualTo("MASTER");
+    }
+
+    @Test
+    void anonymousUserThrowsException() {
+        // given
+        SecurityContextHolder.getContext().setAuthentication(
+                new AnonymousAuthenticationToken(
+                        "anonymous",
+                        "anonymousUser",
+                        AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS")
+                )
+        );
+
+        // when & then
+        assertThatThrownBy(CurrentUser::userId)
+                .isInstanceOf(IllegalStateException.class);
     }
 }

@@ -230,7 +230,7 @@ public class OrderService {
             UUID orderId,
             OrderDispatchDeadlineUpdateRequest request
     ) {
-        Order order = orderRepository.findByOrderId(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         order.updateFinalDispatchDeadline(request.finalDispatchDeadline());
@@ -245,7 +245,7 @@ public class OrderService {
             UUID orderId,
             OrderUpdateRequest request
     ) {
-        Order order = orderRepository.findByOrderId(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         if (!isMaster(role)) {
@@ -259,7 +259,7 @@ public class OrderService {
 
     @Transactional
     public OrderCancelResponse cancelOrder(String userId, UUID orderId) {
-        Order order = orderRepository.findByOrderId(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         validateOrderOwner(order, userId);
@@ -289,7 +289,7 @@ public class OrderService {
 
     @Transactional
     public OrderCompleteResponse completeOrder(UUID orderId) {
-        Order order = orderRepository.findByOrderId(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         if (order.getOrderStatus() == OrderStatus.COMPLETED) {
@@ -307,7 +307,7 @@ public class OrderService {
             throw new OrderNotFoundException();
         }
 
-        Order order = orderRepository.findByOrderId(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         if (!order.isDeletable()) {

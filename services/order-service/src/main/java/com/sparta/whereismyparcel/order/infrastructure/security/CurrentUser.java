@@ -1,5 +1,6 @@
 package com.sparta.whereismyparcel.order.infrastructure.security;
 
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,7 +29,11 @@ public final class CurrentUser {
 
     private static Authentication authentication() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
+        if (
+                authentication == null
+                        || !authentication.isAuthenticated()
+                        || authentication instanceof AnonymousAuthenticationToken
+        ) {
             throw new IllegalStateException("Authenticated user is missing.");
         }
         return authentication;
