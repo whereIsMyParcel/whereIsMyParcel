@@ -104,11 +104,23 @@ public class SlackMessage extends BaseEntity {
 
     /**
      * PERMANENT_FAILED 상태의 메시지를 재전송하기 위해 READY_TO_SEND 상태로 변경하고 재시도 횟수를 초기화합니다.
+     * 이 메서드는 무한 재시도 루프 위험이 있어 사용에 주의해야 합니다.
+     * 대신 prepareForRetry()를 사용하는 것을 권장합니다.
      */
     public void requeueForSending() {
         this.slackStatus = SlackStatus.READY_TO_SEND;
         this.retryCount = 0;
         this.sentAt = null; // 재전송을 위해 발송 시간 초기화
+    }
+
+    /**
+     * 재시도를 위해 메시지 상태를 READY_TO_SEND로 변경합니다.
+     * retryCount는 초기화하지 않아 재시도 횟수 제한을 유지합니다.
+     */
+    public void prepareForRetry() {
+        this.slackStatus = SlackStatus.READY_TO_SEND;
+        this.sentAt = null; // 재전송을 위해 발송 시간 초기화
+        // retryCount는 초기화하지 않음!
     }
 
     public void updateMessage(String newMessageContent) {

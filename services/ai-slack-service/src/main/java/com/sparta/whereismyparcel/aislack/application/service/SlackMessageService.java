@@ -195,7 +195,7 @@ public class SlackMessageService {
         }
 
         // 2. 재시도를 위해 상태를 READY_TO_SEND로 변경하고 카운트 증가 준비
-        slackMessage.requeueForSending();
+        slackMessage.prepareForRetry(); // CHANGED: Use prepareForRetry() instead of requeueForSending()
         slackMessageRepository.save(slackMessage);
 
         // 3. 주입받은 전역 slackToken을 활용해 실발송 재시도 오케스트레이션
