@@ -70,12 +70,16 @@ public class InventoryService {
      */
     @Transactional
     public List<StockReservationResponse> reserveOrderStock(StockReservationRequest request) {
-        return request.items().stream()
+        List<StockReservationRequest.Item> sortedItems = request.items().stream()
+                .sorted(java.util.Comparator.comparing(StockReservationRequest.Item::skuCode))
+                .toList();
+
+        return sortedItems.stream()
                 .map(item -> {
                     ProductVariant variant = productVariantRepository.findProductBySkuCode(item.skuCode())
                             .orElseThrow(ProductVariantNotFoundException::new);
 
-                    Inventory inventory = inventoryRepository.findByProductVariantWithLock(variant)
+                    Inventory inventory = inventoryRepository.findByProductVariant(variant)
                             .orElseThrow(InventoryNotFoundException::new);
 
                     inventory.addReservedStock(item.quantity());
@@ -95,7 +99,7 @@ public class InventoryService {
         ProductVariant productVariant = productVariantRepository.findById(request.productVariantId())
                 .orElseThrow(ProductVariantNotFoundException::new);
 
-        Inventory inventory = inventoryRepository.findByProductVariantWithLock(productVariant)
+        Inventory inventory = inventoryRepository.findByProductVariant(productVariant)
                 .orElseThrow(InventoryNotFoundException::new);
 
         inventory.confirmShipment(request.quantity());
@@ -108,11 +112,15 @@ public class InventoryService {
      */
     @Transactional
     public void cancelOrderReservation(StockCancelRequest request) {
-        request.items().forEach(item -> {
+        List<StockCancelRequest.Item> sortedItems = request.items().stream()
+                .sorted(java.util.Comparator.comparing(StockCancelRequest.Item::skuCode))
+                .toList();
+
+        sortedItems.forEach(item -> {
             ProductVariant productVariant = productVariantRepository.findProductBySkuCode(item.skuCode())
                     .orElseThrow(ProductVariantNotFoundException::new);
 
-            Inventory inventory = inventoryRepository.findByProductVariantWithLock(productVariant)
+            Inventory inventory = inventoryRepository.findByProductVariant(productVariant)
                     .orElseThrow(InventoryNotFoundException::new);
 
             inventory.cancelReservation(item.quantity());
