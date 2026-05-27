@@ -174,8 +174,6 @@ public class OrderService {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            predicates.add(cb.isNull(root.get("deletedAt")));
-
             if (!isMaster) {
                 predicates.add(cb.equal(root.get("orderedBy"), userId));
             }
@@ -184,15 +182,15 @@ public class OrderService {
                 predicates.add(cb.equal(root.get("orderStatus"), status));
             }
 
-        if (keyword != null) {
-            String lowerKeywordPattern = "%" + keyword.toLowerCase(Locale.ROOT) + "%";
-            String upperKeywordPattern = "%" + keyword.toUpperCase(Locale.ROOT) + "%";
-            predicates.add(cb.or(
-                    cb.like(root.get("orderNumber"), upperKeywordPattern),
-                    cb.like(cb.lower(root.get("recipientName")), lowerKeywordPattern),
-                    cb.like(root.get("recipientPhone"), "%" + keyword + "%")
-            ));
-        }
+            if (keyword != null) {
+                String lowerKeywordPattern = "%" + keyword.toLowerCase(Locale.ROOT) + "%";
+                String upperKeywordPattern = "%" + keyword.toUpperCase(Locale.ROOT) + "%";
+                predicates.add(cb.or(
+                        cb.like(root.get("orderNumber"), upperKeywordPattern),
+                        cb.like(cb.lower(root.get("recipientName")), lowerKeywordPattern),
+                        cb.like(root.get("recipientPhone"), "%" + keyword + "%")
+                ));
+            }
 
             if (startDate != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("orderedAt"), startDate));
@@ -221,7 +219,7 @@ public class OrderService {
     }
 
     public OrderAiContextResponse getOrderAiContext(UUID orderId) {
-        Order order = orderRepository.findWithOrderItemsByOrderIdAndDeletedAtIsNull(orderId)
+        Order order = orderRepository.findWithOrderItemsByOrderId(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         return OrderAiContextResponse.from(order);
@@ -232,7 +230,7 @@ public class OrderService {
             UUID orderId,
             OrderDispatchDeadlineUpdateRequest request
     ) {
-        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         order.updateFinalDispatchDeadline(request.finalDispatchDeadline());
@@ -247,7 +245,7 @@ public class OrderService {
             UUID orderId,
             OrderUpdateRequest request
     ) {
-        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         if (!isMaster(role)) {
@@ -261,7 +259,7 @@ public class OrderService {
 
     @Transactional
     public OrderCancelResponse cancelOrder(String userId, UUID orderId) {
-        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         validateOrderOwner(order, userId);
@@ -291,7 +289,7 @@ public class OrderService {
 
     @Transactional
     public OrderCompleteResponse completeOrder(UUID orderId) {
-        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         if (order.getOrderStatus() == OrderStatus.COMPLETED) {
@@ -309,7 +307,7 @@ public class OrderService {
             throw new OrderNotFoundException();
         }
 
-        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         if (!order.isDeletable()) {

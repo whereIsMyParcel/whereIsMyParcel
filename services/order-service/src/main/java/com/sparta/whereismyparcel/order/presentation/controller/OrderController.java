@@ -4,6 +4,7 @@ import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.common.util.PageableUtils;
 import com.sparta.whereismyparcel.order.application.service.OrderService;
 import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
+import com.sparta.whereismyparcel.order.infrastructure.security.CurrentUser;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
@@ -38,17 +39,14 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<OrderCreateResponse>> createOrder(
-            @RequestHeader("X-User-Id") String userId,
             @RequestBody @Valid OrderCreateRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(orderService.createOrder(userId, request)));
+                .body(ApiResponse.created(orderService.createOrder(CurrentUser.userId(), request)));
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<OrderListResponse>>> getOrders(
-            @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
@@ -56,8 +54,8 @@ public class OrderController {
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return ResponseEntity.ok(ApiResponse.success(orderService.getOrders(
-                userId,
-                role,
+                CurrentUser.userId(),
+                CurrentUser.role(),
                 status,
                 keyword,
                 startDate,
@@ -68,38 +66,36 @@ public class OrderController {
 
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderDetailResponse>> getOrder(
-            @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
             @PathVariable UUID orderId
     ) {
-        return ResponseEntity.ok(ApiResponse.success(orderService.getOrder(userId, role, orderId)));
+        return ResponseEntity.ok(ApiResponse.success(
+                orderService.getOrder(CurrentUser.userId(), CurrentUser.role(), orderId)
+        ));
     }
 
     @PatchMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderUpdateResponse>> updateOrder(
-            @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
             @PathVariable UUID orderId,
             @RequestBody @Valid OrderUpdateRequest request
     ) {
-        return ResponseEntity.ok(ApiResponse.success(orderService.updateOrder(userId, role, orderId, request)));
+        return ResponseEntity.ok(ApiResponse.success(
+                orderService.updateOrder(CurrentUser.userId(), CurrentUser.role(), orderId, request)
+        ));
     }
 
     @PatchMapping("/{orderId}/cancel")
     public ResponseEntity<ApiResponse<OrderCancelResponse>> cancelOrder(
-            @RequestHeader("X-User-Id") String userId,
             @PathVariable UUID orderId
     ) {
-        return ResponseEntity.ok(ApiResponse.success(orderService.cancelOrder(userId, orderId)));
+        return ResponseEntity.ok(ApiResponse.success(orderService.cancelOrder(CurrentUser.userId(), orderId)));
     }
 
     @DeleteMapping("/{orderId}")
     public ResponseEntity<ApiResponse<Void>> deleteOrder(
-            @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
             @PathVariable UUID orderId
     ) {
-        orderService.deleteOrder(userId, role, orderId);
+        orderService.deleteOrder(CurrentUser.userId(), CurrentUser.role(), orderId);
         return ResponseEntity.ok(ApiResponse.ok());
     }
 }
+

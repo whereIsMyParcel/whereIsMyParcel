@@ -12,17 +12,14 @@ import java.util.UUID;
 
 public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecificationExecutor<Order> {
 
-    Optional<Order> findByOrderIdAndDeletedAtIsNull(UUID orderId);
-
     @EntityGraph(attributePaths = "orderItems")
-    Optional<Order> findWithOrderItemsByOrderIdAndDeletedAtIsNull(UUID orderId);
+    Optional<Order> findWithOrderItemsByOrderId(UUID orderId);
 
     @EntityGraph(attributePaths = "orderItems")
     @Query("""
             SELECT o
             FROM Order o
             WHERE o.orderId = :orderId
-              AND o.deletedAt IS NULL
               AND (:isMaster = true OR o.orderedBy = :userId)
             """)
     Optional<Order> findDetailByOrderId(

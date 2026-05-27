@@ -156,7 +156,7 @@ class OrderServiceTest {
         String userId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(userId);
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
 
         // when
@@ -176,7 +176,7 @@ class OrderServiceTest {
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(userId);
         order.reserveStock();
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
         given(companyFeignClient.cancelReservation(any(), any()))
                 .willReturn(ApiResponse.ok());
@@ -199,7 +199,7 @@ class OrderServiceTest {
         Order order = createOrder(userId);
         order.reserveStock();
         order.confirm();
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
         given(shipmentFeignClient.cancelShipments(any(), any()))
                 .willReturn(ApiResponse.ok());
@@ -223,7 +223,7 @@ class OrderServiceTest {
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(userId);
         order.reserveStock();
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
         given(companyFeignClient.cancelReservation(any(), any()))
                 .willReturn(ApiResponse.error(OrderErrorCode.SAGA_COMPENSATION_FAILED));
@@ -243,7 +243,7 @@ class OrderServiceTest {
         Order order = createOrder(userId);
         order.reserveStock();
         order.confirm();
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
         given(shipmentFeignClient.cancelShipments(any(), any()))
                 .willReturn(ApiResponse.error(OrderErrorCode.SAGA_COMPENSATION_FAILED));
@@ -263,7 +263,7 @@ class OrderServiceTest {
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(userId);
         order.fail();
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
 
         // when & then
@@ -281,7 +281,7 @@ class OrderServiceTest {
         String otherUserId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(ownerId);
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
 
         // when & then
@@ -300,7 +300,7 @@ class OrderServiceTest {
         Order order = createOrder(userId);
         order.reserveStock();
         order.confirm();
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
 
         // when
@@ -321,7 +321,7 @@ class OrderServiceTest {
         order.reserveStock();
         order.confirm();
         order.complete();
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
 
         // when
@@ -337,7 +337,7 @@ class OrderServiceTest {
     void completeOrderNotFoundThrowsException() {
         // given
         UUID orderId = UUID.randomUUID();
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.empty());
 
         // when & then
@@ -352,7 +352,7 @@ class OrderServiceTest {
         String userId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(userId);
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
 
         // when & then
@@ -390,7 +390,7 @@ class OrderServiceTest {
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(userId);
         OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
 
         // when
@@ -412,7 +412,7 @@ class OrderServiceTest {
         Order order = createOrder(UUID.randomUUID().toString());
         order.reserveStock();
         OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
 
         // when
@@ -433,7 +433,7 @@ class OrderServiceTest {
         Order order = createOrder(userId);
         LocalDateTime originalRequestedDeliveryAt = order.getRequestedDeliveryAt();
         OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", null);
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
 
         // when
@@ -454,7 +454,7 @@ class OrderServiceTest {
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(ownerId);
         OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
 
         // when & then
@@ -472,7 +472,7 @@ class OrderServiceTest {
         order.reserveStock();
         order.confirm();
         OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
 
         // when & then
@@ -487,7 +487,7 @@ class OrderServiceTest {
         String userId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
         OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.empty());
 
         // when & then
@@ -503,7 +503,7 @@ class OrderServiceTest {
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(userId);
         order.fail();
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
 
         // when
@@ -526,7 +526,7 @@ class OrderServiceTest {
         String userId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(userId);
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
 
         // when & then
@@ -545,7 +545,7 @@ class OrderServiceTest {
         // when & then
         assertThatThrownBy(() -> orderService.deleteOrder(userId, "COMPANY_MANAGER", orderId))
                 .isInstanceOf(OrderNotFoundException.class);
-        then(orderRepository).should(never()).findByOrderIdAndDeletedAtIsNull(any());
+        then(orderRepository).should(never()).findById(any());
     }
 
     @Test
@@ -554,7 +554,7 @@ class OrderServiceTest {
         // given
         String userId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.empty());
 
         // when & then
@@ -727,7 +727,7 @@ class OrderServiceTest {
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(UUID.randomUUID().toString());
 
-        given(orderRepository.findWithOrderItemsByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findWithOrderItemsByOrderId(orderId))
                 .willReturn(Optional.of(order));
 
         // when
@@ -747,7 +747,7 @@ class OrderServiceTest {
         // given
         UUID orderId = UUID.randomUUID();
 
-        given(orderRepository.findWithOrderItemsByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findWithOrderItemsByOrderId(orderId))
                 .willReturn(Optional.empty());
 
         // when & then
@@ -767,7 +767,7 @@ class OrderServiceTest {
         OrderDispatchDeadlineUpdateRequest request =
                 new OrderDispatchDeadlineUpdateRequest(finalDispatchDeadline);
 
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.of(order));
 
         // when
@@ -787,7 +787,7 @@ class OrderServiceTest {
         OrderDispatchDeadlineUpdateRequest request =
                 new OrderDispatchDeadlineUpdateRequest(LocalDateTime.now().plusDays(1));
 
-        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+        given(orderRepository.findById(orderId))
                 .willReturn(Optional.empty());
 
         // when & then
