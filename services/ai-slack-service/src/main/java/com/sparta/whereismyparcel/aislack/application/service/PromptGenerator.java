@@ -31,7 +31,11 @@ public class PromptGenerator {
         promptBuilder.append("  - Recipient Name: ").append(order.recipientName()).append("\n");
         promptBuilder.append("  - Recipient Address: ").append(order.recipientAddress()).append("\n");
         promptBuilder.append("  - Requested Delivery At: ").append(order.requestedDeliveryAt()).append("\n");
-        promptBuilder.append("  - Order Status: ").append(order.orderStatus()).append("\n\n");
+        promptBuilder.append("  - Order Status: ").append(order.orderStatus()).append("\n"); //append("\n\n")
+        promptBuilder.append("  - Order requestMemo: ").append(order.requestMemo()).append("\n");
+        promptBuilder.append("  - Order orderAt: ").append(order.orderedAt()).append("\n");
+        promptBuilder.append("  - Order items: ").append(String.join(", ", order.items())).append("\n\n");
+
 
         promptBuilder.append("Shipment Details:\n");
         shipments.forEach(shipment -> {

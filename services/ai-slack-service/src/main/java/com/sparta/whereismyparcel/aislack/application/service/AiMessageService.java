@@ -192,27 +192,27 @@ public class AiMessageService {
     }
 
 
-    private OrderResponse getOrderDetails(UUID orderId, String UserId) {
-        ApiResponse<OrderResponse> orderResponse = orderFeignClient.getOrder(UserId, orderId);
+    private OrderResponse getOrderDetails(UUID orderId, String userId) {
+        ApiResponse<OrderResponse> orderResponse = orderFeignClient.getOrder(userId, orderId);
         if (!orderResponse.success() || orderResponse.data() == null) {
             throw new BusinessException(AiSlackErrorCode.INVALID_AI_REQUEST_DATA, "주문 정보를 가져오지 못했습니다: " + orderResponse.message());
         }
         return orderResponse.data();
     }
 
-    private List<ShipmentResponse> getShipmentDetails(UUID orderId, String UserId) {
-        ApiResponse<List<ShipmentResponse>> shipmentResponse = shipmentFeignClient.getShipmentByOrderId(UserId, orderId);
+    private List<ShipmentResponse> getShipmentDetails(UUID orderId, String userId) {
+        ApiResponse<List<ShipmentResponse>> shipmentResponse = shipmentFeignClient.getShipmentByOrderId(userId, orderId);
         if (!shipmentResponse.success() || shipmentResponse.data() == null || shipmentResponse.data().isEmpty()) {
             throw new BusinessException(AiSlackErrorCode.INVALID_AI_REQUEST_DATA, "배송 정보를 가져오지 못했습니다: " + shipmentResponse.message());
         }
         return shipmentResponse.data();
     }
 
-    private UserResponse getUserDetails(String recipientName, String UserId) {
+    private UserResponse getUserDetails(String recipientName, String userId) {
         // 실제로는 recipientName으로 사용자 ID를 조회하는 API가 필요할 수 있습니다.
-        // 현재는 임시로 callerUserId를 사용하여 UserResponse를 가져오는 것으로 가정합니다.
-        // UserFeignClient는 userId로만 조회 가능하므로, 이 부분은 실제 API에 맞춰 수정이 필요합니다.
-        ApiResponse<UserResponse> userResponse = userFeignClient.getUser(UserId);
+        // 현재는 임시로 userId 사용하여 UserResponse를 가져오는 것으로 가정합니다.
+        // UserFeignClient는 userId 조회 가능하므로, 이 부분은 실제 API에 맞춰 수정이 필요합니다.
+        ApiResponse<UserResponse> userResponse = userFeignClient.getUser(userId);
         if (!userResponse.success() || userResponse.data() == null) {
             throw new BusinessException(AiSlackErrorCode.SLACK_ID_NOT_FOUND, "수령인 사용자 정보를 가져오지 못했습니다: " + userResponse.message());
         }
