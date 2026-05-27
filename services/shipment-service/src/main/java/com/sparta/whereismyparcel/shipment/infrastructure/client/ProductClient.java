@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-@FeignClient(name = "product-service", path = "/internal/v1/products")
+@FeignClient(name = "company-service", path = "/internal/v1/products")
 public interface ProductClient {
 
     @PostMapping()

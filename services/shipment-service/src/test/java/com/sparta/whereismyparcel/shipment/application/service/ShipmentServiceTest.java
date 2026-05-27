@@ -2,6 +2,7 @@ package com.sparta.whereismyparcel.shipment.application.service;
 
 import com.sparta.whereismyparcel.shipment.domain.entity.Shipment;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentAlreadyStartedException;
+import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentNotFoundException;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentUpdateDeniedException;
 import com.sparta.whereismyparcel.shipment.domain.repository.ShipmentRepository;
 import com.sparta.whereismyparcel.shipment.infrastructure.client.*;
@@ -13,7 +14,9 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.UUID;
 
+import static java.util.Collections.emptyList;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -216,6 +219,22 @@ class ShipmentServiceTest {
             verify(orderClient, never())
                     .complete(anyString(), any(UUID.class));
         }
+    }
+
+    @Test
+    @DisplayName("주문에 속한 배송이 없으면 예외가 발생한다")
+    void getShipmentByOrderId_notFound() {
+        // given
+        when(shipmentRepository.findAllByOrderId(orderId))
+                .thenReturn(emptyList());
+
+        // when & then
+        assertThrows(
+                ShipmentNotFoundException.class,
+                () -> shipmentService.getShipmentByOrderId(orderId)
+        );
+
+        verify(shipmentRepository).findAllByOrderId(orderId);
     }
 
     private Shipment cancelableShipment(boolean canCancel) {

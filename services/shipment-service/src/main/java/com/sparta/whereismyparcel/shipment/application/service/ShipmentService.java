@@ -18,6 +18,7 @@ import com.sparta.whereismyparcel.shipment.presentation.dto.request.ShipmentCrea
 import com.sparta.whereismyparcel.shipment.presentation.dto.request.ShipmentSearchRequest;
 import com.sparta.whereismyparcel.shipment.presentation.dto.response.GetProductHubIdResponse;
 import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShipmentCreateResponse;
+import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShipmentInfoResponse;
 import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShipmentViewResponse;
 import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShortestPathResponse;
 import lombok.RequiredArgsConstructor;
@@ -296,6 +297,18 @@ public class ShipmentService {
         shipment.start();
 
         inventoryClient.decrease(DecreaseInventoryRequest.from(shipment.getItems()));
+    }
+
+    public List<ShipmentInfoResponse> getShipmentByOrderId(UUID orderId) {
+        List<Shipment> shipments = shipmentRepository.findAllByOrderId(orderId);
+
+        if (shipments.isEmpty()) {
+            throw new ShipmentNotFoundException();
+        }
+
+        return shipments.stream()
+                .map(ShipmentInfoResponse::from)
+                .toList();
     }
 
     private void validateUpdatePermission(List<Shipment> shipments, UUID managerId) {

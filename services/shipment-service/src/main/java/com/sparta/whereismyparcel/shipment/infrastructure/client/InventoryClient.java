@@ -6,7 +6,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "inventory-service", path = "/internal/v1/inventories")
+@FeignClient(name = "company-service", path = "/internal/v1/inventories")
 public interface InventoryClient {
 
     @PatchMapping("/decrease")
