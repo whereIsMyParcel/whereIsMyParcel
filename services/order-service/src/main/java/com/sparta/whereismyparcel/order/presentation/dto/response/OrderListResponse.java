@@ -12,6 +12,7 @@ public record OrderListResponse(
         OrderStatus orderStatus,
         Long totalPrice,
         String recipientName,
+        LocalDateTime requestedDeliveryAt,
         LocalDateTime orderedAt,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -23,6 +24,7 @@ public record OrderListResponse(
                 order.getOrderStatus(),
                 order.getTotalPrice(),
                 order.getRecipientName(),
+                order.getRequestedDeliveryAt(),
                 order.getOrderedAt(),
                 order.getCreatedAt(),
                 order.getUpdatedAt()

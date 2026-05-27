@@ -9,6 +9,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "p_orders")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Order extends BaseEntity {
@@ -61,8 +63,11 @@ public class Order extends BaseEntity {
     @Column(name = "request_memo", length = 500)
     private String requestMemo;
 
-    @Column(name = "delivery_deadline")
-    private LocalDateTime deliveryDeadline;
+    @Column(name = "requested_delivery_at")
+    private LocalDateTime requestedDeliveryAt;
+
+    @Column(name = "final_dispatch_deadline")
+    private LocalDateTime finalDispatchDeadline;
 
     @Column(name = "ordered_at", nullable = false)
     private LocalDateTime orderedAt;
@@ -80,7 +85,7 @@ public class Order extends BaseEntity {
             String address,
             String addressDetail,
             String requestMemo,
-            LocalDateTime deliveryDeadline,
+            LocalDateTime requestedDeliveryAt,
             String orderedBy
     ) {
         this.companyMemberId = companyMemberId;
@@ -92,7 +97,7 @@ public class Order extends BaseEntity {
         this.address = address;
         this.addressDetail = addressDetail;
         this.requestMemo = requestMemo;
-        this.deliveryDeadline = deliveryDeadline;
+        this.requestedDeliveryAt = requestedDeliveryAt;
         this.orderedAt = LocalDateTime.now();
         this.orderedBy = orderedBy;
     }
@@ -106,7 +111,7 @@ public class Order extends BaseEntity {
             String address,
             String addressDetail,
             String requestMemo,
-            LocalDateTime deliveryDeadline,
+            LocalDateTime requestedDeliveryAt,
             String orderedBy,
             List<OrderItem> orderItems
     ) {
@@ -121,7 +126,7 @@ public class Order extends BaseEntity {
                 .address(address)
                 .addressDetail(addressDetail)
                 .requestMemo(requestMemo)
-                .deliveryDeadline(deliveryDeadline)
+                .requestedDeliveryAt(requestedDeliveryAt)
                 .orderedBy(orderedBy)
                 .build();
 
@@ -178,7 +183,7 @@ public class Order extends BaseEntity {
         this.orderItems.forEach(item -> item.softDelete(userId));
     }
 
-    public void updateRequestInfo(String requestMemo, LocalDateTime deliveryDeadline) {
+    public void updateRequestInfo(String requestMemo, LocalDateTime requestedDeliveryAt) {
         if (
                 this.orderStatus != OrderStatus.PENDING
                         && this.orderStatus != OrderStatus.STOCK_RESERVED
@@ -189,9 +194,16 @@ public class Order extends BaseEntity {
         if (requestMemo != null) {
             this.requestMemo = requestMemo;
         }
-        if (deliveryDeadline != null) {
-            this.deliveryDeadline = deliveryDeadline;
+        if (requestedDeliveryAt != null) {
+            this.requestedDeliveryAt = requestedDeliveryAt;
         }
+    }
+
+    public void updateFinalDispatchDeadline(LocalDateTime finalDispatchDeadline) {
+        if (this.orderStatus != OrderStatus.CONFIRMED) {
+            throw new InvalidOrderStatusException();
+        }
+        this.finalDispatchDeadline = finalDispatchDeadline;
     }
 
     public boolean isDeletable() {

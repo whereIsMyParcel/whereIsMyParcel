@@ -13,31 +13,42 @@ import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaFailedException;
 import com.sparta.whereismyparcel.order.domain.repository.OrderRepository;
+import com.sparta.whereismyparcel.order.infrastructure.client.AiSlackFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.ShipmentFeignClient;
+import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.AiAnalysisRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.ShipmentCancelRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.StockCancelRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
+import com.sparta.whereismyparcel.order.presentation.dto.request.OrderDispatchDeadlineUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderAiContextResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCompleteResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDetailResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDispatchDeadlineUpdateResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderListResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderUpdateResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Slf4j
@@ -56,6 +67,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CompanyFeignClient companyFeignClient;
     private final ShipmentFeignClient shipmentFeignClient;
+    private final AiSlackFeignClient aiSlackFeignClient;
     private final OrderCreateSaga orderCreateSaga;
 
     @Transactional
@@ -93,7 +105,7 @@ public class OrderService {
                 request.address(),
                 request.addressDetail(),
                 request.requestMemo(),
-                request.deliveryDeadline(),
+                request.requestedDeliveryAt(),
                 userId,
                 orderItems
         );
@@ -120,6 +132,10 @@ public class OrderService {
             orderRepository.save(order);
         }
 
+        if (order.getOrderStatus() == OrderStatus.CONFIRMED) {
+            registerAiAnalysisAfterCommit(userId, order.getOrderId());
+        }
+
         return OrderCreateResponse.from(order);
     }
 
@@ -134,15 +150,65 @@ public class OrderService {
     ) {
         validateSearchDateRange(startDate, endDate);
 
-        return orderRepository.searchOrders(
-                userId,
-                isMaster(role),
-                status,
-                keyword,
-                startDate,
-                endDate,
+        return orderRepository.findAll(
+                orderSearchSpecification(
+                        userId,
+                        isMaster(role),
+                        status,
+                        normalizeKeyword(keyword),
+                        startDate,
+                        endDate
+                ),
                 pageable
         ).map(OrderListResponse::from);
+    }
+
+    private Specification<Order> orderSearchSpecification(
+            String userId,
+            boolean isMaster,
+            OrderStatus status,
+            String keyword,
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    ) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (!isMaster) {
+                predicates.add(cb.equal(root.get("orderedBy"), userId));
+            }
+
+            if (status != null) {
+                predicates.add(cb.equal(root.get("orderStatus"), status));
+            }
+
+            if (keyword != null) {
+                String lowerKeywordPattern = "%" + keyword.toLowerCase(Locale.ROOT) + "%";
+                String upperKeywordPattern = "%" + keyword.toUpperCase(Locale.ROOT) + "%";
+                predicates.add(cb.or(
+                        cb.like(root.get("orderNumber"), upperKeywordPattern),
+                        cb.like(cb.lower(root.get("recipientName")), lowerKeywordPattern),
+                        cb.like(root.get("recipientPhone"), "%" + keyword + "%")
+                ));
+            }
+
+            if (startDate != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("orderedAt"), startDate));
+            }
+
+            if (endDate != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("orderedAt"), endDate));
+            }
+
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+    }
+
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return keyword.trim();
     }
 
     public OrderDetailResponse getOrder(String userId, String role, UUID orderId) {
@@ -152,6 +218,26 @@ public class OrderService {
         return OrderDetailResponse.from(order);
     }
 
+    public OrderAiContextResponse getOrderAiContext(UUID orderId) {
+        Order order = orderRepository.findWithOrderItemsByOrderId(orderId)
+                .orElseThrow(OrderNotFoundException::new);
+
+        return OrderAiContextResponse.from(order);
+    }
+
+    @Transactional
+    public OrderDispatchDeadlineUpdateResponse updateFinalDispatchDeadline(
+            UUID orderId,
+            OrderDispatchDeadlineUpdateRequest request
+    ) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(OrderNotFoundException::new);
+
+        order.updateFinalDispatchDeadline(request.finalDispatchDeadline());
+
+        return OrderDispatchDeadlineUpdateResponse.from(order);
+    }
+
     @Transactional
     public OrderUpdateResponse updateOrder(
             String userId,
@@ -159,21 +245,21 @@ public class OrderService {
             UUID orderId,
             OrderUpdateRequest request
     ) {
-        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         if (!isMaster(role)) {
             validateOrderOwner(order, userId);
         }
 
-        order.updateRequestInfo(request.requestMemo(), request.deliveryDeadline());
+        order.updateRequestInfo(request.requestMemo(), request.requestedDeliveryAt());
 
         return OrderUpdateResponse.from(order);
     }
 
     @Transactional
     public OrderCancelResponse cancelOrder(String userId, UUID orderId) {
-        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         validateOrderOwner(order, userId);
@@ -203,7 +289,7 @@ public class OrderService {
 
     @Transactional
     public OrderCompleteResponse completeOrder(UUID orderId) {
-        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         if (order.getOrderStatus() == OrderStatus.COMPLETED) {
@@ -221,7 +307,7 @@ public class OrderService {
             throw new OrderNotFoundException();
         }
 
-        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         if (!order.isDeletable()) {
@@ -291,6 +377,43 @@ public class OrderService {
     private void ensureCompensationSuccess(ApiResponse<Void> response) {
         if (response == null || !response.success()) {
             throw new SagaCompensationFailedException();
+        }
+    }
+
+    private void registerAiAnalysisAfterCommit(String userId, UUID orderId) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            requestAiAnalysis(userId, orderId);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                requestAiAnalysis(userId, orderId);
+            }
+        });
+    }
+
+    private void requestAiAnalysis(String userId, UUID orderId) {
+        try {
+            ApiResponse<UUID> response = aiSlackFeignClient.createAiAnalysisRequest(
+                    userId,
+                    new AiAnalysisRequest(orderId)
+            );
+
+            if (response == null || !response.success()) {
+                log.warn(
+                        "[OrderService] AI 분석 요청 실패 응답. orderId={}, errorCode={}, message={}",
+                        orderId,
+                        response == null ? null : response.errorCode(),
+                        response == null ? null : response.message()
+                );
+                return;
+            }
+
+            log.info("[OrderService] AI 분석 요청 완료. orderId={}, aiMessageId={}", orderId, response.data());
+        } catch (Exception e) {
+            log.warn("[OrderService] AI 분석 요청 예외 발생. orderId={}", orderId, e);
         }
     }
 }

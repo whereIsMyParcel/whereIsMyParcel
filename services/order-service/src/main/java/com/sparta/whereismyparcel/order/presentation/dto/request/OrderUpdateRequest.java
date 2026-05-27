@@ -10,6 +10,6 @@ public record OrderUpdateRequest(
         String requestMemo,
 
         @FutureOrPresent
-        LocalDateTime deliveryDeadline
+        LocalDateTime requestedDeliveryAt
 ) {
 }

@@ -1,6 +1,5 @@
 package com.sparta.whereismyparcel.inventory.application.service;
 
-import com.sparta.whereismyparcel.common.infrastructure.client.HubFeignClient;
 import com.sparta.whereismyparcel.inventory.domain.entity.Inventory;
 import com.sparta.whereismyparcel.inventory.domain.exception.InventoryAlreadyExistsException;
 import com.sparta.whereismyparcel.inventory.domain.exception.InventoryNotFoundException;
@@ -29,14 +28,13 @@ public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
     private final ProductVariantRepository productVariantRepository;
-    private final HubFeignClient hubFeignClient;
 
     @Transactional
     public AddInventoryResponse addStock(AddInventoryRequest request) {
         ProductVariant productVariant = productVariantRepository.findById(request.productVariantId())
                 .orElseThrow(ProductVariantNotFoundException::new);
 
-        // 2. ⭐ [핵심 검증] 상품에 링크된 진짜 허브 ID 추출
+        // 상품에 링크된 진짜 허브 ID 추출
         UUID actualHubId = productVariant.getProduct().getHubId();
 
 
@@ -68,19 +66,24 @@ public class InventoryService {
     }
 
     /**
-     * ③ 주문 생성 시 수량 예약 선점 (Order ➡️ Inventory)
+     * 주문 생성 시 수량 예약 선점 (Order ➡︎ Inventory)
      */
     @Transactional
     public List<StockReservationResponse> reserveOrderStock(StockReservationRequest request) {
-        return request.items().stream()
+        List<StockReservationRequest.Item> sortedItems = request.items().stream()
+                .sorted(java.util.Comparator.comparing(StockReservationRequest.Item::skuCode))
+                .toList();
+
+        return sortedItems.stream()
                 .map(item -> {
                     ProductVariant variant = productVariantRepository.findProductBySkuCode(item.skuCode())
                             .orElseThrow(ProductVariantNotFoundException::new);
 
-                    Inventory inventory = inventoryRepository.findByHubIdAndProductVariant(item.hubId(),variant)
+                    Inventory inventory = inventoryRepository.findByProductVariant(variant)
                             .orElseThrow(InventoryNotFoundException::new);
 
                     inventory.addReservedStock(item.quantity());
+
                     return new StockReservationResponse(
                             inventory.getProductVariant().getId(),
                             item.quantity());
@@ -89,16 +92,14 @@ public class InventoryService {
     }
 
     /**
-     * ④ 배송 시작 시 출고 확정 및 예약 해제 (Delivery ➡️ Inventory)
+     * 배송 시작 시 출고 확정 및 예약 해제 (Delivery ➡︎ Inventory)
      */
     @Transactional
     public void confirmDeliveryLaunch(StockConfirmRequest request) {
         ProductVariant productVariant = productVariantRepository.findById(request.productVariantId())
                 .orElseThrow(ProductVariantNotFoundException::new);
 
-        UUID managedHubId = productVariant.getProduct().getHubId();
-
-        Inventory inventory = inventoryRepository.findByHubIdAndProductVariant(managedHubId, productVariant)
+        Inventory inventory = inventoryRepository.findByProductVariant(productVariant)
                 .orElseThrow(InventoryNotFoundException::new);
 
         inventory.confirmShipment(request.quantity());
@@ -107,18 +108,21 @@ public class InventoryService {
     }
 
     /**
-     * 🔄 예외 시나리오: 배송 전 주문 취소 시 재고 복구 (Order/Delivery ➡️ Inventory)
+     * 예외 시나리오: 배송 전 주문 취소 시 재고 복구 (Order/Delivery ➡︎ Inventory)
      */
     @Transactional
     public void cancelOrderReservation(StockCancelRequest request) {
-        request.items().forEach(item -> {
+        List<StockCancelRequest.Item> sortedItems = request.items().stream()
+                .sorted(java.util.Comparator.comparing(StockCancelRequest.Item::skuCode))
+                .toList();
+
+        sortedItems.forEach(item -> {
             ProductVariant productVariant = productVariantRepository.findProductBySkuCode(item.skuCode())
                     .orElseThrow(ProductVariantNotFoundException::new);
 
-            UUID managedHubId = productVariant.getProduct().getHubId();
-
-            Inventory inventory = inventoryRepository.findByHubIdAndProductVariant(managedHubId, productVariant)
+            Inventory inventory = inventoryRepository.findByProductVariant(productVariant)
                     .orElseThrow(InventoryNotFoundException::new);
+
             inventory.cancelReservation(item.quantity());
         });
     }

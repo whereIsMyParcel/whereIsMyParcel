@@ -11,7 +11,7 @@ import java.util.UUID;
 @FeignClient(name = "user-service", path = "/internal/v1/users")
 public interface UserClient {
 
-    @GetMapping("/{slackId}/exists")
+    @GetMapping("/by-slack/{slackId}")
     ApiResponse<Boolean> exists(@PathVariable String slackId);
 
     @GetMapping("/{userId}")

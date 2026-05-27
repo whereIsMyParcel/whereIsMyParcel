@@ -1,6 +1,7 @@
 package com.sparta.whereismyparcel.common.exception;
 
 import com.sparta.whereismyparcel.common.response.ApiResponse;
+import io.sentry.Sentry;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
@@ -123,6 +124,11 @@ public class GlobalExceptionHandler {
 		Exception exception,
 		HttpServletRequest request
 	) {
+		Sentry.withScope(scope -> {
+			scope.setTag("uri", request.getRequestURI());
+			scope.setTag("method", request.getMethod());
+			Sentry.captureException(exception);
+		});
 		log.error("[UnhandledException] uri={}, message={}", request.getRequestURI(), exception.getMessage(), exception);
 
 		return ResponseEntity

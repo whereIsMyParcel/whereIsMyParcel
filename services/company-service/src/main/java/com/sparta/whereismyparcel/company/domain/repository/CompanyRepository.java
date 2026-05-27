@@ -15,9 +15,13 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface CompanyRepository extends JpaRepository<Company, UUID> {
+    boolean existsByBusinessNumber(String businessNumber);
 
-    Optional<Company> findByCompanyIdAndStatus(UUID companyId, CompanyStatus status);
+    boolean existsByCompanyName(String companyName);
+
+    Optional<Company> findByIdAndStatus(UUID companyId, CompanyStatus status);
 
     Page<Company> findAllCompaniesByStatus(CompanyStatus status, Pageable pageable);
 
+    Optional<Company> findByZipCodeAndAddressAndAddressDetail(String zipCode, String address, String addressDetail);
 }

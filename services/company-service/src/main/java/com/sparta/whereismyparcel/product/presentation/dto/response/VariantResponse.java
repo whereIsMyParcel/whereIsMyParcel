@@ -6,7 +6,7 @@ import com.sparta.whereismyparcel.product.domain.entity.ProductVariant;
 import java.util.UUID;
 
 public record VariantResponse(
-        UUID id,
+        UUID variantId,
         String skuCode,
         String variantName,
         Integer variantPrice,

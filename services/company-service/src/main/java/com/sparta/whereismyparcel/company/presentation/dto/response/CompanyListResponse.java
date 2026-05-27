@@ -14,7 +14,7 @@ public record CompanyListResponse(
 ) {
     public static CompanyListResponse from(Company company) {
         return new CompanyListResponse(
-                company.getCompanyId(),
+                company.getId(),
                 company.getHubId(),
                 company.getCompanyType(),
                 company.getCompanyName(),

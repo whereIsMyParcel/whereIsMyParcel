@@ -20,7 +20,7 @@ public record CompanyResponse(
 
     public static CompanyResponse from(Company company) {
         return new CompanyResponse(
-                company.getCompanyId(),
+                company.getId(),
                 company.getHubId(),
                 company.getCompanyType(),
                 company.getCompanyName(),

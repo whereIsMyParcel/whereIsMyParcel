@@ -1,6 +1,6 @@
 package com.sparta.whereismyparcel.company.application.service;
 
-import com.sparta.whereismyparcel.common.infrastructure.client.HubFeignClient;
+import com.sparta.whereismyparcel.company.infrastructure.feign.client.HubFeignClient;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.company.domain.entity.Company;
 import com.sparta.whereismyparcel.company.domain.entity.CompanyMember;
@@ -10,13 +10,11 @@ import com.sparta.whereismyparcel.company.domain.exception.*;
 import com.sparta.whereismyparcel.company.domain.repository.CompanyMemberRepository;
 import com.sparta.whereismyparcel.company.domain.repository.CompanyRepository;
 import com.sparta.whereismyparcel.company.infrastructure.feign.client.UserFeignClient;
+import com.sparta.whereismyparcel.company.presentation.dto.request.CompanySearchHubRequest;
 import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyMemberRequest;
 import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyRegisterRequest;
 import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyUpdateRequest;
-import com.sparta.whereismyparcel.company.presentation.dto.response.CompanyListResponse;
-import com.sparta.whereismyparcel.company.presentation.dto.response.CompanyMemberResponse;
-import com.sparta.whereismyparcel.company.presentation.dto.response.CompanyResponse;
-import com.sparta.whereismyparcel.company.presentation.dto.response.UserIdResponse;
+import com.sparta.whereismyparcel.company.presentation.dto.response.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +36,13 @@ public class CompanyService {
     // 업체 등록
     @Transactional
     public CompanyResponse registerCompany(CompanyRegisterRequest request) {
+        if (companyRepository.existsByBusinessNumber(request.businessNumber())) {
+            throw new BusinessNumberIsExistsException();
+        }
+        if (companyRepository.existsByCompanyName(request.companyName())) {
+            throw new CompanyNameIsExistsException();
+        }
+
         ApiResponse<Boolean> hubCheck = hubFeignClient.isHubExists(request.hubId());
         if (hubCheck == null || !hubCheck.success() || Boolean.FALSE.equals(hubCheck.data())) {
             throw new HubNotFoundException();
@@ -64,7 +69,7 @@ public class CompanyService {
 
         Company savedCompany = companyRepository.save(company);
 
-        ApiResponse<Void> updateUserResponse = userFeignClient.updateUserCompanyId(managerId, savedCompany.getCompanyId());
+        ApiResponse<Void> updateUserResponse = userFeignClient.updateUserCompanyId(managerId, savedCompany.getId());
         if (updateUserResponse == null || !updateUserResponse.success()) {
             throw new UserSyncFailedException();
         }
@@ -76,7 +81,7 @@ public class CompanyService {
 
     // 업체 조회
     public CompanyResponse getCompany(UUID companyId) {
-        Company company = companyRepository.findByCompanyIdAndStatus(companyId, CompanyStatus.ACTIVE)
+        Company company = companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
         return CompanyResponse.from(company);
     }
@@ -91,7 +96,7 @@ public class CompanyService {
     // 업체 수정
     @Transactional
     public CompanyResponse updateCompanyDetails(UUID companyId, CompanyUpdateRequest request) {
-        Company company = companyRepository.findByCompanyIdAndStatus(companyId, CompanyStatus.ACTIVE)
+        Company company = companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
 
         company.updateDetails(
@@ -110,13 +115,12 @@ public class CompanyService {
     // 업체 삭제
     @Transactional
     public void deleteCompany(UUID companyId, String hubManagerOrMasterId) {
-        Company company = companyRepository.findByCompanyIdAndStatus(companyId, CompanyStatus.ACTIVE)
+        Company company = companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
 
         company.delete(hubManagerOrMasterId);
 
         ApiResponse<Void> userDeleteResponse = userFeignClient.deleteAllUsersInCompany(companyId);
-
         if (userDeleteResponse == null || !userDeleteResponse.success()) {
             throw new UserSyncFailedException();
         }
@@ -125,7 +129,7 @@ public class CompanyService {
     // 업체 직원 등록
     @Transactional
     public CompanyMemberResponse registerCompanyMember(UUID companyId, CompanyMemberRequest request) {
-        Company company = companyRepository.findByCompanyIdAndStatus(companyId, CompanyStatus.ACTIVE)
+        Company company = companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
 
         Boolean isExistsMember = companyMemberRepository.existsByUserId(request.companyMemberId());
@@ -145,22 +149,30 @@ public class CompanyService {
 
     // 직원 조회
     public CompanyMemberResponse getCompanyMember(UUID companyId, UUID memberId) {
-        Company company = companyRepository.findByCompanyIdAndStatus(companyId, CompanyStatus.ACTIVE)
+        companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
-        CompanyMember companyMember = companyMemberRepository.findByCompanyMemberIdAndStatus(memberId, CompanyMemberStatus.ACTIVE)
+        CompanyMember companyMember = companyMemberRepository.findByIdAndStatus(memberId, CompanyMemberStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
         return CompanyMemberResponse.from(companyMember);
+    }
+
+    // 직원 목록 조회
+    public Page<CompanyMemberResponse> getCompanyMembers(UUID companyId, Pageable pageable) {
+        companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
+                .orElseThrow(CompanyNotFoundException::new);
+        Page<CompanyMember> companyMembers = companyMemberRepository.findByCompanyIdAndStatus(companyId, CompanyMemberStatus.ACTIVE, pageable);
+        return companyMembers.map(CompanyMemberResponse::from);
     }
 
     // 직원 삭제
     @Transactional
     public void deleteCompanyMember(UUID companyId, CompanyMemberRequest request, String companyManagerId) {
-        Company company = companyRepository.findByCompanyIdAndStatus(companyId, CompanyStatus.ACTIVE)
+        companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
 
-        CompanyMember companyMember = companyMemberRepository.findByCompanyMemberIdAndStatus(request.companyMemberId(), CompanyMemberStatus.ACTIVE)
+        CompanyMember companyMember = companyMemberRepository.findByIdAndStatus(request.companyMemberId(), CompanyMemberStatus.ACTIVE)
                 .orElseThrow(CompanyMemberNotFoundException::new);
-        if (!companyMember.getCompany().getCompanyId().equals(companyId)) {
+        if (!companyMember.getCompany().getId().equals(companyId)) {
             throw new CompanyMemberNotFoundException();
         }
 
@@ -171,4 +183,16 @@ public class CompanyService {
 
         companyMember.delete(companyManagerId);
     }
+
+    /**
+     * 배송 생성시 입력받은 주소로 목적지 허브 조회 (Shipment ➡︎ Company) 단일요청
+     */
+    public CompanySearchHubResponse getHub(CompanySearchHubRequest request) {
+        Company company = companyRepository.findByZipCodeAndAddressAndAddressDetail(request.zipCode(), request.address(), request.addressDetails())
+                .orElseThrow(CompanyNotFoundException::new);
+
+        return CompanySearchHubResponse.from(company.getHubId());
+    }
+
+
 }

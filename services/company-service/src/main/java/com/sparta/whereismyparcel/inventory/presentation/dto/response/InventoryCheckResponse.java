@@ -12,7 +12,7 @@ public record InventoryCheckResponse(
 ) {
     public static InventoryCheckResponse from (Inventory inventory) {
         return new InventoryCheckResponse(
-                inventory.getInventoryId(),
+                inventory.getId(),
                 inventory.getHubId(),
                 inventory.getProductVariant().getId(),
                 inventory.getAvailableQuantity()

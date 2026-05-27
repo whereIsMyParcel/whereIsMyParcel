@@ -37,6 +37,10 @@ configure(subprojects.findAll { it.buildFile.exists() }) {
 	dependencies {
 		implementation 'io.micrometer:micrometer-tracing-bridge-brave'
 		implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+		implementation 'io.micrometer:micrometer-registry-prometheus'
+		implementation 'com.github.loki4j:loki-logback-appender:1.5.2'
+		implementation 'io.sentry:sentry-spring-boot-starter-jakarta:7.22.0'
+		implementation 'io.sentry:sentry-logback:7.22.0'
 	}
 
 	// 서비스 모듈들에 공통 테스트 환경(ArchUnit 포함) 적용

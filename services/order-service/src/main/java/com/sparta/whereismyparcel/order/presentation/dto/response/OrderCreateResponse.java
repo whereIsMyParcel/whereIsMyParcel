@@ -11,6 +11,8 @@ public record OrderCreateResponse(
         String orderNumber,
         OrderStatus orderStatus,
         Long totalPrice,
+        LocalDateTime requestedDeliveryAt,
+        LocalDateTime finalDispatchDeadline,
         LocalDateTime orderedAt
 ) {
     public static OrderCreateResponse from(Order order) {
@@ -19,6 +21,8 @@ public record OrderCreateResponse(
                 order.getOrderNumber(),
                 order.getOrderStatus(),
                 order.getTotalPrice(),
+                order.getRequestedDeliveryAt(),
+                order.getFinalDispatchDeadline(),
                 order.getOrderedAt()
         );
     }
