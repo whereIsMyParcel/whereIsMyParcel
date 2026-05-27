@@ -36,7 +36,7 @@ public class ProductInternalController {
      */
     @GetMapping("/search-hub")
     public ResponseEntity<ApiResponse<List<VariantHubResponse>>> getVariantHub(
-            @RequestParam List<UUID> productVariantIds) {
+            @RequestParam("productVariantId") List<UUID> productVariantIds) {
         List<VariantHubResponse> response = productService.getVariantHub(productVariantIds);
         return ResponseEntity.ok(ApiResponse.success(response));
     }

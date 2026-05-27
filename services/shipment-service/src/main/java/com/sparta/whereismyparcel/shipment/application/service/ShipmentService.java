@@ -11,23 +11,24 @@ import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentRouteNotFoun
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentUpdateDeniedException;
 import com.sparta.whereismyparcel.shipment.domain.repository.ShipmentRepository;
 import com.sparta.whereismyparcel.shipment.domain.util.ShipmentNumberGenerator;
-import com.sparta.whereismyparcel.shipment.infrastructure.client.*;
+import com.sparta.whereismyparcel.shipment.infrastructure.client.CompanyClient;
+import com.sparta.whereismyparcel.shipment.infrastructure.client.HubClient;
+import com.sparta.whereismyparcel.shipment.infrastructure.client.OrderClient;
 import com.sparta.whereismyparcel.shipment.presentation.dto.request.DecreaseInventoryRequest;
 import com.sparta.whereismyparcel.shipment.presentation.dto.request.GetDestinationHubIdRequest;
 import com.sparta.whereismyparcel.shipment.presentation.dto.request.ShipmentCreateRequest;
 import com.sparta.whereismyparcel.shipment.presentation.dto.request.ShipmentSearchRequest;
-import com.sparta.whereismyparcel.shipment.presentation.dto.response.GetProductHubIdResponse;
-import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShipmentCreateResponse;
-import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShipmentInfoResponse;
-import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShipmentViewResponse;
-import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShortestPathResponse;
+import com.sparta.whereismyparcel.shipment.presentation.dto.response.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.*;
@@ -90,11 +91,11 @@ public class ShipmentService {
     public List<ShipmentCreateResponse> create(String userId, ShipmentCreateRequest request) {
 
         // 상품 옵션 ID 추출
-        Set<UUID> productVariantIds = extractProductVariantIds(request);
+        List<UUID> productVariantIds = extractProductVariantIds(request);
 
         // 상품별 출발 허브 조회
         List<GetProductHubIdResponse> hubMappings =
-                companyClient.getHubMappingsByProductIds(userId, productVariantIds)
+                companyClient.getHubMappingsByProductIds(productVariantIds)
                         .data();
 
         // 배송지 기준 최종 도착 허브 조회
@@ -121,10 +122,11 @@ public class ShipmentService {
     /**
      * 요청 상품 옵션 ID 추출
      */
-    private Set<UUID> extractProductVariantIds(ShipmentCreateRequest request) {
+    private List<UUID> extractProductVariantIds(ShipmentCreateRequest request) {
         return request.items().stream()
                 .map(ShipmentCreateRequest.Item::productVariantId)
-                .collect(toSet());
+                .distinct()
+                .collect(toList());
     }
 
     /**
@@ -138,7 +140,7 @@ public class ShipmentService {
                                 request.addressDetail()
                         )
                 )
-                .data();
+                .data().hubId();
     }
 
     /**
@@ -150,7 +152,7 @@ public class ShipmentService {
         return hubMappings.stream()
                 .collect(groupingBy(
                         GetProductHubIdResponse::hubId,
-                        mapping(GetProductHubIdResponse::productVariantId, toList())
+                        mapping(GetProductHubIdResponse::variantId, toList())
                 ));
     }
 
@@ -294,7 +296,14 @@ public class ShipmentService {
 
         shipment.start();
 
-        companyClient.decrease(DecreaseInventoryRequest.from(shipment.getItems()));
+        shipment.getItems().forEach(item ->
+                companyClient.decrease(
+                        new DecreaseInventoryRequest(
+                                item.getOrderItemId(),
+                                item.getQuantity()
+                        )
+                )
+        );
     }
 
     public List<ShipmentInfoResponse> getShipmentByOrderId(UUID orderId) {
