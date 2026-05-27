@@ -5,7 +5,9 @@ spring:
   application:
     name: user-service
   config:
-    import: "optional:configserver:"
+    import:
+      - "optional:configserver:"
+      - "optional:file:.env[.properties]"
   cloud:
     config:
       enabled: ${SPRING_CLOUD_CONFIG_ENABLED:false}
@@ -32,6 +34,18 @@ eureka:
     service-url:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
 
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+
 keycloak:
   server-url: ${KEYCLOAK_SERVER_URL:http://localhost:8080}
   realm: ${KEYCLOAK_REALM:sparta-logistics}
@@ -39,3 +53,13 @@ keycloak:
   admin:
     client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:user-service-admin}
     client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:user-service-admin-secret}
+
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SPRING_PROFILES_ACTIVE:local}
+  traces-sample-rate: 1.0
+  send-default-pii: false
+  mdc-tags:
+    - traceId
+    - userId
+    - username
