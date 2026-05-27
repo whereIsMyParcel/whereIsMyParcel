@@ -48,6 +48,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Slf4j
@@ -183,14 +184,15 @@ public class OrderService {
                 predicates.add(cb.equal(root.get("orderStatus"), status));
             }
 
-            if (keyword != null) {
-                String keywordPattern = "%" + keyword.toLowerCase() + "%";
-                predicates.add(cb.or(
-                        cb.like(cb.lower(root.get("orderNumber")), keywordPattern),
-                        cb.like(cb.lower(root.get("recipientName")), keywordPattern),
-                        cb.like(root.get("recipientPhone"), "%" + keyword + "%")
-                ));
-            }
+        if (keyword != null) {
+            String lowerKeywordPattern = "%" + keyword.toLowerCase(Locale.ROOT) + "%";
+            String upperKeywordPattern = "%" + keyword.toUpperCase(Locale.ROOT) + "%";
+            predicates.add(cb.or(
+                    cb.like(root.get("orderNumber"), upperKeywordPattern),
+                    cb.like(cb.lower(root.get("recipientName")), lowerKeywordPattern),
+                    cb.like(root.get("recipientPhone"), "%" + keyword + "%")
+            ));
+        }
 
             if (startDate != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("orderedAt"), startDate));
