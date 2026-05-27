@@ -304,10 +304,9 @@ class OrderServiceTest {
                 .willReturn(Optional.of(order));
 
         // when
-        OrderCompleteResponse response = orderService.completeOrder(orderId);
+        orderService.completeOrder(orderId);
 
         // then
-        assertThat(response.orderStatus()).isEqualTo(OrderStatus.COMPLETED);
         assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.COMPLETED);
     }
 
@@ -325,10 +324,9 @@ class OrderServiceTest {
                 .willReturn(Optional.of(order));
 
         // when
-        OrderCompleteResponse response = orderService.completeOrder(orderId);
+        orderService.completeOrder(orderId);
 
         // then
-        assertThat(response.orderStatus()).isEqualTo(OrderStatus.COMPLETED);
         assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.COMPLETED);
     }
 
@@ -372,13 +370,7 @@ class OrderServiceTest {
 
         // when & then
         assertThatThrownBy(() -> orderService.getOrders(
-                userId,
-                "MASTER",
-                null,
-                null,
-                startDate,
-                endDate,
-                pageable
+                userId, "MASTER", null, null, startDate, endDate, pageable
         )).isInstanceOf(InvalidOrderSearchDateRangeException.class);
     }
 
@@ -562,51 +554,6 @@ class OrderServiceTest {
                 .isInstanceOf(OrderNotFoundException.class);
     }
 
-    private OrderCreateRequest createRequest() {
-        return new OrderCreateRequest(
-                UUID.randomUUID(),
-                "문 앞에 놓아주세요",
-                LocalDateTime.now().plusDays(3),
-                "홍길동",
-                "010-1234-5678",
-                "12345",
-                "서울시 강남구",
-                "101동 1001호",
-                List.of(new OrderCreateRequest.OrderItemCreateRequest(UUID.randomUUID(), 2))
-        );
-    }
-
-    private SkuValidationResponse createValidationResponse(OrderCreateRequest request) {
-        List<SkuValidationResponse.Item> items = request.items().stream()
-                .map(i -> new SkuValidationResponse.Item(
-                        i.productVariantId(), "SKU-001", "옵션명", 10_000, "ON_SALE"))
-                .toList();
-        return new SkuValidationResponse(items);
-    }
-
-    private Order createOrder(String orderedBy) {
-        return Order.create(
-                UUID.randomUUID(),
-                "ORD-001",
-                "홍길동",
-                "010-1234-5678",
-                "12345",
-                "서울시 강남구",
-                "101동 1001호",
-                "문 앞에 놓아주세요",
-                LocalDateTime.now().plusDays(3),
-                orderedBy,
-                List.of(OrderItem.create(
-                        UUID.randomUUID(),
-                        "SKU-001",
-                        "상품명",
-                        "옵션명",
-                        10_000L,
-                        2
-                ))
-        );
-    }
-
     @Test
     @DisplayName("MASTER는 전체 주문 목록을 조회할 수 있다")
     void getOrdersByMaster() {
@@ -624,13 +571,7 @@ class OrderServiceTest {
 
         // when
         Page<OrderListResponse> response = orderService.getOrders(
-                userId,
-                "MASTER",
-                OrderStatus.PENDING,
-                "ORD",
-                startDate,
-                endDate,
-                pageable
+                userId, "MASTER", OrderStatus.PENDING, "ORD", startDate, endDate, pageable
         );
 
         // then
@@ -653,13 +594,7 @@ class OrderServiceTest {
 
         // when
         Page<OrderListResponse> response = orderService.getOrders(
-                userId,
-                "COMPANY_MANAGER",
-                null,
-                null,
-                null,
-                null,
-                pageable
+                userId, "COMPANY_MANAGER", null, null, null, null, pageable
         );
 
         // then
@@ -793,5 +728,50 @@ class OrderServiceTest {
         // when & then
         assertThatThrownBy(() -> orderService.updateFinalDispatchDeadline(orderId, request))
                 .isInstanceOf(OrderNotFoundException.class);
+    }
+
+    private OrderCreateRequest createRequest() {
+        return new OrderCreateRequest(
+                UUID.randomUUID(),
+                "문 앞에 놓아주세요",
+                LocalDateTime.now().plusDays(3),
+                "홍길동",
+                "010-1234-5678",
+                "12345",
+                "서울시 강남구",
+                "101동 1001호",
+                List.of(new OrderCreateRequest.OrderItemCreateRequest(UUID.randomUUID(), 2))
+        );
+    }
+
+    private SkuValidationResponse createValidationResponse(OrderCreateRequest request) {
+        List<SkuValidationResponse.Item> items = request.items().stream()
+                .map(i -> new SkuValidationResponse.Item(
+                        i.productVariantId(), "SKU-001", "옵션명", 10_000, "ON_SALE"))
+                .toList();
+        return new SkuValidationResponse(items);
+    }
+
+    private Order createOrder(String orderedBy) {
+        return Order.create(
+                UUID.randomUUID(),
+                "ORD-001",
+                "홍길동",
+                "010-1234-5678",
+                "12345",
+                "서울시 강남구",
+                "101동 1001호",
+                "문 앞에 놓아주세요",
+                LocalDateTime.now().plusDays(3),
+                orderedBy,
+                List.of(OrderItem.create(
+                        UUID.randomUUID(),
+                        "SKU-001",
+                        "상품명",
+                        "옵션명",
+                        10_000L,
+                        2
+                ))
+        );
     }
 }

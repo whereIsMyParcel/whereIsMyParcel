@@ -36,7 +36,7 @@ public class OrderCreateSaga {
                     companyFeignClient.reserveStock(context.getUserId(), request)
             );
             context.applyReservation(reservations.stream()
-                    .map(r -> new OrderCreateSagaContext.StockReservation(r.variantId(), findSkuCode(context, r.variantId()), r.reservedQuantity()))
+                    .map(r -> new OrderCreateSagaContext.StockReservation(r.productVariantId(), findSkuCode(context, r.productVariantId()), r.reservedQuantity()))
                     .toList());
             order.reserveStock();
         } catch (Exception e) {
@@ -101,9 +101,9 @@ public class OrderCreateSaga {
         }
     }
 
-    private String findSkuCode(OrderCreateSagaContext context, UUID variantId) {
+    private String findSkuCode(OrderCreateSagaContext context, UUID productVariantId) {
         return context.getItems().stream()
-                .filter(item -> item.productVariantId().equals(variantId))
+                .filter(item -> item.productVariantId().equals(productVariantId))
                 .map(OrderCreateSagaContext.OrderItemInfo::skuCode)
                 .findFirst()
                 .orElseThrow(SagaFailedException::new);

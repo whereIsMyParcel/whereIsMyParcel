@@ -23,9 +23,8 @@ import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuVa
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderDispatchDeadlineUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderUpdateRequest;
-import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderAiContextResponse;
-import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCompleteResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDetailResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDispatchDeadlineUpdateResponse;
@@ -82,7 +81,7 @@ public class OrderService {
         List<OrderItem> orderItems = request.items().stream()
                 .map(i -> {
                     SkuValidationResponse.Item skuInfo = validation.items().stream()
-                            .filter(v -> v.id().equals(i.productVariantId()))
+                            .filter(v -> v.variantId().equals(i.productVariantId()))
                             .findFirst()
                             .orElseThrow(InvalidOrderItemsException::new);
                     return OrderItem.create(
@@ -173,6 +172,8 @@ public class OrderService {
     ) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            predicates.add(cb.isNull(root.get("deletedAt")));
 
             if (!isMaster) {
                 predicates.add(cb.equal(root.get("orderedBy"), userId));
@@ -288,17 +289,15 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderCompleteResponse completeOrder(UUID orderId) {
+    public void completeOrder(UUID orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         if (order.getOrderStatus() == OrderStatus.COMPLETED) {
-            return OrderCompleteResponse.from(order);
+            return;
         }
 
         order.complete();
-
-        return OrderCompleteResponse.from(order);
     }
 
     @Transactional

@@ -7,7 +7,7 @@ public record SkuValidationResponse(
         List<Item> items
 ) {
     public record Item(
-            UUID id,
+            UUID variantId,
             String skuCode,
             String variantName,
             Integer variantPrice,
