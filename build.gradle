@@ -19,6 +19,7 @@ allprojects {
 configure(subprojects.findAll { it.buildFile.exists() }) {
 	apply plugin: 'java-library'
 	apply plugin: 'io.spring.dependency-management'
+	apply plugin: 'jacoco'
 
 	java {
 		toolchain {
@@ -47,6 +48,27 @@ configure(subprojects.findAll { it.buildFile.exists() }) {
 
 	tasks.named('test') {
 		useJUnitPlatform()
+		finalizedBy jacocoTestReport
+	}
+
+	jacocoTestReport {
+		dependsOn test
+		reports {
+			xml.required = true
+			html.required = true
+		}
+		afterEvaluate {
+			classDirectories.setFrom(files(classDirectories.files.collect {
+				fileTree(dir: it, exclude: [
+						"**/*Application*",
+						"**/*Config*",
+						"**/infrastructure/**",
+						"**/dto/**",
+						"**/exception/**",
+						"**/util/**"
+				])
+			}))
+		}
 	}
 
 	tasks.withType(JavaCompile) {
