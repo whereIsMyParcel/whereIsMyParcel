@@ -30,8 +30,9 @@
 MSA는 서비스가 많아서 로컬에서 세팅이 복잡합니다. Docker Compose는 **"이 서비스들을 이 순서로, 이 설정으로 한번에 띄워줘"** 를 한 파일로 정의합니다.
 
 ```bash
-# 이 한 줄로 인프라 전체가 올라옵니다
-docker compose -f infra/docker-compose.yml --env-file .env up -d
+# infra/ 디렉토리에서 실행
+cd infra
+docker compose up -d
 ```
 
 팀원 누구든 이 명령 하나로 동일한 환경을 갖게 됩니다.
@@ -212,13 +213,13 @@ sparta_logistics (DB)
 
 ```bash
 # 내 서비스만 재빌드해서 올리기
-docker compose -f infra/docker-compose.yml --env-file .env up -d --build hub-service
+docker compose up -d --build hub-service
 
 # 전체 로그 보기
-docker compose -f infra/docker-compose.yml --env-file .env logs -f
+docker compose logs -f
 
 # 특정 서비스 로그만 보기
-docker compose -f infra/docker-compose.yml --env-file .env logs -f user-service
+docker compose logs -f user-service
 
 # DB 스키마 확인
 docker exec -it postgres psql -U sparta -d sparta_logistics -c "\dn"
