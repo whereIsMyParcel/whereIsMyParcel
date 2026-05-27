@@ -9,7 +9,6 @@ public record CompanySearchHubRequest(
         @NotBlank
         String address,
 
-        @NotBlank
         String addressDetails
 ) {
 }

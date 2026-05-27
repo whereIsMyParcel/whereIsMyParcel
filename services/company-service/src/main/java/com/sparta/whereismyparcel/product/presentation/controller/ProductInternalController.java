@@ -32,7 +32,7 @@ public class ProductInternalController {
     }
 
     /**
-     * 배송 생성시 주문 상품들의 허브 조회 (Shipment ➡︎ Company) 리스트 조회 (이거는 상품쪽으로 가도 될듯)
+     * 배송 생성시 주문 상품들의 허브 조회 (Shipment ➡︎ Company) 리스트 조회
      */
     @GetMapping("/search-hub")
     public ResponseEntity<ApiResponse<List<VariantHubResponse>>> getVariantHub(

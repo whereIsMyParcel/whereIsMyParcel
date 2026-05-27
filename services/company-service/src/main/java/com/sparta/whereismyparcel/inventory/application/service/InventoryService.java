@@ -34,7 +34,7 @@ public class InventoryService {
         ProductVariant productVariant = productVariantRepository.findById(request.productVariantId())
                 .orElseThrow(ProductVariantNotFoundException::new);
 
-        // 2. ⭐ [핵심 검증] 상품에 링크된 진짜 허브 ID 추출
+        // 상품에 링크된 진짜 허브 ID 추출
         UUID actualHubId = productVariant.getProduct().getHubId();
 
 
@@ -75,10 +75,11 @@ public class InventoryService {
                     ProductVariant variant = productVariantRepository.findProductBySkuCode(item.skuCode())
                             .orElseThrow(ProductVariantNotFoundException::new);
 
-                    Inventory inventory = inventoryRepository.findByHubIdAndProductVariant(item.hubId(),variant)
+                    Inventory inventory = inventoryRepository.findByHubIdAndProductVariantWithLock(item.hubId(),variant)
                             .orElseThrow(InventoryNotFoundException::new);
 
                     inventory.addReservedStock(item.quantity());
+
                     return new StockReservationResponse(
                             inventory.getProductVariant().getId(),
                             item.quantity());
@@ -96,7 +97,7 @@ public class InventoryService {
 
         UUID managedHubId = productVariant.getProduct().getHubId();
 
-        Inventory inventory = inventoryRepository.findByHubIdAndProductVariant(managedHubId, productVariant)
+        Inventory inventory = inventoryRepository.findByHubIdAndProductVariantWithLock(managedHubId, productVariant)
                 .orElseThrow(InventoryNotFoundException::new);
 
         inventory.confirmShipment(request.quantity());
@@ -115,8 +116,9 @@ public class InventoryService {
 
             UUID managedHubId = productVariant.getProduct().getHubId();
 
-            Inventory inventory = inventoryRepository.findByHubIdAndProductVariant(managedHubId, productVariant)
+            Inventory inventory = inventoryRepository.findByHubIdAndProductVariantWithLock(managedHubId, productVariant)
                     .orElseThrow(InventoryNotFoundException::new);
+
             inventory.cancelReservation(item.quantity());
         });
     }

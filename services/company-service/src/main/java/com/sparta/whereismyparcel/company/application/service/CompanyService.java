@@ -149,7 +149,7 @@ public class CompanyService {
 
     // 직원 조회
     public CompanyMemberResponse getCompanyMember(UUID companyId, UUID memberId) {
-        Company company = companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
+        companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
         CompanyMember companyMember = companyMemberRepository.findByIdAndStatus(memberId, CompanyMemberStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
@@ -158,6 +158,8 @@ public class CompanyService {
 
     // 직원 목록 조회
     public Page<CompanyMemberResponse> getCompanyMembers(UUID companyId, Pageable pageable) {
+        companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
+                .orElseThrow(CompanyNotFoundException::new);
         Page<CompanyMember> companyMembers = companyMemberRepository.findByCompanyIdAndStatus(companyId, CompanyMemberStatus.ACTIVE, pageable);
         return companyMembers.map(CompanyMemberResponse::from);
     }
@@ -165,7 +167,7 @@ public class CompanyService {
     // 직원 삭제
     @Transactional
     public void deleteCompanyMember(UUID companyId, CompanyMemberRequest request, String companyManagerId) {
-        Company company = companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
+        companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
 
         CompanyMember companyMember = companyMemberRepository.findByIdAndStatus(request.companyMemberId(), CompanyMemberStatus.ACTIVE)

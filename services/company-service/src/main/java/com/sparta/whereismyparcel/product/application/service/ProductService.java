@@ -361,7 +361,7 @@ public class ProductService {
     }
 
     /**
-     * 배송 생성시 주문 상품들의 허브 조회 (Shipment ➡︎ Product) 리스트 조회 (이거는 상품쪽으로 가도 될듯)
+     * 배송 생성시 주문 상품들의 허브 조회 (Shipment ➡︎ Product) 리스트 조회
      */
     public List<VariantHubResponse> getVariantHub (List<UUID> productVariantIds){
         if (productVariantIds == null || productVariantIds.isEmpty()) {
