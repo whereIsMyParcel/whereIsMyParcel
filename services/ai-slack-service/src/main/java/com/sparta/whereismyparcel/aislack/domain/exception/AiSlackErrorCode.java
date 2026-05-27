@@ -16,7 +16,8 @@ public enum AiSlackErrorCode implements ErrorCode {
     SLACK_MESSAGE_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AISLACK-005", "Slack 메시지 전송에 실패했습니다."),
     SLACK_MESSAGE_PERMANENT_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AISLACK-006", "Slack 메시지 전송이 영구적으로 실패했습니다."),
     SLACK_MESSAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "AISLACK-007", "Slack 메시지를 찾을 수 없습니다."), // 수정됨
-    INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "AISLACK-008", "유효하지 않은 입력 값입니다."); // 수정됨
+    INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "AISLACK-008", "유효하지 않은 입력 값입니다."),
+    ORDER_SERVICE_COMMUNICATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,"AISLACK-009" , "Order 서비스에 delivery_deadline 수정 실패했습니다." ); // 수정됨
 
     private final HttpStatus status;
     private final String code;

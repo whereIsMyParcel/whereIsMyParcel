@@ -5,7 +5,7 @@ plugins {
 description = 'AI & Slack 알림 서비스'
 
 ext {
-	set('springAiVersion', "2.0.0-M6")
+	set('springAiVersion', "1.1.7")
 }
 dependencyManagement {
 	imports {
@@ -36,7 +36,7 @@ dependencies {
 	implementation 'com.slack.api:slack-api-client:1.49.0'
 	implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
-	implementation 'org.springframework.retry:spring-retry' // 이 라인을 제거합니다.
+	implementation 'org.springframework.retry:spring-retry'
 	implementation 'org.springframework:spring-aspects'
 
 	runtimeOnly 'org.postgresql:postgresql'
