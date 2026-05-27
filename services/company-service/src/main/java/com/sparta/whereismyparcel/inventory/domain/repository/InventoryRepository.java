@@ -16,11 +16,6 @@ public interface InventoryRepository extends JpaRepository<Inventory, UUID> {
     Optional<Inventory> findByHubIdAndProductVariant(UUID hubId, ProductVariant productVariant);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT i FROM Inventory i " +
-            "WHERE i.hubId = :hubId AND i.productVariant = :productVariant")
-    Optional<Inventory> findByHubIdAndProductVariantWithLock(
-            @Param("hubId") UUID hubId,
-            @Param("productVariant") ProductVariant productVariant
-    );
+    Optional<Inventory> findByProductVariant(@Param("productVariant") ProductVariant productVariant);
 }
 
