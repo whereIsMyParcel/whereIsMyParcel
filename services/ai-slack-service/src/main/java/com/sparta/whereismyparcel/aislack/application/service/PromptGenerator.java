@@ -1,7 +1,5 @@
 package com.sparta.whereismyparcel.aislack.application.service;
 
-import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.request.GeminiRequest;
-import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.request.OrderInternalRequest;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.OrderResponse;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.ShipmentResponse;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.UserResponse;
@@ -31,7 +29,17 @@ public class PromptGenerator {
         promptBuilder.append("  - Recipient Name: ").append(order.recipientName()).append("\n");
         promptBuilder.append("  - Recipient Address: ").append(order.recipientAddress()).append("\n");
         promptBuilder.append("  - Requested Delivery At: ").append(order.requestedDeliveryAt()).append("\n");
-        promptBuilder.append("  - Order Status: ").append(order.orderStatus()).append("\n\n");
+        promptBuilder.append("  - Order Status: ").append(order.orderStatus()).append("\n"); //append("\n\n")
+        promptBuilder.append("  - Order requestMemo: ").append(order.requestMemo()).append("\n");
+        promptBuilder.append("  - Order orderAt: ").append(order.orderedAt()).append("\n");
+        promptBuilder.append("  - Order items: ").append(
+                promptBuilder.append("  - Order items: ").append(
+                                order.shipmentItems() == null ? "정보 없음" :
+                                        String.join(", ",
+                                                order.shipmentItems().stream()
+                                                        .filter(osi -> osi != null && osi.items() != null)
+                                                        .flatMap(osi -> osi.items().stream())
+                                                        .distinct().toList())).append("\n\n"));
 
         promptBuilder.append("Shipment Details:\n");
         shipments.forEach(shipment -> {

@@ -21,9 +21,9 @@ public interface OrderFeignClient {
             @PathVariable UUID orderId
     );
 
-    @PatchMapping("/internal/v1/orders/{orderId}/delivery-deadline")
+    @PatchMapping("/internal/v1/orders/{orderId}/finalDispatchDeadline")
     ApiResponse<Void> patchDeliveryDeadline(
-            @RequestHeader("X-User-Id") String UserId,
+            @RequestHeader("X-User-Id") String userId,
             @PathVariable UUID orderId,
             @RequestBody DeliveryDeadlinePatchRequest request
     );
