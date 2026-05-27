@@ -18,6 +18,9 @@
 | 내부 회원 조회 `GET /internal/v1/users/{userId}` | ✅ 완료 |
 | 내부 사업자번호 조회 `GET /internal/v1/users/by-business-number/{businessNumber}` | ✅ 완료 |
 | 내부 Slack ID 조회 `GET /internal/v1/users/by-slack/{slackId}` | ✅ 완료 |
+| 내부 소속 회사 연결 `PATCH /internal/v1/users/{userId}/companies/{companyId}` | ✅ 완료 |
+| 내부 소속 회사 해제 `DELETE /internal/v1/users/{userId}` | ✅ 완료 |
+| 내부 회사 전체 회원 해제 `DELETE /internal/v1/users/companies/{companyId}` | ✅ 완료 |
 
 ---
 
@@ -307,6 +310,67 @@ Swagger UI에 노출되지 않습니다 (`@Hidden`).
 > shipment-service가 배송담당자 등록 시 Slack ID 유효성 검증 용도로 사용합니다.
 > `status`, `role` 필터링은 하지 않으며, 호출하는 서비스에서 반환된 응답의 `status`, `role`을 검증합니다.
 
+### PATCH /internal/v1/users/{userId}/companies/{companyId} — 소속 회사 연결
+
+| 파라미터 | 타입 | 설명 |
+| --- | --- | --- |
+| `userId` | `UUID` | 대상 회원 ID |
+| `companyId` | `UUID` | 연결할 회사 ID |
+
+**Response** `200 OK`
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "errorCode": null,
+  "message": "OK",
+  "data": null
+}
+```
+
+> company-service가 회사 생성 후 COMPANY_MANAGER의 `companyId`를 설정할 때 사용합니다.
+
+### DELETE /internal/v1/users/{userId} — 소속 회사 해제
+
+| 파라미터 | 타입 | 설명 |
+| --- | --- | --- |
+| `userId` | `UUID` | 대상 회원 ID |
+
+**Response** `200 OK`
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "errorCode": null,
+  "message": "OK",
+  "data": null
+}
+```
+
+> company-service가 회원과 회사 연결을 끊을 때 사용합니다. 회원 자체는 삭제되지 않습니다.
+
+### DELETE /internal/v1/users/companies/{companyId} — 회사 전체 회원 소속 해제
+
+| 파라미터 | 타입 | 설명 |
+| --- | --- | --- |
+| `companyId` | `UUID` | 대상 회사 ID |
+
+**Response** `200 OK`
+
+```json
+{
+  "success": true,
+  "status": 200,
+  "errorCode": null,
+  "message": "OK",
+  "data": null
+}
+```
+
+> company-service가 회사를 삭제할 때, 해당 회사에 속한 모든 회원의 `companyId`를 일괄 해제합니다.
+
 ---
 
 ## 에러 코드
@@ -396,7 +460,7 @@ implementation 'org.springframework.boot:spring-boot-starter-validation'
 implementation 'org.springframework.boot:spring-boot-starter-actuator'
 implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 implementation 'org.springframework.cloud:spring-cloud-starter-config'
-implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6'
+implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
 implementation 'org.keycloak:keycloak-admin-client:26.0.0'
 ```
 

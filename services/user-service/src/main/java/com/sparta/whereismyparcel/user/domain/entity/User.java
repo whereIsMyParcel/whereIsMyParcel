@@ -117,4 +117,12 @@ public class User extends BaseEntity {
 		}
 		this.status = UserStatus.REJECTED;
 	}
+
+	public void updateCompanyId(UUID companyId) {
+		this.companyId = companyId;
+	}
+
+	public void clearCompanyId() {
+		this.companyId = null;
+	}
 }
