@@ -197,6 +197,10 @@ public class Order extends BaseEntity {
         }
     }
 
+    public void updateFinalDispatchDeadline(LocalDateTime finalDispatchDeadline) {
+        this.finalDispatchDeadline = finalDispatchDeadline;
+    }
+
     public boolean isDeletable() {
         return this.orderStatus == OrderStatus.CANCELLED
                 || this.orderStatus == OrderStatus.COMPLETED

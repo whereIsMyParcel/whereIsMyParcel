@@ -16,6 +16,7 @@ import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient
 import com.sparta.whereismyparcel.order.infrastructure.client.ShipmentFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
+import com.sparta.whereismyparcel.order.presentation.dto.request.OrderDispatchDeadlineUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.*;
 import org.junit.jupiter.api.DisplayName;
@@ -727,6 +728,44 @@ class OrderServiceTest {
 
         // when & then
         assertThatThrownBy(() -> orderService.getOrderAiContext(orderId))
+                .isInstanceOf(OrderNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("AI가 계산한 최종 출고 상한을 주문에 반영할 수 있다")
+    void updateFinalDispatchDeadline() {
+        // given
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(UUID.randomUUID().toString());
+        LocalDateTime finalDispatchDeadline = LocalDateTime.now().plusDays(1);
+        OrderDispatchDeadlineUpdateRequest request =
+                new OrderDispatchDeadlineUpdateRequest(finalDispatchDeadline);
+
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderDispatchDeadlineUpdateResponse response =
+                orderService.updateFinalDispatchDeadline(orderId, request);
+
+        // then
+        assertThat(response.finalDispatchDeadline()).isEqualTo(finalDispatchDeadline);
+        assertThat(order.getFinalDispatchDeadline()).isEqualTo(finalDispatchDeadline);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주문에는 최종 출고 상한을 반영할 수 없다")
+    void updateFinalDispatchDeadlineNotFoundThrowsException() {
+        // given
+        UUID orderId = UUID.randomUUID();
+        OrderDispatchDeadlineUpdateRequest request =
+                new OrderDispatchDeadlineUpdateRequest(LocalDateTime.now().plusDays(1));
+
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> orderService.updateFinalDispatchDeadline(orderId, request))
                 .isInstanceOf(OrderNotFoundException.class);
     }
 }

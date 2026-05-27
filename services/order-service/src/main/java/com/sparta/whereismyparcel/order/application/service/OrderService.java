@@ -19,12 +19,14 @@ import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.Shipme
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.StockCancelRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
+import com.sparta.whereismyparcel.order.presentation.dto.request.OrderDispatchDeadlineUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderAiContextResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCompleteResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDetailResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDispatchDeadlineUpdateResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderListResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderUpdateResponse;
 import lombok.RequiredArgsConstructor;
@@ -158,6 +160,19 @@ public class OrderService {
                 .orElseThrow(OrderNotFoundException::new);
 
         return OrderAiContextResponse.from(order);
+    }
+
+    @Transactional
+    public OrderDispatchDeadlineUpdateResponse updateFinalDispatchDeadline(
+            UUID orderId,
+            OrderDispatchDeadlineUpdateRequest request
+    ) {
+        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+                .orElseThrow(OrderNotFoundException::new);
+
+        order.updateFinalDispatchDeadline(request.finalDispatchDeadline());
+
+        return OrderDispatchDeadlineUpdateResponse.from(order);
     }
 
     @Transactional
