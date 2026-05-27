@@ -223,7 +223,7 @@ management:
       probability: 1.0   # 100% 샘플링 (개발 환경)
   zipkin:
     tracing:
-      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411}/api/v2/spans
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
 ```
 
 > 운영 환경에서는 `probability`를 `0.1` ~ `0.3` 수준으로 낮추는 것을 권장한다.
@@ -254,7 +254,6 @@ implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 ```
 요청
  └─ MdcLoggingFilter (Order 1)   : X-User-Id, X-Username → MDC
- └─ SentryTraceFilter (Order 2)  : MDC(traceId, userId, username) → Sentry 태그
  └─ Controller / Service
  └─ GlobalExceptionHandler        : Sentry.captureException() — uri, method 태그 포함
 ```
@@ -262,6 +261,7 @@ implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 - `BusinessException` (4xx): Sentry 이벤트 미발행, WARN 로그만 기록
 - `Exception` (5xx): Sentry 이벤트 발행, 태그(`uri`, `method`, `traceId`, `userId`) 포함
 - `SentryAppender`: 이벤트 발행 비활성화(`OFF`), INFO 이상 로그는 Breadcrumb으로만 기록
+- MDC 태그(`traceId`, `userId`, `username`)는 `sentry.mdc-tags` 설정으로 Sentry가 자동 주입 (커스텀 필터 불필요)
 
 ### 서비스 측 설정
 

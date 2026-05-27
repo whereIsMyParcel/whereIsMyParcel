@@ -40,7 +40,7 @@ management:
       probability: 1.0
   zipkin:
     tracing:
-      endpoint: ${ZIPKIN_URL:http://localhost:9411}/api/v2/spans
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
   endpoints:
     web:
       exposure:
@@ -59,3 +59,7 @@ sentry:
   environment: ${SPRING_PROFILES_ACTIVE:local}
   traces-sample-rate: 1.0
   send-default-pii: false
+  mdc-tags:
+    - traceId
+    - userId
+    - username
