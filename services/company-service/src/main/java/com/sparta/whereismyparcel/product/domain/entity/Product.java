@@ -19,7 +19,7 @@ public class Product extends BaseEntity {
     // 대대장
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "product_id", nullable = false,  updatable = false)
+    @Column(name = "product_id", nullable = false, updatable = false)
     private UUID id;
 
     @Column(name = "product_name", nullable = false, length = 100)
@@ -89,9 +89,15 @@ public class Product extends BaseEntity {
     }
 
     public void updateDetails(String name, String description, Integer price) {
-        this.name = name;
+        if (name != null) {
+            this.name = name;
+        }
+
         this.description = description;
-        this.price = price;
+
+        if (price != null) {
+            this.price = price;
+        }
     }
 
     public void stopSelling() {
@@ -109,7 +115,7 @@ public class Product extends BaseEntity {
         super.softDelete(userId);
         this.status = ProductStatus.DELETED;
 
-        this.options.forEach(option->option.delete(userId));
-        this.variants.forEach(variant->variant.delete(userId));
+        this.options.forEach(option -> option.delete(userId));
+        this.variants.forEach(variant -> variant.delete(userId));
     }
 }

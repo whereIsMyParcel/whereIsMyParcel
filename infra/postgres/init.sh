@@ -12,6 +12,8 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     CREATE SCHEMA IF NOT EXISTS user_db;
     CREATE SCHEMA IF NOT EXISTS hub_db;
     CREATE SCHEMA IF NOT EXISTS company_db;
+    CREATE SCHEMA IF NOT EXISTS inventory_db;
+    CREATE SCHEMA IF NOT EXISTS product_db;
     CREATE SCHEMA IF NOT EXISTS order_db;
     CREATE SCHEMA IF NOT EXISTS shipment_db;
     CREATE SCHEMA IF NOT EXISTS notification_db;

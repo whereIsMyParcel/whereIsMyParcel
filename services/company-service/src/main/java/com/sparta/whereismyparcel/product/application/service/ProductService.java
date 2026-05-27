@@ -11,6 +11,8 @@ import com.sparta.whereismyparcel.product.domain.repository.ProductVariantReposi
 import com.sparta.whereismyparcel.product.presentation.dto.request.*;
 import com.sparta.whereismyparcel.product.presentation.dto.response.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -182,6 +184,13 @@ public class ProductService {
                         .map(VariantResponse::from)
                         .toList();
         return ProductResponse.from(product,optionResponses,variantResponses);
+    }
+
+    // 상품 목록 조회
+    public Page<ProductPageResponse> getProducts(Pageable pageable) {
+        Page<Product> products = productRepository.findAllByDeletedAtIsNull(pageable);
+
+        return products.map(ProductPageResponse::from);
     }
 
     // 상품 아이디를 기반으로 모든 베리언트 조회

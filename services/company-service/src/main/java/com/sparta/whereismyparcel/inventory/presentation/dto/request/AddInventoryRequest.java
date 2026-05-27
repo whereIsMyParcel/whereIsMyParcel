@@ -8,11 +8,11 @@ import java.util.UUID;
 public record AddInventoryRequest(
         @NotNull
         UUID productVariantId,
-        @NotNull
-        UUID hubId,
+
         @NotNull
         @PositiveOrZero
         Integer quantity,
+
         @NotNull
         @PositiveOrZero
         Integer safetyStockQuantity

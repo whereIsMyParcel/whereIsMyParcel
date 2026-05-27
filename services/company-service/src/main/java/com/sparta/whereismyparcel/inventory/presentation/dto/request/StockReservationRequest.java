@@ -1,7 +1,5 @@
 package com.sparta.whereismyparcel.inventory.presentation.dto.request;
 
-import org.hibernate.cache.spi.support.AbstractReadWriteAccess;
-
 import java.util.List;
 import java.util.UUID;
 

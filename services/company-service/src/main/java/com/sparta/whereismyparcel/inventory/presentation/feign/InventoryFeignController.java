@@ -2,7 +2,7 @@ package com.sparta.whereismyparcel.inventory.presentation.feign;
 
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.inventory.application.service.InventoryService;
-import com.sparta.whereismyparcel.inventory.presentation.dto.request.InventoryStockRequest;
+import com.sparta.whereismyparcel.inventory.presentation.dto.request.StockConfirmRequest;
 import com.sparta.whereismyparcel.inventory.presentation.dto.request.StockCancelRequest;
 import com.sparta.whereismyparcel.inventory.presentation.dto.request.StockReservationRequest;
 import com.sparta.whereismyparcel.inventory.presentation.dto.response.StockReservationResponse;
@@ -42,7 +42,7 @@ public class InventoryFeignController {
      * 배송 시작 시 출고 확정
      */
     @PostMapping("/confirm")
-    public void confirmDeliveryLaunch(@RequestBody InventoryStockRequest request) {
+    public void confirmDeliveryLaunch(@RequestBody StockConfirmRequest request) {
         inventoryService.confirmDeliveryLaunch(request);
     }
 }

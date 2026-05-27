@@ -8,7 +8,6 @@ public record StockCancelRequest(
         List<Item> items
 ) {
     public record Item(
-            UUID hubId,
             String skuCode,
             Integer quantity
     ) {}

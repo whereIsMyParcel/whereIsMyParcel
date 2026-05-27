@@ -1,18 +1,17 @@
 package com.sparta.whereismyparcel.inventory.application.service;
 
 import com.sparta.whereismyparcel.common.infrastructure.client.HubFeignClient;
-import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.inventory.domain.entity.Inventory;
-import com.sparta.whereismyparcel.inventory.domain.exception.HubNotFoundException;
 import com.sparta.whereismyparcel.inventory.domain.exception.InventoryAlreadyExistsException;
 import com.sparta.whereismyparcel.inventory.domain.exception.InventoryNotFoundException;
 import com.sparta.whereismyparcel.inventory.domain.exception.ProductVariantNotFoundException;
 import com.sparta.whereismyparcel.inventory.domain.repository.InventoryRepository;
 import com.sparta.whereismyparcel.inventory.presentation.dto.request.AddInventoryRequest;
-import com.sparta.whereismyparcel.inventory.presentation.dto.request.InventoryStockRequest;
 import com.sparta.whereismyparcel.inventory.presentation.dto.request.StockCancelRequest;
+import com.sparta.whereismyparcel.inventory.presentation.dto.request.StockConfirmRequest;
 import com.sparta.whereismyparcel.inventory.presentation.dto.request.StockReservationRequest;
 import com.sparta.whereismyparcel.inventory.presentation.dto.response.AddInventoryResponse;
+import com.sparta.whereismyparcel.inventory.presentation.dto.response.InventoryCheckResponse;
 import com.sparta.whereismyparcel.inventory.presentation.dto.response.StockReservationResponse;
 import com.sparta.whereismyparcel.product.domain.entity.ProductVariant;
 import com.sparta.whereismyparcel.product.domain.repository.ProductVariantRepository;
@@ -21,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -33,28 +33,38 @@ public class InventoryService {
 
     @Transactional
     public AddInventoryResponse addStock(AddInventoryRequest request) {
-        // 허브 존재 확인 feign 요청
-        ApiResponse<Boolean> hubCheck = hubFeignClient.isHubExists(request.hubId());
-        if (hubCheck == null || !hubCheck.success() || Boolean.FALSE.equals(hubCheck.data())) {
-            throw new HubNotFoundException();
-        }
-
         ProductVariant productVariant = productVariantRepository.findById(request.productVariantId())
                 .orElseThrow(ProductVariantNotFoundException::new);
 
-        inventoryRepository.findByHubIdAndProductVariant(request.hubId(), productVariant)
+        // 2. ⭐ [핵심 검증] 상품에 링크된 진짜 허브 ID 추출
+        UUID actualHubId = productVariant.getProduct().getHubId();
+
+
+        inventoryRepository.findByHubIdAndProductVariant(actualHubId, productVariant)
                 .ifPresent(inventory -> {
                     throw new InventoryAlreadyExistsException();
                 });
 
         Inventory inventory = Inventory.addInventory(
-                request.hubId(),
+                actualHubId,
                 productVariant,
                 request.quantity(),
                 request.safetyStockQuantity()
         );
         inventoryRepository.save(inventory);
         return AddInventoryResponse.from(inventory);
+    }
+
+    public InventoryCheckResponse checkStock(UUID productVariantId) {
+        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
+                .orElseThrow(ProductVariantNotFoundException::new);
+
+        UUID managedHubId = productVariant.getProduct().getHubId();
+
+        Inventory inventory = inventoryRepository.findByHubIdAndProductVariant(managedHubId, productVariant)
+                .orElseThrow(InventoryNotFoundException::new);
+
+        return InventoryCheckResponse.from(inventory);
     }
 
     /**
@@ -82,11 +92,13 @@ public class InventoryService {
      * ④ 배송 시작 시 출고 확정 및 예약 해제 (Delivery ➡️ Inventory)
      */
     @Transactional
-    public void confirmDeliveryLaunch(InventoryStockRequest request) {
+    public void confirmDeliveryLaunch(StockConfirmRequest request) {
         ProductVariant productVariant = productVariantRepository.findById(request.productVariantId())
                 .orElseThrow(ProductVariantNotFoundException::new);
 
-        Inventory inventory = inventoryRepository.findByHubIdAndProductVariant(request.hubId(), productVariant)
+        UUID managedHubId = productVariant.getProduct().getHubId();
+
+        Inventory inventory = inventoryRepository.findByHubIdAndProductVariant(managedHubId, productVariant)
                 .orElseThrow(InventoryNotFoundException::new);
 
         inventory.confirmShipment(request.quantity());
@@ -100,10 +112,12 @@ public class InventoryService {
     @Transactional
     public void cancelOrderReservation(StockCancelRequest request) {
         request.items().forEach(item -> {
-            ProductVariant variant = productVariantRepository.findProductBySkuCode(item.skuCode())
+            ProductVariant productVariant = productVariantRepository.findProductBySkuCode(item.skuCode())
                     .orElseThrow(ProductVariantNotFoundException::new);
 
-            Inventory inventory = inventoryRepository.findByHubIdAndProductVariant(item.hubId(), variant)
+            UUID managedHubId = productVariant.getProduct().getHubId();
+
+            Inventory inventory = inventoryRepository.findByHubIdAndProductVariant(managedHubId, productVariant)
                     .orElseThrow(InventoryNotFoundException::new);
             inventory.cancelReservation(item.quantity());
         });
