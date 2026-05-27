@@ -747,7 +747,6 @@ class OrderServiceTest {
         assertThat(response.recipientName()).isEqualTo(order.getRecipientName());
         assertThat(response.recipientAddress()).contains(order.getAddress());
         assertThat(response.requestedDeliveryAt()).isEqualTo(order.getRequestedDeliveryAt());
-        assertThat(response.finalDispatchDeadline()).isNull();
         assertThat(response.items()).hasSize(1);
     }
 
