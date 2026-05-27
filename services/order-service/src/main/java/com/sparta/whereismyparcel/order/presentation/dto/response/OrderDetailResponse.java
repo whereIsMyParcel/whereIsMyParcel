@@ -20,7 +20,8 @@ public record OrderDetailResponse(
         String address,
         String addressDetail,
         String requestMemo,
-        LocalDateTime deliveryDeadline,
+        LocalDateTime requestedDeliveryAt,
+        LocalDateTime finalDispatchDeadline,
         LocalDateTime orderedAt,
         String orderedBy,
         List<OrderItemResponse> items
@@ -38,7 +39,8 @@ public record OrderDetailResponse(
                 order.getAddress(),
                 order.getAddressDetail(),
                 order.getRequestMemo(),
-                order.getDeliveryDeadline(),
+                order.getRequestedDeliveryAt(),
+                order.getFinalDispatchDeadline(),
                 order.getOrderedAt(),
                 order.getOrderedBy(),
                 order.getOrderItems().stream()

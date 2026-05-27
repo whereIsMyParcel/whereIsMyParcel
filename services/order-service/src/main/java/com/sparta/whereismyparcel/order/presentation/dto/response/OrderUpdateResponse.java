@@ -11,7 +11,7 @@ public record OrderUpdateResponse(
         String orderNumber,
         OrderStatus orderStatus,
         String requestMemo,
-        LocalDateTime deliveryDeadline
+        LocalDateTime requestedDeliveryAt
 ) {
     public static OrderUpdateResponse from(Order order) {
         return new OrderUpdateResponse(
@@ -19,7 +19,7 @@ public record OrderUpdateResponse(
                 order.getOrderNumber(),
                 order.getOrderStatus(),
                 order.getRequestMemo(),
-                order.getDeliveryDeadline()
+                order.getRequestedDeliveryAt()
         );
     }
 }

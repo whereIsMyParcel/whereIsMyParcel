@@ -93,7 +93,7 @@ public class OrderService {
                 request.address(),
                 request.addressDetail(),
                 request.requestMemo(),
-                request.deliveryDeadline(),
+                request.requestedDeliveryAt(),
                 userId,
                 orderItems
         );
@@ -166,7 +166,7 @@ public class OrderService {
             validateOrderOwner(order, userId);
         }
 
-        order.updateRequestInfo(request.requestMemo(), request.deliveryDeadline());
+        order.updateRequestInfo(request.requestMemo(), request.requestedDeliveryAt());
 
         return OrderUpdateResponse.from(order);
     }

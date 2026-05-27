@@ -362,9 +362,9 @@ class OrderServiceTest {
 
         // then
         assertThat(response.requestMemo()).isEqualTo(request.requestMemo());
-        assertThat(response.deliveryDeadline()).isEqualTo(request.deliveryDeadline());
+        assertThat(response.requestedDeliveryAt()).isEqualTo(request.requestedDeliveryAt());
         assertThat(order.getRequestMemo()).isEqualTo(request.requestMemo());
-        assertThat(order.getDeliveryDeadline()).isEqualTo(request.deliveryDeadline());
+        assertThat(order.getRequestedDeliveryAt()).isEqualTo(request.requestedDeliveryAt());
     }
 
     @Test
@@ -385,7 +385,7 @@ class OrderServiceTest {
         // then
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.STOCK_RESERVED);
         assertThat(response.requestMemo()).isEqualTo(request.requestMemo());
-        assertThat(response.deliveryDeadline()).isEqualTo(request.deliveryDeadline());
+        assertThat(response.requestedDeliveryAt()).isEqualTo(request.requestedDeliveryAt());
     }
 
     @Test
@@ -395,7 +395,7 @@ class OrderServiceTest {
         String userId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(userId);
-        LocalDateTime originalDeliveryDeadline = order.getDeliveryDeadline();
+        LocalDateTime originalRequestedDeliveryAt = order.getRequestedDeliveryAt();
         OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", null);
         given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
                 .willReturn(Optional.of(order));
@@ -405,8 +405,8 @@ class OrderServiceTest {
 
         // then
         assertThat(response.requestMemo()).isEqualTo(request.requestMemo());
-        assertThat(response.deliveryDeadline()).isEqualTo(originalDeliveryDeadline);
-        assertThat(order.getDeliveryDeadline()).isEqualTo(originalDeliveryDeadline);
+        assertThat(response.requestedDeliveryAt()).isEqualTo(originalRequestedDeliveryAt);
+        assertThat(order.getRequestedDeliveryAt()).isEqualTo(originalRequestedDeliveryAt);
     }
 
     @Test
