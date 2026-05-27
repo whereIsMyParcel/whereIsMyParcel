@@ -8,6 +8,7 @@ import com.sparta.whereismyparcel.aislack.infrastructure.client.GeminiClient;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.OrderFeignClient;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.ShipmentFeignClient;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.UserFeignClient;
+import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.request.DeliveryDeadlinePatchRequest;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.request.GeminiRequest;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.request.OrderInternalRequest;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.GeminiResponse;
@@ -68,6 +69,20 @@ public class AiMessageService {
         return aiMessage.getAiId();
     }
 
+    /**
+     * Gemini 분석 완료 후, Order 서비스에 최적 발송 시한을 패치합니다.
+     * @param request 주문 ID와 최적 발송 시한 정보를 담은 DTO
+     * @param callerUserId 요청을 시작한 사용자 ID 
+     */
+    @Transactional
+    public void patchDeliveryDeadlineToOrderService(DeliveryDeadlinePatchRequest request, String callerUserId) {
+        log.info("Order 서비스에 delivery_deadline 패치 요청: orderId={}, deliveryDeadline={}", request.orderId(), request.deliveryDeadline());
+        ApiResponse<Void> response = orderFeignClient.patchDeliveryDeadline(callerUserId, request.orderId(), request);
+        if (!response.success()) {
+            throw new BusinessException(AiSlackErrorCode.ORDER_SERVICE_COMMUNICATION_FAILED, "Order 서비스에 delivery_deadline 패치 실패: " + response.message());
+        }
+    }
+
 
     /**
      * 특정 AiMessage에 대해 Gemini AI 분석을 수행하고 결과를 업데이트합니다.
@@ -101,6 +116,13 @@ public class AiMessageService {
             // 2. AiMessage 상태 업데이트 및 결과 저장
             aiMessage.succeedAnalysis(aiResponseContent, finalDispatchDeadline);
             log.info("AI 분석 성공: aiMessageId={}", aiMessageId);
+
+            // 3. Order 서비스에 delivery_deadline 패치
+            DeliveryDeadlinePatchRequest patchRequest = new DeliveryDeadlinePatchRequest(aiMessage.getOrderId(), finalDispatchDeadline);
+            // 내부 서비스 호출이므로 고정된 내부 서비스 ID 사용
+            patchDeliveryDeadlineToOrderService(patchRequest, "ai-slack-internal-service");
+            log.info("Order 서비스에 최종 발송 시한 패치 완료: orderId={}, deliveryDeadline={}", aiMessage.getOrderId(), finalDispatchDeadline);
+
         } catch (BusinessException e) {
             aiMessage.failAnalysis();
             log.error("AI 분석 실패: aiMessageId={}, error={}", aiMessageId, e.getMessage());

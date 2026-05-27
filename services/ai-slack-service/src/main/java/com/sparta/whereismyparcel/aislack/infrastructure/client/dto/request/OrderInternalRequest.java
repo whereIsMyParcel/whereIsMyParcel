@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
 /*
 필수 요구사항:
 주문 생성 시 발송 허브 담당자 알림 및 AI 시한 계산을 위한 내부 요청 DTO
@@ -38,7 +39,10 @@ public record OrderInternalRequest(
         @Valid
         @NotNull(message = "배송 건 목록은 필수입니다.")
         @Size(min = 1, message = "최소 하나 이상의 배송 건이 필요합니다.")
-        List<String> delieveriesInfo
+        List<String> delieveriesInfo,
+
+        // AI 분석 완료 후 산출된 최적 발송 시한
+        LocalDateTime deliveryDeadline
 
 ) {
     /*
