@@ -46,13 +46,9 @@ public class AiMessageService {
     private final PromptGenerator promptGenerator;
 
     // Self-injection for transactional method calls
-    private final ApplicationContext applicationContext;
+    @org.springframework.context.annotation.Lazy
+    @org.springframework.beans.factory.annotation.Autowired
     private AiMessageService self;
-
-    @PostConstruct
-    public void init() {
-        self = applicationContext.getBean(AiMessageService.class);
-    }
 
     /**
      * AI 분석 요청을 생성하고 초기 상태로 저장합니다.

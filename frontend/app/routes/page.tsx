@@ -18,37 +18,57 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, ArrowRight } from "lucide-react"
-import { useState, useEffect } from "react"
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, ArrowRight, Clock, Ruler } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
 import { fetchApi } from "@/lib/api"
-
-
+import { CreateRouteModal } from "@/components/routes/create-route-modal"
+import { toast } from "sonner"
 
 export default function RoutesPage() {
   const [routes, setRoutes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
 
-  useEffect(() => {
-    async function loadRoutes() {
-      try {
-        setLoading(true)
-        const pageData = await fetchApi<any>('/hub-routes?size=50')
-        setRoutes(pageData.content || [])
-      } catch (error) {
-        console.error("Failed to fetch routes:", error)
-      } finally {
-        setLoading(false)
-      }
+  const loadRoutes = useCallback(async () => {
+    try {
+      setLoading(true)
+      const pageData = await fetchApi<any>('/hub-routes?size=50')
+      setRoutes(pageData.content || [])
+    } catch (error) {
+      console.error("Failed to fetch routes:", error)
+      toast.error("경로 목록을 불러오지 못했습니다.")
+    } finally {
+      setLoading(false)
     }
-    loadRoutes()
   }, [])
+
+  useEffect(() => {
+    loadRoutes()
+  }, [loadRoutes])
+
+  const handleDelete = async (hubRouteId: string) => {
+    if (!confirm("정말 이 경로를 삭제하시겠습니까?")) return
+    try {
+      await fetchApi(`/hub-routes/${hubRouteId}`, { method: 'DELETE' })
+      toast.success("경로가 삭제되었습니다.")
+      loadRoutes()
+    } catch (error: any) {
+      toast.error(error.message || "삭제에 실패했습니다.")
+    }
+  }
 
   const filteredRoutes = routes.filter(
     (route) =>
-      (route.from || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (route.to || "").toLowerCase().includes(searchTerm.toLowerCase())
+      (route.originHubName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (route.destinationHubName || "").toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const avgDistance = routes.length > 0
+    ? Math.round(routes.reduce((acc, r) => acc + (r.distance || 0), 0) / routes.length)
+    : 0
+  const avgDuration = routes.length > 0
+    ? Math.round(routes.reduce((acc, r) => acc + (r.duration || 0), 0) / routes.length)
+    : 0
 
   return (
     <DashboardLayout>
@@ -58,10 +78,7 @@ export default function RoutesPage() {
             <h1 className="text-2xl font-bold tracking-tight">이동경로 관리</h1>
             <p className="text-muted-foreground">허브 간 이동 경로 및 소요 시간을 관리합니다.</p>
           </div>
-          <Button className="bg-primary hover:bg-primary/90">
-            <Plus className="w-4 h-4 mr-2" />
-            경로 추가
-          </Button>
+          <CreateRouteModal onSuccess={loadRoutes} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -73,18 +90,20 @@ export default function RoutesPage() {
           </Card>
           <Card className="bg-card border-border">
             <CardContent className="p-6">
-              <div className="text-sm text-muted-foreground">평균 거리</div>
-              <div className="text-3xl font-bold mt-1">
-                {routes.length > 0 ? Math.round(routes.reduce((acc, r) => acc + (r.distance || 0), 0) / routes.length) : 0}km
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Ruler className="w-4 h-4" />
+                평균 거리
               </div>
+              <div className="text-3xl font-bold mt-1">{avgDistance}<span className="text-lg text-muted-foreground ml-1">km</span></div>
             </CardContent>
           </Card>
           <Card className="bg-card border-border">
             <CardContent className="p-6">
-              <div className="text-sm text-muted-foreground">평균 소요시간</div>
-              <div className="text-3xl font-bold mt-1">
-                {routes.length > 0 ? Math.round(routes.reduce((acc, r) => acc + (r.duration || 0), 0) / routes.length) : 0}분
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="w-4 h-4" />
+                평균 소요시간
               </div>
+              <div className="text-3xl font-bold mt-1">{avgDuration}<span className="text-lg text-muted-foreground ml-1">분</span></div>
             </CardContent>
           </Card>
         </div>
@@ -108,9 +127,8 @@ export default function RoutesPage() {
             <Table>
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="text-muted-foreground">경로 ID</TableHead>
                   <TableHead className="text-muted-foreground">출발 허브</TableHead>
-                  <TableHead className="text-muted-foreground w-12"></TableHead>
+                  <TableHead className="text-muted-foreground w-8"></TableHead>
                   <TableHead className="text-muted-foreground">도착 허브</TableHead>
                   <TableHead className="text-muted-foreground">거리</TableHead>
                   <TableHead className="text-muted-foreground">소요시간</TableHead>
@@ -120,31 +138,30 @@ export default function RoutesPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       데이터를 불러오는 중입니다...
                     </TableCell>
                   </TableRow>
                 ) : filteredRoutes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       등록된 경로가 없습니다.
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredRoutes.map((route, index) => (
-                    <TableRow key={route.id || `rte-${index}`} className="border-border hover:bg-muted/50">
-                      <TableCell className="font-mono text-sm text-primary">{route.id}</TableCell>
-                      <TableCell className="font-medium">{route.from}</TableCell>
+                    <TableRow key={route.hubRouteId || `rte-${index}`} className="border-border hover:bg-muted/50">
+                      <TableCell className="font-medium">{route.originHubName || route.originHubId?.slice(0, 8) + '...' || '-'}</TableCell>
                       <TableCell>
                         <ArrowRight className="w-4 h-4 text-muted-foreground" />
                       </TableCell>
-                      <TableCell className="font-medium">{route.to}</TableCell>
+                      <TableCell className="font-medium">{route.destinationHubName || route.destinationHubId?.slice(0, 8) + '...' || '-'}</TableCell>
                       <TableCell>
-                        <span className="font-mono">{route.distance}</span>
+                        <span className="font-mono">{route.distance?.toFixed(1) || '-'}</span>
                         <span className="text-muted-foreground ml-1">km</span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-mono">{route.duration}</span>
+                        <span className="font-mono">{route.duration || '-'}</span>
                         <span className="text-muted-foreground ml-1">분</span>
                       </TableCell>
                       <TableCell>
@@ -159,7 +176,10 @@ export default function RoutesPage() {
                               <Pencil className="w-4 h-4 mr-2" />
                               수정
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
+                            <DropdownMenuItem
+                              className="text-destructive cursor-pointer"
+                              onClick={() => handleDelete(route.hubRouteId)}
+                            >
                               <Trash2 className="w-4 h-4 mr-2" />
                               삭제
                             </DropdownMenuItem>

@@ -16,6 +16,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  PackageCheck,
 } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -29,6 +30,7 @@ const navigation = [
   { name: "업체 관리", href: "/companies", icon: Building2 },
   { name: "상품 관리", href: "/products", icon: Package },
   { name: "주문 관리", href: "/orders", icon: ShoppingCart },
+  { name: "배송 관리", href: "/shipments", icon: PackageCheck },
   { name: "사용자 관리", href: "/users", icon: Users },
   { name: "슬랙 메시지", href: "/slack", icon: MessageSquare },
 ]

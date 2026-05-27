@@ -23,6 +23,7 @@ import { Plus, Search, MoreHorizontal, Pencil, Trash2, MapPin } from "lucide-rea
 import { useState, useEffect, useCallback } from "react"
 import { fetchApi } from "@/lib/api"
 import { CreateHubModal } from "@/components/hubs/create-hub-modal"
+import { toast } from "sonner"
 
 export default function HubsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -31,21 +32,31 @@ export default function HubsPage() {
 
   const loadHubs = useCallback(async () => {
     try {
-      setLoading(true);
-      // 백엔드의 GET /api/v1/hubs 호출 (페이징 없이 100개 임시 로드)
-      const pageData = await fetchApi<any>('/hubs?size=50');
-      // Spring Boot의 Page 객체는 실제 리스트를 content 안에 담아 보냅니다.
-      setHubs(pageData.content || []);
+      setLoading(true)
+      const pageData = await fetchApi<any>('/hubs?size=50')
+      setHubs(pageData.content || [])
     } catch (error) {
-      console.error("Failed to fetch hubs:", error);
+      console.error("Failed to fetch hubs:", error)
+      toast.error("허브 목록을 불러오지 못했습니다.")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    loadHubs();
-  }, [loadHubs]);
+    loadHubs()
+  }, [loadHubs])
+
+  const handleDelete = async (hubId: string) => {
+    if (!confirm("정말 이 허브를 삭제하시겠습니까?")) return
+    try {
+      await fetchApi(`/hubs/${hubId}`, { method: 'DELETE' })
+      toast.success("허브가 삭제되었습니다.")
+      loadHubs()
+    } catch (error: any) {
+      toast.error(error.message || "허브 삭제에 실패했습니다.")
+    }
+  }
 
   const filteredHubs = hubs.filter(
     (hub) =>
@@ -62,6 +73,27 @@ export default function HubsPage() {
             <p className="text-muted-foreground">스파르타 물류의 전체 허브 목록을 관리합니다.</p>
           </div>
           <CreateHubModal onSuccess={loadHubs} />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="bg-card border-border">
+            <CardContent className="p-6">
+              <div className="text-sm text-muted-foreground">전체 허브</div>
+              <div className="text-3xl font-bold mt-1">{hubs.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card border-border">
+            <CardContent className="p-6">
+              <div className="text-sm text-muted-foreground">운영중</div>
+              <div className="text-3xl font-bold mt-1 text-success">{hubs.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card border-border">
+            <CardContent className="p-6">
+              <div className="text-sm text-muted-foreground">검색 결과</div>
+              <div className="text-3xl font-bold mt-1">{filteredHubs.length}</div>
+            </CardContent>
+          </Card>
         </div>
 
         <Card className="bg-card border-border">
@@ -93,49 +125,60 @@ export default function HubsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredHubs.map((hub, index) => (
-                  <TableRow key={hub.id || `hub-${index}`} className="border-border hover:bg-muted/50">
-                    <TableCell className="font-mono text-sm text-primary max-w-[120px] truncate" title={hub.id || 'N/A'}>{hub.id || '-'}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded bg-primary/10">
-                          <MapPin className="w-3.5 h-3.5 text-primary" />
-                        </div>
-                        <span className="font-medium">{hub.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground max-w-xs truncate">{hub.address}</TableCell>
-                    <TableCell className="font-mono text-sm">{hub.latitude?.toFixed(4) || '0.0000'}</TableCell>
-                    <TableCell className="font-mono text-sm">{hub.longitude?.toFixed(4) || '0.0000'}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className="bg-success/20 text-success border-success/30"
-                      >
-                        운영중
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Pencil className="w-4 h-4 mr-2" />
-                            수정
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            삭제
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      데이터를 불러오는 중입니다...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : filteredHubs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      등록된 허브가 없습니다.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredHubs.map((hub, index) => (
+                    <TableRow key={hub.hubId || `hub-${index}`} className="border-border hover:bg-muted/50">
+                      <TableCell className="font-mono text-xs text-primary max-w-[120px] truncate" title={hub.hubId || 'N/A'}>{hub.hubId ? hub.hubId.slice(0, 8) + '...' : '-'}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded bg-primary/10">
+                            <MapPin className="w-3.5 h-3.5 text-primary" />
+                          </div>
+                          <span className="font-medium">{hub.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground max-w-xs truncate">{hub.address}</TableCell>
+                      <TableCell className="font-mono text-sm">{hub.latitude?.toFixed(4) || '0.0000'}</TableCell>
+                      <TableCell className="font-mono text-sm">{hub.longitude?.toFixed(4) || '0.0000'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="bg-success/20 text-success border-success/30">
+                          운영중
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Pencil className="w-4 h-4 mr-2" />
+                              수정
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive cursor-pointer" onClick={() => handleDelete(hub.hubId)}>
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              삭제
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
