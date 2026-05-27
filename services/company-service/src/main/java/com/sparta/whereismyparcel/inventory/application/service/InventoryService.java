@@ -75,7 +75,7 @@ public class InventoryService {
                     ProductVariant variant = productVariantRepository.findProductBySkuCode(item.skuCode())
                             .orElseThrow(ProductVariantNotFoundException::new);
 
-                    Inventory inventory = inventoryRepository.findByHubIdAndProductVariantWithLock(item.hubId(),variant)
+                    Inventory inventory = inventoryRepository.findByProductVariantWithLock(variant)
                             .orElseThrow(InventoryNotFoundException::new);
 
                     inventory.addReservedStock(item.quantity());
@@ -95,9 +95,7 @@ public class InventoryService {
         ProductVariant productVariant = productVariantRepository.findById(request.productVariantId())
                 .orElseThrow(ProductVariantNotFoundException::new);
 
-        UUID managedHubId = productVariant.getProduct().getHubId();
-
-        Inventory inventory = inventoryRepository.findByHubIdAndProductVariantWithLock(managedHubId, productVariant)
+        Inventory inventory = inventoryRepository.findByProductVariantWithLock(productVariant)
                 .orElseThrow(InventoryNotFoundException::new);
 
         inventory.confirmShipment(request.quantity());
@@ -114,9 +112,7 @@ public class InventoryService {
             ProductVariant productVariant = productVariantRepository.findProductBySkuCode(item.skuCode())
                     .orElseThrow(ProductVariantNotFoundException::new);
 
-            UUID managedHubId = productVariant.getProduct().getHubId();
-
-            Inventory inventory = inventoryRepository.findByHubIdAndProductVariantWithLock(managedHubId, productVariant)
+            Inventory inventory = inventoryRepository.findByProductVariantWithLock(productVariant)
                     .orElseThrow(InventoryNotFoundException::new);
 
             inventory.cancelReservation(item.quantity());
