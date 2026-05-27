@@ -27,11 +27,13 @@ public record SlackRequest(
     public static SlackRequest of(OrderResponse orderResponse, List<ShipmentResponse> shipmentResponses, UserResponse userResponse, String aiEstimatedTime) {
         // 배송 품목은 OrderResponse의 shipmentItems 필드를 사용합니다.
         // 모든 배송의 품목을 합쳐서 표시합니다.
-        List<String> allItems = orderResponse.shipmentItems().stream()
-                .flatMap(osi -> osi.items().stream())
-                .distinct() // 중복 제거
-                .collect(Collectors.toList());
-        String products = allItems.isEmpty() ? "정보 없음" : String.join(", ", allItems);
+        List<String> allItems = orderResponse.shipmentItems() == null ? List.of() :
+                orderResponse.shipmentItems().stream()
+                        .filter(osi -> osi != null && osi.items() != null)
+                        .flatMap(osi -> osi.items().stream())
+                        .distinct() // 중복 제거
+                        .collect(Collectors.toList());
+        String products = allItems.isEmpty() ? null : String.join(", ", allItems);
 
         // 출발 허브와 최종 목적지는 ShipmentResponse에서 가져올 수 있습니다.
         // 여기서는 첫 번째 ShipmentResponse를 기준으로 합니다.

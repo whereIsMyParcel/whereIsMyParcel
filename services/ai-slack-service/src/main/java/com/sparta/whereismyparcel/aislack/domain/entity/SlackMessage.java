@@ -130,4 +130,9 @@ public class SlackMessage extends BaseEntity {
     public boolean canRetry() {
         return this.retryCount < 3; // 최대 재시도 횟수 3번으로 가정
     }
+
+    public void markAsRequested() {
+        this.slackStatus = SlackStatus.READY_TO_SEND;
+        this.sentAt = null;
+    }
 }

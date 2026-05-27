@@ -109,6 +109,7 @@ public class SlackMessageService {
 
     /**
      * AI 분석 성공 시 Slack 메시지 생성 및 발송을 시도합니다.
+     * 이 메서드는 트랜잭션 오케스트레이션 역할을 하며, 실제 DB 작업은 별도의 트랜잭션 메서드에서 처리합니다.
      * @param aiMessageId 관련 AI 메시지 ID
      * @param orderResponse 주문 정보
      * @param shipmentResponses 배송 정보 목록
@@ -116,48 +117,60 @@ public class SlackMessageService {
      * @param finalDispatchDeadline 최종 발송 시한
      * @return 생성된 Slack 메시지 정보 DTO
      */
-    @Transactional
-    public SlackMessageResponse sendSlackNotification(
-            UUID aiMessageId,
-            OrderResponse orderResponse,
-            List<ShipmentResponse> shipmentResponses,
-            UserResponse recipientUser,
-            LocalDateTime finalDispatchDeadline
+    public SlackMessageResponse sendSlackNotification( // @Transactional 제거
+                                                       UUID aiMessageId,
+                                                       OrderResponse orderResponse,
+                                                       List<ShipmentResponse> shipmentResponses,
+                                                       UserResponse recipientUser,
+                                                       LocalDateTime finalDispatchDeadline
     ) {
         String formattedDispatchDeadline = finalDispatchDeadline.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         SlackRequest slackRequest = SlackRequest.of(orderResponse, shipmentResponses, recipientUser, formattedDispatchDeadline);
 
-        //  수정: 다른 메서드들과 파라미터 순서 정합성 통일 (receiverId 위치에 aiMessageId 배치)
-        SlackMessage newSlackMessage = SlackMessage.create(
-                slackRequest.slackId(),
-                aiMessageId,
-                slackRequest.message()
-        );
-        SlackMessage savedMessage = slackMessageRepository.save(newSlackMessage);
+        SlackMessage savedMessage = null;
+        boolean apiSuccess = false;
+        String apiError = null;
 
         try {
-            //  수정: 외부 Client 클래스 없이 클래스 상단에 주입된 slackToken으로 즉석 발송
+            // 1. Slack 메시지 엔티티 저장 (새로운 트랜잭션)
+            savedMessage = saveNewSlackMessage(slackRequest.slackId(), aiMessageId, slackRequest.message());
+
+            // 2. Slack API 호출 (트랜잭션 외부)
             ChatPostMessageResponse response = Slack.getInstance().methods(slackToken).chatPostMessage(req -> req
                     .channel(slackRequest.slackId())
                     .text(slackRequest.message())
             );
 
-            //  수정: 슬랙 공식 응답 규격인 response.isOk()로 성공 여부 판단
-            if (response.isOk()) {
-                savedMessage.succeedSending();
-                log.info("Slack 토큰 기반 알림 발송 성공: aiMessageId={}, slackId={}", aiMessageId, slackRequest.slackId());
-            } else {
-                savedMessage.failSending();
-                log.warn("Slack 토큰 발송 실패 (API 에러): aiMessageId={}, error={}", aiMessageId, response.getError());
+            apiSuccess = response.isOk();
+            if (!apiSuccess) {
+                apiError = response.getError();
             }
+
         } catch (Exception e) {
-            savedMessage.failSending();
             log.error("Slack 알림 발송 중 예외 발생: aiMessageId={}, error={}", aiMessageId, e.getMessage(), e);
+            apiSuccess = false;
+            apiError = e.getMessage();
         } finally {
-            slackMessageRepository.save(savedMessage);
+            // 3. Slack API 호출 결과에 따라 메시지 상태 업데이트 (새로운 트랜잭션)
+            if (savedMessage != null) {
+                updateSlackMessageStatusAfterSend(savedMessage.getId(), apiSuccess, apiError);
+            }
         }
 
-        return SlackMessageResponse.from(savedMessage);
+        // savedMessage가 null이 아닐 때만 from 메서드 호출
+        return savedMessage != null ? SlackMessageResponse.from(savedMessage) : null; // 또는 예외 처리
+    }
+
+    /**
+     * 새로운 Slack 메시지 엔티티를 생성하고 저장합니다.
+     * 이 메서드는 새로운 트랜잭션에서 실행됩니다.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected SlackMessage saveNewSlackMessage(String slackId, UUID receiverId, String messageContent) {
+        SlackMessage newSlackMessage = SlackMessage.create(slackId, receiverId, messageContent);
+
+        newSlackMessage.markAsRequested(); // Initial status
+        return slackMessageRepository.save(newSlackMessage);
     }
 
     /**
@@ -169,6 +182,7 @@ public class SlackMessageService {
      */
     @Transactional
     public SlackMessageResponse createSlackMessage(String slackId, UUID receiverId, String messageContent) {
+
         SlackMessage newSlackMessage = SlackMessage.create(slackId, receiverId, messageContent);
         SlackMessage savedMessage = slackMessageRepository.save(newSlackMessage);
         return SlackMessageResponse.from(savedMessage);
@@ -176,11 +190,51 @@ public class SlackMessageService {
 
     /**
      * Slack 메시지 재시도 로직 (스케줄러 또는 이벤트 리스너에서 호출)
-     * * 💡 REQUIRES_NEW를 사용해 하나의 메시지 재시도가 실패하더라도
-     * 다른 대기열 메시지들의 트랜잭션까지 롤백되지 않도록 완전히 격리합니다.
+     * 이 메서드는 트랜잭션 오케스트레이션 역할을 하며, 실제 DB 작업은 별도의 트랜잭션 메서드에서 처리합니다.
+     */
+    public void retrySlackMessage(UUID messageId) { // @Transactional 제거
+        SlackMessage slackMessage = null;
+        boolean apiSuccess = false;
+        String apiError = null;
+
+        try {
+            // 1. 메시지를 재시도 상태로 준비 (새로운 트랜잭션)
+            slackMessage = prepareSlackMessageForRetry(messageId);
+
+            // 2. Slack API 호출 (트랜잭션 외부)
+            SlackMessage finalSlackMessage = slackMessage;
+            ChatPostMessageResponse response = Slack.getInstance().methods(slackToken).chatPostMessage(req -> req
+                    .channel(finalSlackMessage.getSlackId())
+                    .text(finalSlackMessage.getMessage())
+            );
+
+            apiSuccess = response.isOk();
+            if (!apiSuccess) {
+                apiError = response.getError();
+            }
+
+        } catch (BusinessException e) {
+            log.error("Slack 메시지 재시도 준비 중 오류: messageId={}, error={}", messageId, e.getMessage());
+            // prepareSlackMessageForRetry에서 이미 상태가 업데이트되었거나 예외가 던져졌을 것임
+            return; // 추가 처리 없이 종료
+        } catch (Exception e) {
+            log.error("Slack API 호출 중 예외 발생: messageId={}, error={}", messageId, e.getMessage(), e);
+            apiSuccess = false;
+            apiError = e.getMessage();
+        } finally {
+            // 3. Slack API 호출 결과에 따라 메시지 상태 업데이트 (새로운 트랜잭션)
+            if (slackMessage != null) {
+                updateSlackMessageStatusAfterSend(messageId, apiSuccess, apiError);
+            }
+        }
+    }
+
+    /**
+     * Slack 메시지를 재시도 상태로 준비하고, 재시도 횟수 초과 시 영구 실패 처리합니다.
+     * 이 메서드는 새로운 트랜잭션에서 실행됩니다.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void retrySlackMessage(UUID messageId) {
+    protected SlackMessage prepareSlackMessageForRetry(UUID messageId) {
         SlackMessage slackMessage = slackMessageRepository.findById(messageId)
                 .orElseThrow(() -> new BusinessException(AiSlackErrorCode.SLACK_MESSAGE_NOT_FOUND, "Slack message not found with id: " + messageId));
 
@@ -188,35 +242,33 @@ public class SlackMessageService {
         if (!slackMessage.canRetry()) {
             slackMessage.permanentFailSending();
             slackMessageRepository.save(slackMessage);
-
-            // 무조건 예외를 던지기보다 로그를 남기고 리턴하는 것이 스케줄러(배치) 루프 안정성에 훨씬 좋습니다.
             log.warn("Slack 메시지 발송 영구 실패 확정 (재시도 한도 초과): messageId={}", messageId);
-            return;
+            throw new BusinessException(AiSlackErrorCode.SLACK_MESSAGE_PERMANENT_FAILED, "Slack message permanent failed after multiple retries: " + messageId);
         }
 
-        // 2. 재시도를 위해 상태를 READY_TO_SEND로 변경하고 카운트 증가 준비
-        slackMessage.prepareForRetry(); // CHANGED: Use prepareForRetry() instead of requeueForSending()
+        // 2. 재시도를 위해 상태를 READY_TO_SEND로 변경 (retryCount는 초기화하지 않음)
+        slackMessage.prepareForRetry();
         slackMessageRepository.save(slackMessage);
+        log.info("Slack 메시지 재시도 준비 완료: messageId={}", messageId);
+        return slackMessage;
+    }
 
-        // 3. 주입받은 전역 slackToken을 활용해 실발송 재시도 오케스트레이션
-        try {
-            ChatPostMessageResponse response = Slack.getInstance().methods(slackToken).chatPostMessage(req -> req
-                    .channel(slackMessage.getSlackId())   // 엔티티의 getter 사용
-                    .text(slackMessage.getMessage())      // 🛠️ 수정: messageContent -> message 필드명 일치화
-            );
+    /**
+     * Slack API 호출 결과에 따라 메시지 상태를 업데이트합니다.
+     * 이 메서드는 새로운 트랜잭션에서 실행됩니다.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void updateSlackMessageStatusAfterSend(UUID messageId, boolean success, String errorDetails) {
+        SlackMessage slackMessage = slackMessageRepository.findById(messageId)
+                .orElseThrow(() -> new BusinessException(AiSlackErrorCode.SLACK_MESSAGE_NOT_FOUND, "Slack message not found with id: " + messageId));
 
-            if (response.isOk()) {
-                slackMessage.succeedSending(); // 성공 상태로 전이 (MESSAGE_SENT)
-                log.info("Slack 메시지 재발송 성공: messageId={}", messageId);
-            } else {
-                slackMessage.failSending();    // 실패 상태로 전이 (MESSAGE_FAILED 및 카운트 +1)
-                log.warn("Slack 메시지 재발송 실패 (API 에러): messageId={}, error={}", messageId, response.getError());
-            }
-        } catch (Exception e) {
-            slackMessage.failSending();        // 통신 예외 발생 시에도 실패 처리 및 카운트 +1
-            log.error("Slack 메시지 재발송 중 예외 발생: messageId={}, error={}", messageId, e.getMessage(), e);
-        } finally {
-            slackMessageRepository.save(slackMessage); // 최종 상태 반영
+        if (success) {
+            slackMessage.succeedSending();
+            log.info("Slack 메시지 재발송 성공: messageId={}", messageId);
+        } else {
+            slackMessage.failSending();
+            log.warn("Slack 메시지 재발송 실패 (API 에러): messageId={}, error={}", messageId, errorDetails);
         }
+        slackMessageRepository.save(slackMessage);
     }
 }
