@@ -37,11 +37,19 @@ public record CompanyRegisterRequest(
         @Schema(description = "사업자 전화번호", example = "000-1111-2222")
         @NotBlank
         @Size(max = 30)
+        @Pattern(
+                regexp = "^\\d{2,3}-\\d{3,4}-\\d{4}$",
+                message = "전화번호 형식이 올바르지 않습니다. (예: 02-123-4567 또는 010-1234-5678)"
+        )
         String managerPhone,
 
         @Schema(description = "우편번호", example = "11111")
         @NotBlank
         @Size(max = 20)
+        @Pattern(
+                regexp = "^\\d{5}$",
+                message = "우편번호는 숫자 5자리여야 합니다."
+        )
         String zipCode,
 
         @Schema(description = "주소", example = "서울특별시 강남구")

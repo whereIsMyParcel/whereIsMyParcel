@@ -5,7 +5,7 @@ import com.sparta.whereismyparcel.product.domain.entity.ProductOptionValue;
 import java.util.UUID;
 
 public record OptionValueResponse(
-        UUID id,
+        UUID optionValueId,
         String value,
         Integer additionalPrice
 ) {

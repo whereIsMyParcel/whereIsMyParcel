@@ -1,4 +1,4 @@
-package com.sparta.whereismyparcel.common.infrastructure.client;
+package com.sparta.whereismyparcel.company.infrastructure.feign.client;
 
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import org.springframework.cloud.openfeign.FeignClient;

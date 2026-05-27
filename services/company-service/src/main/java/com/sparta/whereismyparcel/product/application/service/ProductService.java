@@ -348,15 +348,29 @@ public class ProductService {
     }
 
     /**
-     * ③ 주문 생성 전 상품 상태 확인 (Order ➡️ Product)
+     * 주문 생성 전 상품 상태 확인 (Order ➡︎ Product)
      */
     public List<VariantResponse> validateVariantById(List<UUID> productVariantIds){
         if (productVariantIds == null || productVariantIds.isEmpty()) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList();
         }
         return productVariantRepository.findAllById(productVariantIds).stream()
                 .filter(variant -> variant.getStatus() == ProductStatus.ACTIVE)
                 .map(VariantResponse::from)
                 .toList();
     }
+
+    /**
+     * 배송 생성시 주문 상품들의 허브 조회 (Shipment ➡︎ Product) 리스트 조회
+     */
+    public List<VariantHubResponse> getVariantHub (List<UUID> productVariantIds){
+        if (productVariantIds == null || productVariantIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return productVariantRepository.findAllWithProductByIdIn(productVariantIds).stream()
+                .map(VariantHubResponse::from)
+                .toList();
+    }
+
 }

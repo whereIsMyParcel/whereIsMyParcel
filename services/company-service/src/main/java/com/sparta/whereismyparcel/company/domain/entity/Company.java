@@ -20,7 +20,7 @@ public class Company extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "company_id", nullable = false,  updatable = false)
-    private UUID companyId;
+    private UUID id;
 
     @Column(name = "hub_id", nullable = false)
     private UUID hubId;
@@ -29,10 +29,10 @@ public class Company extends BaseEntity {
     @Column(name = "company_type", nullable = false, length = 30)
     private CompanyType companyType;
 
-    @Column(name = "company_name", nullable = false, length = 100)
+    @Column(name = "company_name", nullable = false, unique = true, length = 100)
     private String companyName;
 
-    @Column(name = "business_number", nullable = false, length = 30)
+    @Column(name = "business_number", nullable = false, unique = true, length = 30)
     private String businessNumber;
 
     @Column(name = "manager_name", nullable = false, length = 50)
@@ -89,7 +89,7 @@ public class Company extends BaseEntity {
             String address,
             String addressDetail
     ) {
-        Company company = Company.builder()
+        return Company.builder()
                 .hubId(hubId)
                 .companyType(companyType)
                 .companyName(companyName)
@@ -100,8 +100,6 @@ public class Company extends BaseEntity {
                 .address(address)
                 .addressDetail(addressDetail)
                 .build();
-
-        return company;
     }
 
     public void updateDetails(

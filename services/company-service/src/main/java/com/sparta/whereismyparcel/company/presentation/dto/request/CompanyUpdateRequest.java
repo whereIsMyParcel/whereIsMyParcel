@@ -5,6 +5,7 @@ import com.sparta.whereismyparcel.company.domain.entity.CompanyType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record CompanyUpdateRequest(
@@ -27,11 +28,19 @@ public record CompanyUpdateRequest(
         @Schema(description = "사업자 전화번호", example = "010-1111-2222")
         @NotBlank
         @Size(max = 30)
+        @Pattern(
+                regexp = "^\\d{2,3}-\\d{3,4}-\\d{4}$",
+                message = "전화번호 형식이 올바르지 않습니다. (예: 02-123-4567 또는 010-1234-5678)"
+        )
         String managerPhone,
 
         @Schema(description = "우편번호", example = "00700")
         @NotBlank
         @Size(max = 20)
+        @Pattern(
+                regexp = "^\\d{5}$",
+                message = "우편번호는 숫자 5자리여야 합니다."
+        )
         String zipCode,
 
         @Schema(description = "주소", example = "서울특별시 강남구 개포동")
