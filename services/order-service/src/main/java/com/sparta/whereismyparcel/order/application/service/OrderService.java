@@ -98,14 +98,12 @@ public class OrderService {
 
         orderRepository.save(order);
 
-        List<OrderCreateSagaContext.OrderItemInfo> itemInfos = request.items().stream()
-                .map(i -> {
-                    SkuValidationResponse.Item skuInfo = validation.items().stream()
-                            .filter(v -> v.id().equals(i.productVariantId()))
-                            .findFirst()
-                            .orElseThrow(InvalidOrderItemsException::new);
-                    return new OrderCreateSagaContext.OrderItemInfo(i.productVariantId(), skuInfo.skuCode(), i.quantity());
-                })
+        List<OrderCreateSagaContext.OrderItemInfo> itemInfos = orderItems.stream()
+                .map(item -> new OrderCreateSagaContext.OrderItemInfo(
+                        item.getProductVariantId(),
+                        item.getSkuCode(),
+                        item.getQuantity()
+                ))
                 .toList();
         OrderCreateSagaContext context = new OrderCreateSagaContext(
                 order.getOrderId(), userId, itemInfos);
