@@ -1,4 +1,4 @@
-package com.sparta.whereismyparcel.aislack.presentation.dto.request;
+package com.sparta.whereismyparcel.aislack.infrastructure.client.dto.request;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;

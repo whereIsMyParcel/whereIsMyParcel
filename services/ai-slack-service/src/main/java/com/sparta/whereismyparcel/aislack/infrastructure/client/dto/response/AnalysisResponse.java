@@ -1,4 +1,6 @@
-package com.sparta.whereismyparcel.aislack.presentation.dto.response;
+package com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response;
+
+import com.sparta.whereismyparcel.aislack.presentation.dto.response.SlackResponse;
 
 import java.util.List;
 import java.util.UUID;
