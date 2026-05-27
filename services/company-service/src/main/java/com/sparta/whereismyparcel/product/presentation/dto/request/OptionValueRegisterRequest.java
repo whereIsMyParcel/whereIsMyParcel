@@ -8,11 +8,11 @@ import jakarta.validation.constraints.PositiveOrZero;
 
 public record OptionValueRegisterRequest(
 
-        @Schema(name = "옵션 값", example = "화이트")
+        @Schema(description = "옵션 값", example = "화이트")
         @NotBlank
         String value,
 
-        @Schema(name = "추가 금액", example = "0")
+        @Schema(description = "추가 금액", example = "0")
         @NotNull
         @PositiveOrZero
         Integer additionalPrice

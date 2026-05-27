@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 
 public record ProductStatusRequest(
 
-        @Schema(name = "상품 상태", example = "ACTIVE,INACTIVE")
+        @Schema(description = "상품 상태", example = "ACTIVE,INACTIVE")
         @NotNull
         ProductStatus status
 ) {

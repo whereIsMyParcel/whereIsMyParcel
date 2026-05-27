@@ -7,11 +7,11 @@ import java.util.UUID;
 
 public record OptionValueUpdateRequest(
 
-        @Schema(name = "옵션 값", example = "블랙")
+        @Schema(description = "옵션 값", example = "블랙")
         @NotNull
         String value,
 
-        @Schema(name = "추가 금액", example = "0")
+        @Schema(description = "추가 금액", example = "0")
         Integer additionalPrice
 ) {
 }

@@ -3,8 +3,6 @@ package com.sparta.whereismyparcel.inventory.presentation.controller;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.inventory.application.service.InventoryService;
 import com.sparta.whereismyparcel.inventory.presentation.dto.request.AddInventoryRequest;
-import com.sparta.whereismyparcel.inventory.presentation.dto.request.InventoryStockRequest;
-import com.sparta.whereismyparcel.inventory.presentation.dto.request.StockConfirmRequest;
 import com.sparta.whereismyparcel.inventory.presentation.dto.response.AddInventoryResponse;
 import com.sparta.whereismyparcel.inventory.presentation.dto.response.InventoryCheckResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -34,8 +34,8 @@ public class InventoryController {
     @Operation(summary = "재고 조회", description = "ALL")
     @GetMapping
     public ResponseEntity<ApiResponse<InventoryCheckResponse>> getProduct(
-            @RequestBody @Valid InventoryStockRequest request) {
-        InventoryCheckResponse response = inventoryService.checkStock(request);
+            @RequestParam UUID productVariantId) {
+        InventoryCheckResponse response = inventoryService.checkStock(productVariantId);
         return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success(response));
     }
 }

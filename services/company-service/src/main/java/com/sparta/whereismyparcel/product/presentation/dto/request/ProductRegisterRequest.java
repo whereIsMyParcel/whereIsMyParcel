@@ -11,7 +11,7 @@ import java.util.UUID;
 
 public record ProductRegisterRequest(
 
-        @Schema(name = "상품 명", example = "아이폰 17 Pro")
+        @Schema(description = "상품 명", example = "아이폰 17 Pro")
         @NotBlank
         String name,
 
@@ -21,10 +21,10 @@ public record ProductRegisterRequest(
         @NotNull
         UUID hubId,
 
-        @Schema(name = "상품 설명")
+        @Schema(description = "상품 설명")
         String description,
 
-        @Schema(name = "상품 기본 가격", example = "1250000")
+        @Schema(description = "상품 기본 가격", example = "1250000")
         @NotNull
         @PositiveOrZero
         Integer price,

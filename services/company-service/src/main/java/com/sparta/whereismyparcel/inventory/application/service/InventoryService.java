@@ -1,14 +1,15 @@
 package com.sparta.whereismyparcel.inventory.application.service;
 
 import com.sparta.whereismyparcel.common.infrastructure.client.HubFeignClient;
-import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.inventory.domain.entity.Inventory;
-import com.sparta.whereismyparcel.inventory.domain.exception.HubNotFoundException;
 import com.sparta.whereismyparcel.inventory.domain.exception.InventoryAlreadyExistsException;
 import com.sparta.whereismyparcel.inventory.domain.exception.InventoryNotFoundException;
 import com.sparta.whereismyparcel.inventory.domain.exception.ProductVariantNotFoundException;
 import com.sparta.whereismyparcel.inventory.domain.repository.InventoryRepository;
-import com.sparta.whereismyparcel.inventory.presentation.dto.request.*;
+import com.sparta.whereismyparcel.inventory.presentation.dto.request.AddInventoryRequest;
+import com.sparta.whereismyparcel.inventory.presentation.dto.request.StockCancelRequest;
+import com.sparta.whereismyparcel.inventory.presentation.dto.request.StockConfirmRequest;
+import com.sparta.whereismyparcel.inventory.presentation.dto.request.StockReservationRequest;
 import com.sparta.whereismyparcel.inventory.presentation.dto.response.AddInventoryResponse;
 import com.sparta.whereismyparcel.inventory.presentation.dto.response.InventoryCheckResponse;
 import com.sparta.whereismyparcel.inventory.presentation.dto.response.StockReservationResponse;
@@ -54,8 +55,8 @@ public class InventoryService {
         return AddInventoryResponse.from(inventory);
     }
 
-    public InventoryCheckResponse checkStock(InventoryStockRequest request) {
-        ProductVariant productVariant = productVariantRepository.findById(request.productVariantId())
+    public InventoryCheckResponse checkStock(UUID productVariantId) {
+        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
                 .orElseThrow(ProductVariantNotFoundException::new);
 
         UUID managedHubId = productVariant.getProduct().getHubId();
