@@ -18,7 +18,7 @@ public class SecurityConfig {
 			.csrf(ServerHttpSecurity.CsrfSpec::disable)
 			.authorizeExchange(exchanges -> exchanges
 				.pathMatchers(HttpMethod.POST, "/api/v1/auth/signup").permitAll()
-				.pathMatchers("/actuator/**").permitAll()
+				.pathMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
 				.pathMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/webjars/**").permitAll()
 				.anyExchange().authenticated()
 			)
