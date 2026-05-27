@@ -13,7 +13,7 @@ import java.util.UUID;
 @FeignClient(name = "hub-service", path = "/internal/v1")
 public interface HubClient {
 
-    @GetMapping("/hubs/{hubId}/validate")
+    @GetMapping("/hubs/{hubId}/exists")
     ApiResponse<Boolean> exists(@PathVariable UUID hubId);
 
     @GetMapping("/hub-routes/shortest-path")
