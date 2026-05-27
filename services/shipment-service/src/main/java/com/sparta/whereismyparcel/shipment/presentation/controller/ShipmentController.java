@@ -50,6 +50,20 @@ public class ShipmentController {
     }
 
     @Operation(
+            summary = "배송 시작",
+            description = "배송을 시작 처리하고 재고를 차감한다"
+    )
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER', 'DELIVERY_MANAGER')")
+    @PostMapping("/{shipmentId}/start")
+    public ResponseEntity<ApiResponse<Void>> start(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable UUID shipmentId
+    ) {
+        shipmentService.start(userId, shipmentId);
+        return ResponseEntity.ok(ApiResponse.ok());
+    }
+
+    @Operation(
             summary = "배송 1건 조회",
             description = "배송 ID를 기준으로 배송 상세 정보를 조회한다"
     )

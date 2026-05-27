@@ -12,6 +12,7 @@ import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentUpdateDenied
 import com.sparta.whereismyparcel.shipment.domain.repository.ShipmentRepository;
 import com.sparta.whereismyparcel.shipment.domain.util.ShipmentNumberGenerator;
 import com.sparta.whereismyparcel.shipment.infrastructure.client.*;
+import com.sparta.whereismyparcel.shipment.presentation.dto.request.DecreaseInventoryRequest;
 import com.sparta.whereismyparcel.shipment.presentation.dto.request.GetDestinationHubIdRequest;
 import com.sparta.whereismyparcel.shipment.presentation.dto.request.ShipmentCreateRequest;
 import com.sparta.whereismyparcel.shipment.presentation.dto.request.ShipmentSearchRequest;
@@ -40,6 +41,7 @@ public class ShipmentService {
     private final ProductClient productClient;
     private final CompanyClient companyClient;
     private final HubClient hubClient;
+    private final InventoryClient inventoryClient;
 
     @Transactional
     public void cancel(String userId, UUID orderId) {
@@ -265,23 +267,35 @@ public class ShipmentService {
     //endregion
 
     @Transactional
-    public void delete(String userId, UUID shipmentId){
+    public void delete(String userId, UUID shipmentId) {
         Shipment shipment = shipmentRepository.findById(shipmentId)
                 .orElseThrow(ShipmentNotFoundException::new);
 
         shipment.delete(userId);
     }
 
-    public ShipmentViewResponse getShipment(String userId, UUID shipmentId){
+    public ShipmentViewResponse getShipment(String userId, UUID shipmentId) {
         Shipment shipment = shipmentRepository.findById(shipmentId)
                 .orElseThrow(ShipmentNotFoundException::new);
 
         return ShipmentViewResponse.from(shipment);
     }
-    
-    public Page<ShipmentViewResponse> search(ShipmentSearchRequest request, Pageable pageable){
+
+    public Page<ShipmentViewResponse> search(ShipmentSearchRequest request, Pageable pageable) {
         return shipmentRepository.search(request, pageable)
                 .map(ShipmentViewResponse::from);
+    }
+
+    @Transactional
+    public void start(String userId, UUID shipmentId) {
+        Shipment shipment = shipmentRepository.findById(shipmentId)
+                .orElseThrow(ShipmentNotFoundException::new);
+
+        validateUpdatePermission(List.of(shipment), UUID.fromString(userId));
+
+        shipment.start();
+
+        inventoryClient.decrease(DecreaseInventoryRequest.from(shipment.getItems()));
     }
 
     private void validateUpdatePermission(List<Shipment> shipments, UUID managerId) {
