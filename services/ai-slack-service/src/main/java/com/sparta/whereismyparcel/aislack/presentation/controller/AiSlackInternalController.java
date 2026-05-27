@@ -1,7 +1,6 @@
 package com.sparta.whereismyparcel.aislack.presentation.controller;
 
 import com.sparta.whereismyparcel.aislack.application.service.AiMessageService;
-import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.request.DeliveryDeadlinePatchRequest;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.request.OrderInternalRequest;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import jakarta.validation.Valid;
