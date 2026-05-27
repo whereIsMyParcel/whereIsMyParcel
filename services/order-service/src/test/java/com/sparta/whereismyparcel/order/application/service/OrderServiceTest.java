@@ -693,4 +693,40 @@ class OrderServiceTest {
         assertThatThrownBy(() -> orderService.getOrder(userId, "COMPANY_MANAGER", orderId))
                 .isInstanceOf(OrderNotFoundException.class);
     }
+
+    @Test
+    @DisplayName("AI 프롬프트용 주문 컨텍스트를 조회할 수 있다")
+    void getOrderAiContext() {
+        // given
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(UUID.randomUUID().toString());
+
+        given(orderRepository.findWithOrderItemsByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderAiContextResponse response = orderService.getOrderAiContext(orderId);
+
+        // then
+        assertThat(response.orderNumber()).isEqualTo(order.getOrderNumber());
+        assertThat(response.recipientName()).isEqualTo(order.getRecipientName());
+        assertThat(response.recipientAddress()).contains(order.getAddress());
+        assertThat(response.requestedDeliveryAt()).isEqualTo(order.getRequestedDeliveryAt());
+        assertThat(response.finalDispatchDeadline()).isNull();
+        assertThat(response.items()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주문은 AI 프롬프트용 컨텍스트를 조회할 수 없다")
+    void getOrderAiContextNotFoundThrowsException() {
+        // given
+        UUID orderId = UUID.randomUUID();
+
+        given(orderRepository.findWithOrderItemsByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> orderService.getOrderAiContext(orderId))
+                .isInstanceOf(OrderNotFoundException.class);
+    }
 }

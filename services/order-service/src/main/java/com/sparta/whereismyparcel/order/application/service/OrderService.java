@@ -21,6 +21,7 @@ import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuVa
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderAiContextResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCompleteResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDetailResponse;
@@ -150,6 +151,13 @@ public class OrderService {
                 .orElseThrow(OrderNotFoundException::new);
 
         return OrderDetailResponse.from(order);
+    }
+
+    public OrderAiContextResponse getOrderAiContext(UUID orderId) {
+        Order order = orderRepository.findWithOrderItemsByOrderIdAndDeletedAtIsNull(orderId)
+                .orElseThrow(OrderNotFoundException::new);
+
+        return OrderAiContextResponse.from(order);
     }
 
     @Transactional
