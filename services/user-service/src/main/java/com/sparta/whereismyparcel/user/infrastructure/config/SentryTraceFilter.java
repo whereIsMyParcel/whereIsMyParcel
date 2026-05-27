@@ -9,7 +9,6 @@ import jakarta.servlet.ServletResponse;
 import org.slf4j.MDC;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-
 import java.io.IOException;
 
 @Component
@@ -23,11 +22,9 @@ public class SentryTraceFilter implements Filter {
         String userId = MDC.get("userId");
         String username = MDC.get("username");
 
-        Sentry.configureScope(scope -> {
-            if (traceId != null) scope.setTag("traceId", traceId);
-            if (userId != null) scope.setTag("userId", userId);
-            if (username != null) scope.setTag("username", username);
-        });
+        if (traceId != null) Sentry.setTag("traceId", traceId);
+        if (userId != null) Sentry.setTag("userId", userId);
+        if (username != null) Sentry.setTag("username", username);
 
         chain.doFilter(request, response);
     }
