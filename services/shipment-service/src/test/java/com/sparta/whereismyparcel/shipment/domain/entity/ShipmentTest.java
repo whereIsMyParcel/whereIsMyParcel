@@ -2,6 +2,7 @@ package com.sparta.whereismyparcel.shipment.domain.entity;
 
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentAlreadyStartedException;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentCannotBeDeliveredException;
+import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentCannotBeStartedException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -190,6 +191,57 @@ class ShipmentTest {
 
             // then
             assertThat(result).isEqualTo(expected);
+        }
+    }
+
+    @DisplayName("배송 시작")
+    @Nested
+    class Start {
+        @DisplayName("배송 시작 시, HUB_WAITING 상태일 때만 배송 상태 변경 가능하다")
+        @ParameterizedTest(name = "[{index}] status = {0}")
+        @EnumSource(value = ShipmentStatus.class, names = "HUB_WAITING")
+        void start_success(ShipmentStatus status) {
+            // given
+            Shipment shipment = Shipment.create(
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    "배송번호 1",
+                    status,
+                    "배송지",
+                    "수령인",
+                    "slack"
+            );
+
+            // when
+            shipment.start();
+
+            // then
+            assertThat(shipment.getShipmentStatus())
+                    .isEqualTo(ShipmentStatus.HUB_MOVING);
+        }
+
+        @DisplayName("배송 시작 시, HUB_WAITING이 아니면 예외 발생한다")
+        @ParameterizedTest(name = "[{index}] status = {0}")
+        @EnumSource(value = ShipmentStatus.class, names = "HUB_WAITING", mode = EnumSource.Mode.EXCLUDE)
+        void start_fail_invalid_status(ShipmentStatus status) {
+            // given
+            Shipment shipment = Shipment.create(
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    "배송번호 1",
+                    status,
+                    "배송지",
+                    "수령인",
+                    "slack"
+            );
+
+            // when & then
+            assertThatThrownBy(shipment::start)
+                    .isInstanceOf(ShipmentCannotBeStartedException.class);
         }
     }
 }

@@ -1,18 +1,10 @@
 package com.sparta.whereismyparcel.shipment.application.service;
 
-import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.shipment.domain.entity.Shipment;
-import com.sparta.whereismyparcel.shipment.domain.entity.ShipmentStatus;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentAlreadyStartedException;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentUpdateDeniedException;
 import com.sparta.whereismyparcel.shipment.domain.repository.ShipmentRepository;
-import com.sparta.whereismyparcel.shipment.infrastructure.client.CompanyClient;
-import com.sparta.whereismyparcel.shipment.infrastructure.client.HubClient;
-import com.sparta.whereismyparcel.shipment.infrastructure.client.OrderClient;
-import com.sparta.whereismyparcel.shipment.infrastructure.client.ProductClient;
-import com.sparta.whereismyparcel.shipment.presentation.dto.request.ShipmentCreateRequest;
-import com.sparta.whereismyparcel.shipment.presentation.dto.response.GetProductHubIdResponse;
-import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShortestPathResponse;
+import com.sparta.whereismyparcel.shipment.infrastructure.client.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -21,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
@@ -35,6 +26,7 @@ class ShipmentServiceTest {
     private ProductClient productClient;
     private CompanyClient companyClient;
     private HubClient hubClient;
+    private InventoryClient inventoryClient;
 
     private UUID orderId;
     private UUID managerId;
@@ -47,6 +39,7 @@ class ShipmentServiceTest {
         productClient = mock(ProductClient.class);
         companyClient = mock(CompanyClient.class);
         hubClient = mock(HubClient.class);
+        inventoryClient = mock(InventoryClient.class);
 
         shipmentService = new ShipmentService(
                 shipmentRepository,
@@ -54,7 +47,8 @@ class ShipmentServiceTest {
                 orderClient,
                 productClient,
                 companyClient,
-                hubClient
+                hubClient,
+                inventoryClient
         );
 
         orderId = UUID.randomUUID();

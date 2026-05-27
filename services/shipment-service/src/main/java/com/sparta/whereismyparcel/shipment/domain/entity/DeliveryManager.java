@@ -57,4 +57,14 @@ public class DeliveryManager extends BaseEntity {
                 .deliveryOrder(deliveryOrder)
                 .build();
     }
+
+    public void update(UUID hubId, String slackId, DeliveryType type) {
+        this.hubId = hubId;
+        this.slackId = slackId;
+        this.type = type;
+    }
+
+    public void delete(String userId){
+        softDelete(userId);
+    }
 }

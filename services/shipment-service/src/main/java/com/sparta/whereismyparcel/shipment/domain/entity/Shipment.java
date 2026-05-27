@@ -3,6 +3,7 @@ package com.sparta.whereismyparcel.shipment.domain.entity;
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentAlreadyStartedException;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentCannotBeDeliveredException;
+import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentCannotBeStartedException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -65,6 +66,9 @@ public class Shipment extends BaseEntity {
 
     @OneToMany(mappedBy = "shipment", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ShipmentHistory> histories = new ArrayList<>();
+
+    @OneToMany(mappedBy = "shipment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ShipmentItem> items = new ArrayList<>();
 
 
     @Builder(access = AccessLevel.PRIVATE)
@@ -159,7 +163,24 @@ public class Shipment extends BaseEntity {
         return this.shipmentStatus == ShipmentStatus.DELIVERED;
     }
 
-    public void addHistories(List<ShipmentHistory> histories){
+    public void addHistories(List<ShipmentHistory> histories) {
         this.histories = histories;
+    }
+
+    public void addItems(List<ShipmentItem> items){
+        this.items = items;
+    }
+
+    public void start() {
+        if (this.shipmentStatus != ShipmentStatus.HUB_WAITING) {
+            throw new ShipmentCannotBeStartedException();
+        }
+        this.shipmentStatus = ShipmentStatus.HUB_MOVING;
+        this.shippedAt = LocalDateTime.now();
+    }
+
+    public void delete(String userId) {
+        softDelete(userId);
+        this.histories.forEach(item -> item.softDelete(userId));
     }
 }
