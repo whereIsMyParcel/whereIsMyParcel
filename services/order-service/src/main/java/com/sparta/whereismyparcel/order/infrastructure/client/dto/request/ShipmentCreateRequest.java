@@ -12,5 +12,5 @@ public record ShipmentCreateRequest(
         String addressDetail,
         List<Item> items
 ) {
-    public record Item(UUID skuId, Integer quantity) {}
+    public record Item(UUID productVariantId, Integer quantity) {}
 }

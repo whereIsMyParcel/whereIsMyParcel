@@ -27,6 +27,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -616,13 +617,8 @@ class OrderServiceTest {
         LocalDateTime startDate = LocalDateTime.now().minusDays(1);
         LocalDateTime endDate = LocalDateTime.now().plusDays(1);
 
-        given(orderRepository.searchOrders(
-                eq(userId),
-                eq(true),
-                eq(OrderStatus.PENDING),
-                eq("ORD"),
-                eq(startDate),
-                eq(endDate),
+        given(orderRepository.findAll(
+                org.mockito.ArgumentMatchers.<Specification<Order>>any(),
                 eq(pageable)
         )).willReturn(new PageImpl<>(List.of(order), pageable, 1));
 
@@ -650,13 +646,8 @@ class OrderServiceTest {
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
         Order order = createOrder(userId);
 
-        given(orderRepository.searchOrders(
-                eq(userId),
-                eq(false),
-                eq(null),
-                eq(null),
-                eq(null),
-                eq(null),
+        given(orderRepository.findAll(
+                org.mockito.ArgumentMatchers.<Specification<Order>>any(),
                 eq(pageable)
         )).willReturn(new PageImpl<>(List.of(order), pageable, 1));
 
