@@ -198,6 +198,9 @@ public class Order extends BaseEntity {
     }
 
     public void updateFinalDispatchDeadline(LocalDateTime finalDispatchDeadline) {
+        if (this.orderStatus != OrderStatus.CONFIRMED) {
+            throw new InvalidOrderStatusException();
+        }
         this.finalDispatchDeadline = finalDispatchDeadline;
     }
 

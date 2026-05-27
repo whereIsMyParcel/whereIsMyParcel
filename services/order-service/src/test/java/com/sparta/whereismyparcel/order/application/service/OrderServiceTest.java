@@ -770,6 +770,8 @@ class OrderServiceTest {
         // given
         UUID orderId = UUID.randomUUID();
         Order order = createOrder(UUID.randomUUID().toString());
+        order.reserveStock();
+        order.confirm();
         LocalDateTime finalDispatchDeadline = LocalDateTime.now().plusDays(1);
         OrderDispatchDeadlineUpdateRequest request =
                 new OrderDispatchDeadlineUpdateRequest(finalDispatchDeadline);
