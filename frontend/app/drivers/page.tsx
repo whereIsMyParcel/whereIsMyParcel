@@ -21,24 +21,29 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Plus, Search, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
-import { useState } from "react"
-
-const drivers = [
-  { id: "DRV-001", name: "김배송", type: "hub", hub: null, slackId: "@kim.delivery", order: 1, status: "active" },
-  { id: "DRV-002", name: "이운송", type: "hub", hub: null, slackId: "@lee.transport", order: 2, status: "active" },
-  { id: "DRV-003", name: "박물류", type: "hub", hub: null, slackId: "@park.logistics", order: 3, status: "active" },
-  { id: "DRV-004", name: "최택배", type: "hub", hub: null, slackId: "@choi.parcel", order: 4, status: "inactive" },
-  { id: "DRV-005", name: "정배달", type: "hub", hub: null, slackId: "@jung.delivery", order: 5, status: "active" },
-  { id: "DRV-006", name: "강화물", type: "company", hub: "서울특별시 센터", slackId: "@kang.cargo", order: 1, status: "active" },
-  { id: "DRV-007", name: "조운반", type: "company", hub: "서울특별시 센터", slackId: "@jo.transfer", order: 2, status: "active" },
-  { id: "DRV-008", name: "윤배송", type: "company", hub: "경기 남부 센터", slackId: "@yoon.ship", order: 1, status: "active" },
-  { id: "DRV-009", name: "장물류", type: "company", hub: "부산광역시 센터", slackId: "@jang.logistics", order: 1, status: "active" },
-  { id: "DRV-010", name: "임택배", type: "company", hub: "대구광역시 센터", slackId: "@lim.parcel", order: 1, status: "active" },
-]
+import { useState, useEffect } from "react"
+import { fetchApi } from "@/lib/api"
 
 export default function DriversPage() {
+  const [drivers, setDrivers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState<"all" | "hub" | "company">("all")
+
+  useEffect(() => {
+    async function loadDrivers() {
+      try {
+        setLoading(true)
+        const pageData = await fetchApi<any>('/delivery-managers?size=50')
+        setDrivers(pageData.content || [])
+      } catch (error) {
+        console.error("Failed to fetch drivers:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadDrivers()
+  }, [])
 
   const filteredDrivers = drivers.filter((driver) => {
     const matchesSearch =
@@ -146,8 +151,21 @@ export default function DriversPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDrivers.map((driver) => (
-                  <TableRow key={driver.id} className="border-border hover:bg-muted/50">
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      데이터를 불러오는 중입니다...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredDrivers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      등록된 배송담당자가 없습니다.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredDrivers.map((driver, index) => (
+                    <TableRow key={driver.id || `drv-${index}`} className="border-border hover:bg-muted/50">
                     <TableCell className="font-mono text-sm text-primary">{driver.id}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -208,7 +226,7 @@ export default function DriversPage() {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))}
+                )))}
               </TableBody>
             </Table>
           </CardContent>

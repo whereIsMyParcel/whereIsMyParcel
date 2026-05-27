@@ -7,53 +7,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { MessageSquare, Send, CheckCircle, XCircle, Clock } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
+import { fetchApi } from "@/lib/api"
 
-const messages = [
-  {
-    id: "MSG-001",
-    recipient: "@channel",
-    content: "경기 남부 센터 → 부산 센터 배송 시작 (ORD-20240101-001)",
-    status: "sent",
-    sentAt: "2024-01-15 09:35",
-  },
-  {
-    id: "MSG-002",
-    recipient: "@kim.delivery",
-    content: "새로운 배송 건이 배정되었습니다. ORD-20240101-002를 확인해주세요.",
-    status: "sent",
-    sentAt: "2024-01-15 10:20",
-  },
-  {
-    id: "MSG-003",
-    recipient: "@hub-busan",
-    content: "부산 센터 도착 예정: ORD-20240101-001, 예상 도착 시간 14:30",
-    status: "sent",
-    sentAt: "2024-01-15 11:00",
-  },
-  {
-    id: "MSG-004",
-    recipient: "@admin",
-    content: "대구 센터 점검 완료 보고",
-    status: "failed",
-    sentAt: "2024-01-15 12:15",
-  },
-  {
-    id: "MSG-005",
-    recipient: "@channel",
-    content: "오늘 배송 현황: 완료 45건, 진행중 23건, 대기 12건",
-    status: "sent",
-    sentAt: "2024-01-15 18:00",
-  },
-  {
-    id: "MSG-006",
-    recipient: "@lee.transport",
-    content: "긴급: 경로 변경 안내 - 서울 → 대전 구간 우회 필요",
-    status: "pending",
-    sentAt: "2024-01-15 18:30",
-  },
-]
+
 
 const statusConfig = {
   sent: { label: "전송됨", icon: CheckCircle, className: "text-success" },
@@ -62,8 +20,25 @@ const statusConfig = {
 }
 
 export default function SlackPage() {
+  const [messages, setMessages] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [newMessage, setNewMessage] = useState("")
   const [recipient, setRecipient] = useState("")
+
+  useEffect(() => {
+    async function loadMessages() {
+      try {
+        setLoading(true)
+        const pageData = await fetchApi<any>('/slack-messages?size=50')
+        setMessages(pageData.content || [])
+      } catch (error) {
+        console.error("Failed to fetch messages:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadMessages()
+  }, [])
 
   const sentCount = messages.filter((m) => m.status === "sent").length
   const failedCount = messages.filter((m) => m.status === "failed").length
@@ -134,38 +109,50 @@ export default function SlackPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {messages.map((message) => {
-                  const StatusIcon = statusConfig[message.status as keyof typeof statusConfig].icon
-                  return (
-                    <div
-                      key={message.id}
-                      className="flex items-start gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                    >
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <MessageSquare className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono text-sm text-primary">{message.recipient}</span>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs",
-                              message.status === "sent" && "bg-success/20 text-success border-success/30",
-                              message.status === "failed" && "bg-destructive/20 text-destructive border-destructive/30",
-                              message.status === "pending" && "bg-warning/20 text-warning border-warning/30"
-                            )}
-                          >
-                            <StatusIcon className="w-3 h-3 mr-1" />
-                            {statusConfig[message.status as keyof typeof statusConfig].label}
-                          </Badge>
+                {loading ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    데이터를 불러오는 중입니다...
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    메시지가 없습니다.
+                  </div>
+                ) : (
+                  messages.map((message, index) => {
+                    const statusKey = message.status as keyof typeof statusConfig
+                    const config = statusConfig[statusKey] || statusConfig.pending
+                    const StatusIcon = config.icon
+                    return (
+                      <div
+                        key={message.id || `msg-${index}`}
+                        className="flex items-start gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                      >
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <MessageSquare className="w-4 h-4 text-primary" />
                         </div>
-                        <p className="text-sm text-foreground">{message.content}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{message.sentAt}</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-mono text-sm text-primary">{message.recipient}</span>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-xs",
+                                message.status === "sent" && "bg-success/20 text-success border-success/30",
+                                message.status === "failed" && "bg-destructive/20 text-destructive border-destructive/30",
+                                message.status === "pending" && "bg-warning/20 text-warning border-warning/30"
+                              )}
+                            >
+                              <StatusIcon className="w-3 h-3 mr-1" />
+                              {config.label}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-foreground">{message.content}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{message.sentAt}</p>
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })
+                )}
               </div>
             </CardContent>
           </Card>

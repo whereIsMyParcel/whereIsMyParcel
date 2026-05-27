@@ -19,34 +19,35 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, ArrowRight } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { fetchApi } from "@/lib/api"
 
-const routes = [
-  { id: "RTE-001", from: "서울특별시 센터", to: "경기 남부 센터", distance: 45, duration: 55 },
-  { id: "RTE-002", from: "경기 남부 센터", to: "대전광역시 센터", distance: 120, duration: 90 },
-  { id: "RTE-003", from: "대전광역시 센터", to: "대구광역시 센터", distance: 130, duration: 100 },
-  { id: "RTE-004", from: "대구광역시 센터", to: "부산광역시 센터", distance: 90, duration: 70 },
-  { id: "RTE-005", from: "서울특별시 센터", to: "인천광역시 센터", distance: 35, duration: 45 },
-  { id: "RTE-006", from: "경기 북부 센터", to: "서울특별시 센터", distance: 25, duration: 35 },
-  { id: "RTE-007", from: "대전광역시 센터", to: "광주광역시 센터", distance: 150, duration: 120 },
-  { id: "RTE-008", from: "대구광역시 센터", to: "울산광역시 센터", distance: 70, duration: 55 },
-  { id: "RTE-009", from: "경기 남부 센터", to: "강원특별자치도 센터", distance: 110, duration: 85 },
-  { id: "RTE-010", from: "대전광역시 센터", to: "세종특별자치시 센터", distance: 20, duration: 25 },
-  { id: "RTE-011", from: "대전광역시 센터", to: "충청북도 센터", distance: 60, duration: 50 },
-  { id: "RTE-012", from: "대전광역시 센터", to: "충청남도 센터", distance: 55, duration: 45 },
-  { id: "RTE-013", from: "광주광역시 센터", to: "전북특별자치도 센터", distance: 80, duration: 65 },
-  { id: "RTE-014", from: "광주광역시 센터", to: "전라남도 센터", distance: 50, duration: 40 },
-  { id: "RTE-015", from: "대구광역시 센터", to: "경상북도 센터", distance: 65, duration: 55 },
-  { id: "RTE-016", from: "부산광역시 센터", to: "경상남도 센터", distance: 45, duration: 40 },
-]
+
 
 export default function RoutesPage() {
+  const [routes, setRoutes] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+
+  useEffect(() => {
+    async function loadRoutes() {
+      try {
+        setLoading(true)
+        const pageData = await fetchApi<any>('/hub-routes?size=50')
+        setRoutes(pageData.content || [])
+      } catch (error) {
+        console.error("Failed to fetch routes:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadRoutes()
+  }, [])
 
   const filteredRoutes = routes.filter(
     (route) =>
-      route.from.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      route.to.toLowerCase().includes(searchTerm.toLowerCase())
+      (route.from || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (route.to || "").toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
@@ -74,7 +75,7 @@ export default function RoutesPage() {
             <CardContent className="p-6">
               <div className="text-sm text-muted-foreground">평균 거리</div>
               <div className="text-3xl font-bold mt-1">
-                {Math.round(routes.reduce((acc, r) => acc + r.distance, 0) / routes.length)}km
+                {routes.length > 0 ? Math.round(routes.reduce((acc, r) => acc + (r.distance || 0), 0) / routes.length) : 0}km
               </div>
             </CardContent>
           </Card>
@@ -82,7 +83,7 @@ export default function RoutesPage() {
             <CardContent className="p-6">
               <div className="text-sm text-muted-foreground">평균 소요시간</div>
               <div className="text-3xl font-bold mt-1">
-                {Math.round(routes.reduce((acc, r) => acc + r.duration, 0) / routes.length)}분
+                {routes.length > 0 ? Math.round(routes.reduce((acc, r) => acc + (r.duration || 0), 0) / routes.length) : 0}분
               </div>
             </CardContent>
           </Card>
@@ -117,43 +118,57 @@ export default function RoutesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRoutes.map((route) => (
-                  <TableRow key={route.id} className="border-border hover:bg-muted/50">
-                    <TableCell className="font-mono text-sm text-primary">{route.id}</TableCell>
-                    <TableCell className="font-medium">{route.from}</TableCell>
-                    <TableCell>
-                      <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                    </TableCell>
-                    <TableCell className="font-medium">{route.to}</TableCell>
-                    <TableCell>
-                      <span className="font-mono">{route.distance}</span>
-                      <span className="text-muted-foreground ml-1">km</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono">{route.duration}</span>
-                      <span className="text-muted-foreground ml-1">분</span>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Pencil className="w-4 h-4 mr-2" />
-                            수정
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            삭제
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      데이터를 불러오는 중입니다...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : filteredRoutes.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      등록된 경로가 없습니다.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredRoutes.map((route, index) => (
+                    <TableRow key={route.id || `rte-${index}`} className="border-border hover:bg-muted/50">
+                      <TableCell className="font-mono text-sm text-primary">{route.id}</TableCell>
+                      <TableCell className="font-medium">{route.from}</TableCell>
+                      <TableCell>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                      </TableCell>
+                      <TableCell className="font-medium">{route.to}</TableCell>
+                      <TableCell>
+                        <span className="font-mono">{route.distance}</span>
+                        <span className="text-muted-foreground ml-1">km</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono">{route.duration}</span>
+                        <span className="text-muted-foreground ml-1">분</span>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Pencil className="w-4 h-4 mr-2" />
+                              수정
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive">
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              삭제
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>

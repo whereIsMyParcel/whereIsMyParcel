@@ -20,29 +20,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, MapPin } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { fetchApi } from "@/lib/api"
+import { CreateHubModal } from "@/components/hubs/create-hub-modal"
 
 export default function HubsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [hubs, setHubs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    async function loadHubs() {
-      try {
-        // 백엔드의 GET /api/v1/hubs 호출 (페이징 없이 100개 임시 로드)
-        const pageData = await fetchApi<any>('/hubs?size=50');
-        // Spring Boot의 Page 객체는 실제 리스트를 content 안에 담아 보냅니다.
-        setHubs(pageData.content || []);
-      } catch (error) {
-        console.error("Failed to fetch hubs:", error);
-      } finally {
-        setLoading(false);
-      }
+  const loadHubs = useCallback(async () => {
+    try {
+      setLoading(true);
+      // 백엔드의 GET /api/v1/hubs 호출 (페이징 없이 100개 임시 로드)
+      const pageData = await fetchApi<any>('/hubs?size=50');
+      // Spring Boot의 Page 객체는 실제 리스트를 content 안에 담아 보냅니다.
+      setHubs(pageData.content || []);
+    } catch (error) {
+      console.error("Failed to fetch hubs:", error);
+    } finally {
+      setLoading(false);
     }
-    loadHubs();
   }, []);
+
+  useEffect(() => {
+    loadHubs();
+  }, [loadHubs]);
 
   const filteredHubs = hubs.filter(
     (hub) =>
@@ -58,10 +61,7 @@ export default function HubsPage() {
             <h1 className="text-2xl font-bold tracking-tight">허브 관리</h1>
             <p className="text-muted-foreground">스파르타 물류의 전체 허브 목록을 관리합니다.</p>
           </div>
-          <Button className="bg-primary hover:bg-primary/90">
-            <Plus className="w-4 h-4 mr-2" />
-            허브 추가
-          </Button>
+          <CreateHubModal onSuccess={loadHubs} />
         </div>
 
         <Card className="bg-card border-border">
@@ -93,9 +93,9 @@ export default function HubsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredHubs.map((hub) => (
-                  <TableRow key={hub.id} className="border-border hover:bg-muted/50">
-                    <TableCell className="font-mono text-sm text-primary max-w-[120px] truncate" title={hub.id}>{hub.id}</TableCell>
+                {filteredHubs.map((hub, index) => (
+                  <TableRow key={hub.id || `hub-${index}`} className="border-border hover:bg-muted/50">
+                    <TableCell className="font-mono text-sm text-primary max-w-[120px] truncate" title={hub.id || 'N/A'}>{hub.id || '-'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="p-1.5 rounded bg-primary/10">

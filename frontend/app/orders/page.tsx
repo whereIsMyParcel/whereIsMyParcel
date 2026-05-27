@@ -20,88 +20,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Plus, Search, MoreHorizontal, Eye, Trash2, ArrowRight } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
+import { fetchApi } from "@/lib/api"
 
-const orders = [
-  {
-    id: "ORD-20240101-001",
-    product: "마른오징어 가공품",
-    quantity: 50,
-    supplier: "경기 건조식품",
-    receiver: "부산 수산물 도매",
-    fromHub: "경기 남부 센터",
-    toHub: "부산광역시 센터",
-    status: "delivering",
-    createdAt: "2024-01-15 09:30",
-  },
-  {
-    id: "ORD-20240101-002",
-    product: "플라스틱 가공품",
-    quantity: 120,
-    supplier: "서울 플라스틱",
-    receiver: "대구 제조업체",
-    fromHub: "서울특별시 센터",
-    toHub: "대구광역시 센터",
-    status: "preparing",
-    createdAt: "2024-01-15 10:15",
-  },
-  {
-    id: "ORD-20240101-003",
-    product: "전자부품 세트",
-    quantity: 80,
-    supplier: "인천 전자",
-    receiver: "광주 조립업체",
-    fromHub: "인천광역시 센터",
-    toHub: "광주광역시 센터",
-    status: "completed",
-    createdAt: "2024-01-14 14:20",
-  },
-  {
-    id: "ORD-20240101-004",
-    product: "식품 원재료",
-    quantity: 200,
-    supplier: "대전 식품",
-    receiver: "울산 가공업체",
-    fromHub: "대전광역시 센터",
-    toHub: "울산광역시 센터",
-    status: "delivering",
-    createdAt: "2024-01-15 08:00",
-  },
-  {
-    id: "ORD-20240101-005",
-    product: "의류 원단",
-    quantity: 150,
-    supplier: "경기 섬유",
-    receiver: "경남 의류업체",
-    fromHub: "경기 북부 센터",
-    toHub: "경상남도 센터",
-    status: "preparing",
-    createdAt: "2024-01-15 11:45",
-  },
-  {
-    id: "ORD-20240101-006",
-    product: "화장품 원료",
-    quantity: 75,
-    supplier: "서울 화학",
-    receiver: "전북 화장품",
-    fromHub: "서울특별시 센터",
-    toHub: "전북특별자치도 센터",
-    status: "completed",
-    createdAt: "2024-01-13 16:30",
-  },
-  {
-    id: "ORD-20240101-007",
-    product: "농산물 가공품",
-    quantity: 300,
-    supplier: "충남 농산",
-    receiver: "강원 유통",
-    fromHub: "충청남도 센터",
-    toHub: "강원특별자치도 센터",
-    status: "cancelled",
-    createdAt: "2024-01-12 09:00",
-  },
-]
+
 
 const statusConfig = {
   preparing: { label: "준비중", className: "bg-warning/20 text-warning border-warning/30" },
@@ -111,8 +34,25 @@ const statusConfig = {
 }
 
 export default function OrdersPage() {
+  const [orders, setOrders] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+
+  useEffect(() => {
+    async function loadOrders() {
+      try {
+        setLoading(true)
+        const pageData = await fetchApi<any>('/orders?size=50')
+        setOrders(pageData.content || [])
+      } catch (error) {
+        console.error("Failed to fetch orders:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadOrders()
+  }, [])
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
@@ -215,55 +155,69 @@ export default function OrdersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.map((order) => (
-                  <TableRow key={order.id} className="border-border hover:bg-muted/50">
-                    <TableCell className="font-mono text-sm text-primary">{order.id}</TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{order.product}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {order.supplier} → {order.receiver}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono">{order.quantity}개</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm">
-                        <span className="truncate max-w-24">{order.fromHub.replace(" 센터", "")}</span>
-                        <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
-                        <span className="truncate max-w-24">{order.toHub.replace(" 센터", "")}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{order.createdAt}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn(statusConfig[order.status as keyof typeof statusConfig]?.className)}
-                      >
-                        {statusConfig[order.status as keyof typeof statusConfig]?.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Eye className="w-4 h-4 mr-2" />
-                            상세보기
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            취소
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      데이터를 불러오는 중입니다...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : filteredOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      등록된 주문이 없습니다.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredOrders.map((order, index) => (
+                    <TableRow key={order.id || `ord-${index}`} className="border-border hover:bg-muted/50">
+                      <TableCell className="font-mono text-sm text-primary">{order.id}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{order.product}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {order.supplier} → {order.receiver}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono">{order.quantity}개</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm">
+                          <span className="truncate max-w-24">{order.fromHub ? order.fromHub.replace(" 센터", "") : ""}</span>
+                          <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                          <span className="truncate max-w-24">{order.toHub ? order.toHub.replace(" 센터", "") : ""}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{order.createdAt}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={cn(statusConfig[order.status as keyof typeof statusConfig]?.className)}
+                        >
+                          {statusConfig[order.status as keyof typeof statusConfig]?.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Eye className="w-4 h-4 mr-2" />
+                              상세보기
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive">
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              취소
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>

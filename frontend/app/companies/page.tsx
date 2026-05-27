@@ -20,24 +20,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, Building2 } from "lucide-react"
-import { useState } from "react"
-
-const companies = [
-  { id: "CMP-001", name: "경기 건조식품", type: "supplier", hub: "경기 남부 센터", address: "경기도 이천시 부발읍 경충대로 1234", status: "active" },
-  { id: "CMP-002", name: "서울 플라스틱", type: "supplier", hub: "서울특별시 센터", address: "서울시 송파구 문정동 456", status: "active" },
-  { id: "CMP-003", name: "인천 전자", type: "supplier", hub: "인천광역시 센터", address: "인천시 남동구 논현동 789", status: "active" },
-  { id: "CMP-004", name: "대전 식품", type: "supplier", hub: "대전광역시 센터", address: "대전시 유성구 관평동 321", status: "active" },
-  { id: "CMP-005", name: "부산 수산물 도매", type: "receiver", hub: "부산광역시 센터", address: "부산시 동구 초량동 567", status: "active" },
-  { id: "CMP-006", name: "대구 제조업체", type: "receiver", hub: "대구광역시 센터", address: "대구시 북구 산격동 890", status: "inactive" },
-  { id: "CMP-007", name: "광주 조립업체", type: "receiver", hub: "광주광역시 센터", address: "광주시 서구 치평동 234", status: "active" },
-  { id: "CMP-008", name: "울산 가공업체", type: "receiver", hub: "울산광역시 센터", address: "울산시 남구 삼산동 678", status: "active" },
-  { id: "CMP-009", name: "경남 의류업체", type: "receiver", hub: "경상남도 센터", address: "창원시 의창구 팔용동 901", status: "active" },
-  { id: "CMP-010", name: "전북 화장품", type: "receiver", hub: "전북특별자치도 센터", address: "전주시 덕진구 금암동 345", status: "active" },
-]
+import { useState, useEffect } from "react"
+import { fetchApi } from "@/lib/api"
 
 export default function CompaniesPage() {
+  const [companies, setCompanies] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [typeFilter, setTypeFilter] = useState<"all" | "supplier" | "receiver">("all")
+
+  useEffect(() => {
+    async function loadCompanies() {
+      try {
+        setLoading(true)
+        const pageData = await fetchApi<any>('/companies?size=50')
+        setCompanies(pageData.content || [])
+      } catch (error) {
+        console.error("Failed to fetch companies:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadCompanies()
+  }, [])
 
   const filteredCompanies = companies.filter((company) => {
     const matchesSearch =
@@ -142,8 +147,21 @@ export default function CompaniesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCompanies.map((company) => (
-                  <TableRow key={company.id} className="border-border hover:bg-muted/50">
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      데이터를 불러오는 중입니다...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredCompanies.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      등록된 업체가 없습니다.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredCompanies.map((company, index) => (
+                    <TableRow key={company.id || `cmp-${index}`} className="border-border hover:bg-muted/50">
                     <TableCell className="font-mono text-sm text-primary">{company.id}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -199,7 +217,7 @@ export default function CompaniesPage() {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))}
+                )))}
               </TableBody>
             </Table>
           </CardContent>

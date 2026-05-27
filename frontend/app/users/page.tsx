@@ -21,20 +21,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Plus, Search, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { fetchApi } from "@/lib/api"
 
-const users = [
-  { id: "USR-001", username: "admin", nickname: "마스터관리자", email: "admin@sparta.com", role: "MASTER", hub: null, isPublic: true },
-  { id: "USR-002", username: "hub_seoul", nickname: "서울허브관리자", email: "seoul@sparta.com", role: "HUB_MANAGER", hub: "서울특별시 센터", isPublic: true },
-  { id: "USR-003", username: "hub_busan", nickname: "부산허브관리자", email: "busan@sparta.com", role: "HUB_MANAGER", hub: "부산광역시 센터", isPublic: true },
-  { id: "USR-004", username: "hub_daegu", nickname: "대구허브관리자", email: "daegu@sparta.com", role: "HUB_MANAGER", hub: "대구광역시 센터", isPublic: true },
-  { id: "USR-005", username: "driver_kim", nickname: "김배송", email: "kim@sparta.com", role: "DELIVERY_MANAGER", hub: null, isPublic: true },
-  { id: "USR-006", username: "driver_lee", nickname: "이운송", email: "lee@sparta.com", role: "DELIVERY_MANAGER", hub: null, isPublic: true },
-  { id: "USR-007", username: "company_a", nickname: "경기건조식품담당", email: "gyeonggi@company.com", role: "SUPPLIER_MANAGER", hub: "경기 남부 센터", isPublic: false },
-  { id: "USR-008", username: "company_b", nickname: "서울플라스틱담당", email: "seoul@company.com", role: "SUPPLIER_MANAGER", hub: "서울특별시 센터", isPublic: true },
-  { id: "USR-009", username: "company_c", nickname: "부산수산물담당", email: "busan@company.com", role: "SUPPLIER_MANAGER", hub: "부산광역시 센터", isPublic: true },
-  { id: "USR-010", username: "hub_incheon", nickname: "인천허브관리자", email: "incheon@sparta.com", role: "HUB_MANAGER", hub: "인천광역시 센터", isPublic: true },
-]
+
 
 const roleConfig = {
   MASTER: { label: "마스터 관리자", className: "bg-destructive/20 text-destructive border-destructive/30" },
@@ -44,8 +34,25 @@ const roleConfig = {
 }
 
 export default function UsersPage() {
+  const [users, setUsers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState<string>("all")
+
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        setLoading(true)
+        const pageData = await fetchApi<any>('/users?size=50')
+        setUsers(pageData.content || [])
+      } catch (error) {
+        console.error("Failed to fetch users:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadUsers()
+  }, [])
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -147,62 +154,76 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id} className="border-border hover:bg-muted/50">
-                    <TableCell className="font-mono text-sm text-primary">{user.username}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                            {user.nickname.slice(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium">{user.nickname}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={roleConfig[user.role as keyof typeof roleConfig]?.className}
-                      >
-                        {roleConfig[user.role as keyof typeof roleConfig]?.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{user.hub || "-"}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          user.isPublic
-                            ? "bg-success/20 text-success border-success/30"
-                            : "bg-muted text-muted-foreground border-muted"
-                        }
-                      >
-                        {user.isPublic ? "공개" : "비공개"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Pencil className="w-4 h-4 mr-2" />
-                            수정
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            비활성화
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      데이터를 불러오는 중입니다...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : filteredUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      등록된 사용자가 없습니다.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredUsers.map((user, index) => (
+                    <TableRow key={user.id || `usr-${index}`} className="border-border hover:bg-muted/50">
+                      <TableCell className="font-mono text-sm text-primary">{user.username}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-primary/20 text-primary text-xs">
+                              {user.nickname?.slice(0, 2) || "US"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">{user.nickname}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={roleConfig[user.role as keyof typeof roleConfig]?.className}
+                        >
+                          {roleConfig[user.role as keyof typeof roleConfig]?.label || user.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{user.hub || "-"}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={
+                            user.isPublic
+                              ? "bg-success/20 text-success border-success/30"
+                              : "bg-muted text-muted-foreground border-muted"
+                          }
+                        >
+                          {user.isPublic ? "공개" : "비공개"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Pencil className="w-4 h-4 mr-2" />
+                              수정
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive">
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              비활성화
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
