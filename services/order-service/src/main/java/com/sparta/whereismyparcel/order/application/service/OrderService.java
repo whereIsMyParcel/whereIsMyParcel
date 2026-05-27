@@ -46,8 +46,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.function.Function;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.UUID;
 
 @Slf4j
@@ -77,13 +80,18 @@ public class OrderService {
         List<SkuValidationResponse> validations = resolveSkuValidation(
                 companyFeignClient.validateProducts(userId, productVariantIds)
         );
+        Map<UUID, SkuValidationResponse> validationMap = validations.stream()
+                .collect(Collectors.toMap(
+                        SkuValidationResponse::variantId,
+                        Function.identity()
+                ));
 
         List<OrderItem> orderItems = request.items().stream()
                 .map(i -> {
-                    SkuValidationResponse skuInfo = validations.stream()
-                            .filter(v -> v.variantId().equals(i.productVariantId()))
-                            .findFirst()
-                            .orElseThrow(InvalidOrderItemsException::new);
+                    SkuValidationResponse skuInfo = validationMap.get(i.productVariantId());
+                    if (skuInfo == null) {
+                        throw new InvalidOrderItemsException();
+                    }
                     return OrderItem.create(
                             i.productVariantId(),
                             skuInfo.skuCode(),
@@ -172,8 +180,6 @@ public class OrderService {
     ) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-
-            predicates.add(cb.isNull(root.get("deletedAt")));
 
             if (!isMaster) {
                 predicates.add(cb.equal(root.get("orderedBy"), userId));
