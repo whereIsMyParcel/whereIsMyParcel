@@ -3,6 +3,7 @@ package com.sparta.whereismyparcel.shipment.application.service;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.shipment.domain.entity.Shipment;
 import com.sparta.whereismyparcel.shipment.domain.entity.ShipmentHistory;
+import com.sparta.whereismyparcel.shipment.domain.entity.ShipmentItem;
 import com.sparta.whereismyparcel.shipment.domain.entity.ShipmentStatus;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentAlreadyStartedException;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentNotFoundException;
@@ -188,15 +189,35 @@ public class ShipmentService {
                 request.recipientPhone()
         );
 
+        //배송 상품 생성
+        List<ShipmentItem> items = createShipmentItems(shipment, request.items());
+
         // 배송 이력 생성
         List<ShipmentHistory> histories = createShipmentHistories(
                 shipment,
                 routes
         );
 
+        shipment.addItems(items);
         shipment.addHistories(histories);
 
         return shipment;
+    }
+
+    /**
+     * 배송 상품 생성
+     */
+    private List<ShipmentItem> createShipmentItems(
+            Shipment shipment,
+            List<ShipmentCreateRequest.Item> items
+    ) {
+        return items.stream()
+                .map(item -> ShipmentItem.create(
+                        shipment,
+                        item.productVariantId(),
+                        item.quantity()
+                ))
+                .toList();
     }
 
     /**

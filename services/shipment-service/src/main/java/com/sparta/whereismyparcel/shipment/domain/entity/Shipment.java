@@ -67,6 +67,9 @@ public class Shipment extends BaseEntity {
     @OneToMany(mappedBy = "shipment", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ShipmentHistory> histories = new ArrayList<>();
 
+    @OneToMany(mappedBy = "shipment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ShipmentItem> items = new ArrayList<>();
+
 
     @Builder(access = AccessLevel.PRIVATE)
     private Shipment(
@@ -160,12 +163,15 @@ public class Shipment extends BaseEntity {
         return this.shipmentStatus == ShipmentStatus.DELIVERED;
     }
 
-    public void addHistories(List<ShipmentHistory> histories){
+    public void addHistories(List<ShipmentHistory> histories) {
         this.histories = histories;
     }
 
+    public void addItems(List<ShipmentItem> items){
+        this.items = items;
+    }
 
-    public void start(){
+    public void start() {
         if (this.shipmentStatus != ShipmentStatus.HUB_WAITING) {
             throw new ShipmentCannotBeStartedException();
         }
