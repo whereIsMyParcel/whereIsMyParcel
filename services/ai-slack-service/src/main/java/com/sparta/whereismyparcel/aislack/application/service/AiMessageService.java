@@ -9,6 +9,7 @@ import com.sparta.whereismyparcel.aislack.infrastructure.client.OrderFeignClient
 import com.sparta.whereismyparcel.aislack.infrastructure.client.ShipmentFeignClient;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.UserFeignClient;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.request.GeminiRequest;
+import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.request.OrderInternalRequest;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.GeminiResponse;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.OrderResponse;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.ShipmentResponse;
@@ -43,27 +44,30 @@ public class AiMessageService {
     /**
      * AI 분석 요청을 생성하고 초기 상태로 저장합니다.
      * 이 메서드는 주문/배송 정보 생성 시 호출되어 AI 분석을 위한 초기 데이터를 준비합니다.
-     * @param orderId 분석할 주문 ID
-     * @param UserId 요청을 시작한 사용자 ID (Feign Client 호출 시 필요)
+     * @param request 분석할 주문 ID
+     * @param callerUserId 요청을 시작한 사용자 ID (Feign Client 호출 시 필요)
      * @return 생성된 AiMessage의 ID
      */
     @Transactional
-    public UUID createAiAnalysisRequest(UUID orderId, String UserId) {
+    public UUID createAiAnalysisRequest(OrderInternalRequest request, String callerUserId) { // 시그니처 변경
+        UUID orderId = request.orderId(); // OrderInternalRequest에서 orderId 추출
+
         // 1. 주문, 배송, 사용자 정보 가져오기
-        OrderResponse order = getOrderDetails(orderId, UserId);
-        List<ShipmentResponse> shipments = getShipmentDetails(orderId, UserId);
-        UserResponse recipientUser = getUserDetails(order.recipientName(), UserId); // 예시: 주문의 수령인 이름으로 사용자 조회
+        OrderResponse order = getOrderDetails(orderId, callerUserId); // 추출된 orderId 사용
+        List<ShipmentResponse> shipments = getShipmentDetails(orderId, callerUserId); // 추출된 orderId 사용
+        UserResponse recipientUser = getUserDetails(order.recipientName(), callerUserId);
 
         // 2. Gemini AI 프롬프트 생성
         String prompt = promptGenerator.createGeminiPrompt(order, shipments, recipientUser);
 
         // 3. AiMessage 엔티티 생성 및 REQUESTED 상태로 저장
-        AiMessage aiMessage = AiMessage.create(orderId, prompt);
+        AiMessage aiMessage = AiMessage.create(orderId, prompt); // 추출된 orderId 사용
         aiMessageRepository.save(aiMessage);
 
         log.info("AI 분석 요청 생성: orderId={}, aiMessageId={}", orderId, aiMessage.getAiId());
         return aiMessage.getAiId();
     }
+
 
     /**
      * 특정 AiMessage에 대해 Gemini AI 분석을 수행하고 결과를 업데이트합니다.
