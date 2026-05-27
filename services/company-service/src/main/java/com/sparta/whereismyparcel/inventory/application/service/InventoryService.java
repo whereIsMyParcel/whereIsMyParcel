@@ -1,6 +1,5 @@
 package com.sparta.whereismyparcel.inventory.application.service;
 
-import com.sparta.whereismyparcel.common.infrastructure.client.HubFeignClient;
 import com.sparta.whereismyparcel.inventory.domain.entity.Inventory;
 import com.sparta.whereismyparcel.inventory.domain.exception.InventoryAlreadyExistsException;
 import com.sparta.whereismyparcel.inventory.domain.exception.InventoryNotFoundException;
@@ -29,7 +28,6 @@ public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
     private final ProductVariantRepository productVariantRepository;
-    private final HubFeignClient hubFeignClient;
 
     @Transactional
     public AddInventoryResponse addStock(AddInventoryRequest request) {
@@ -68,7 +66,7 @@ public class InventoryService {
     }
 
     /**
-     * ③ 주문 생성 시 수량 예약 선점 (Order ➡️ Inventory)
+     * 주문 생성 시 수량 예약 선점 (Order ➡︎ Inventory)
      */
     @Transactional
     public List<StockReservationResponse> reserveOrderStock(StockReservationRequest request) {
@@ -89,7 +87,7 @@ public class InventoryService {
     }
 
     /**
-     * ④ 배송 시작 시 출고 확정 및 예약 해제 (Delivery ➡️ Inventory)
+     * 배송 시작 시 출고 확정 및 예약 해제 (Delivery ➡︎ Inventory)
      */
     @Transactional
     public void confirmDeliveryLaunch(StockConfirmRequest request) {
@@ -107,7 +105,7 @@ public class InventoryService {
     }
 
     /**
-     * 🔄 예외 시나리오: 배송 전 주문 취소 시 재고 복구 (Order/Delivery ➡️ Inventory)
+     * 예외 시나리오: 배송 전 주문 취소 시 재고 복구 (Order/Delivery ➡︎ Inventory)
      */
     @Transactional
     public void cancelOrderReservation(StockCancelRequest request) {

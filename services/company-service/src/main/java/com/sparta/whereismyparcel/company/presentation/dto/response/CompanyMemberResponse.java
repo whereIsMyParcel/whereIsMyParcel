@@ -11,9 +11,9 @@ public record CompanyMemberResponse(
 ) {
     public static CompanyMemberResponse from(CompanyMember companyMember) {
         return new CompanyMemberResponse(
-                companyMember.getCompanyMemberId(),
+                companyMember.getId(),
                 companyMember.getUserId(),
-                companyMember.getCompany().getCompanyId()
+                companyMember.getCompany().getId()
         );
     }
 }

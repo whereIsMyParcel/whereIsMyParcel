@@ -1,5 +1,6 @@
 package com.sparta.whereismyparcel.company.presentation.controller;
 
+import com.sparta.whereismyparcel.common.dto.PageResponse;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.company.application.service.CompanyService;
 import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyMemberRequest;
@@ -11,6 +12,7 @@ import com.sparta.whereismyparcel.company.presentation.dto.response.CompanyRespo
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.converters.models.PageableAsQueryParam;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -46,12 +48,14 @@ public class CompanyController {
     }
 
     @Operation(summary = "업체 목록 조회", description = "ALL")
+    @PageableAsQueryParam
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<CompanyListResponse>>> getCompanies (
+    public ResponseEntity<ApiResponse<PageResponse<CompanyListResponse>>> getCompanies (
             @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         Page<CompanyListResponse> companies = companyService.getCompanies(pageable);
-        return ResponseEntity.ok(ApiResponse.success(companies));
+        PageResponse<CompanyListResponse> pageResponse = PageResponse.from(companies);
+        return ResponseEntity.ok(ApiResponse.success(pageResponse));
     }
 
     @Operation(summary = "업체 수정", description = "COMPANY_MANAGER")
@@ -76,7 +80,7 @@ public class CompanyController {
         return ResponseEntity.ok(ApiResponse.ok());
     }
 
-    @Operation(summary = "업체 멤버 등록",description = "COMPANY_MANAGER")
+    @Operation(summary = "업체 멤버 등록", description = "COMPANY_MANAGER")
     @PostMapping("/{companyId}/member")
     @PreAuthorize("hasRole('COMPANY_MANAGER')")
     public ResponseEntity<ApiResponse<CompanyMemberResponse>> registerCompanyMember(
@@ -87,13 +91,25 @@ public class CompanyController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(response));
     }
 
-    @Operation(summary = "업체 멤버 조회",description = "ALL")
+    @Operation(summary = "업체 멤버 조회", description = "ALL")
     @GetMapping("/{companyId}/member/{memberId}")
     public ResponseEntity<ApiResponse<CompanyMemberResponse>> getCompanyMember(
             @PathVariable UUID companyId,
             @PathVariable UUID memberId
     )  {
         return ResponseEntity.ok(ApiResponse.success(companyService.getCompanyMember(companyId, memberId)));
+    }
+
+    @Operation(summary = "업체 멤버 목록 조회", description = "ALL")
+    @PageableAsQueryParam
+    @GetMapping("/{companyId}/member")
+    public ResponseEntity<ApiResponse<PageResponse<CompanyMemberResponse>>> getCompanyMembers(
+            @PathVariable UUID companyId,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        Page<CompanyMemberResponse> companyMembers = companyService.getCompanyMembers(companyId, pageable);
+        PageResponse<CompanyMemberResponse> pageResponse = PageResponse.from(companyMembers);
+        return ResponseEntity.ok(ApiResponse.success(pageResponse));
     }
 
     @Operation(summary = "업체 멤버 삭제", description = "COMPANY_MANAGER")

@@ -24,7 +24,7 @@ public class Inventory extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "inventory_id", nullable = false, updatable = false)
-    private UUID inventoryId;
+    private UUID id;
 
     @Column(name = "hub_id", nullable = false)
     private UUID hubId;
