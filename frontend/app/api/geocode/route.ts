@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Address is required" }, { status: 400 });
   }
 
-  const apiKey = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
+  const apiKey = process.env.KAKAO_REST_API_KEY;
   
   if (!apiKey) {
     return NextResponse.json({ error: "Kakao API key is missing" }, { status: 500 });

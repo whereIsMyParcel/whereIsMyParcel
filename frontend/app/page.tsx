@@ -25,10 +25,10 @@ export default function DashboardPage() {
       fetchApi<any>('/products?size=1').catch(() => ({ totalElements: 0 })),
     ]).then(([hubs, orders, shipments, products]) => {
       setStats({
-        hubCount: hubs.totalElements ?? hubs.content?.length ?? 0,
-        orderCount: orders.totalElements ?? orders.content?.length ?? 0,
-        shipmentCount: shipments.totalElements ?? shipments.content?.length ?? 0,
-        productCount: products.totalElements ?? products.content?.length ?? 0,
+        hubCount: hubs?.totalElements ?? hubs?.content?.length ?? 0,
+        orderCount: orders?.totalElements ?? orders?.content?.length ?? 0,
+        shipmentCount: shipments?.totalElements ?? shipments?.content?.length ?? 0,
+        productCount: products?.totalElements ?? products?.content?.length ?? 0,
       })
     }).catch(console.error)
   }, [])

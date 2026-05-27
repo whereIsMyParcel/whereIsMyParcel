@@ -19,7 +19,7 @@ const EMPTY_RESPONSE = {
 export async function GET(request: NextRequest) {
   try {
     const params = request.nextUrl.searchParams.toString()
-    const url = `http://localhost:8086/api/v1/ai-slack${params ? '?' + params : ''}`
+    const url = `${process.env.AI_SLACK_SERVICE_URL || 'http://localhost:8086'}/api/v1/ai-slack${params ? '?' + params : ''}`
 
     const forwardHeaders: Record<string, string> = {
       'Content-Type': 'application/json',

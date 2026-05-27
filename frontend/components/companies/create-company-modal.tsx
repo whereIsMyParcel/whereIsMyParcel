@@ -57,7 +57,7 @@ export function CreateCompanyModal({ onSuccess }: { onSuccess: () => void }) {
   useEffect(() => {
     if (open && hubs.length === 0) {
       fetchApi<any>('/hubs?size=50').then((pageData) => {
-        setHubs(pageData.content || []);
+        setHubs(pageData?.content || []);
       }).catch((err) => {
         console.error(err);
         toast.error("허브 목록을 불러오지 못했습니다.");

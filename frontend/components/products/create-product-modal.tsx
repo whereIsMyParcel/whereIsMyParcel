@@ -56,8 +56,8 @@ export function CreateProductModal({ onSuccess }: { onSuccess: () => void }) {
         fetchApi<any>('/hubs?size=50'),
         fetchApi<any>('/companies?size=100'),
       ]).then(([hubData, companyData]) => {
-        setHubs(hubData.content || [])
-        setCompanies(companyData.content || [])
+        setHubs(hubData?.content || [])
+        setCompanies(companyData?.content || [])
       }).catch((err) => {
         console.error(err)
         toast.error("데이터를 불러오지 못했습니다.")

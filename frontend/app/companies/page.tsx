@@ -42,7 +42,7 @@ export default function CompaniesPage() {
     try {
       const pageData = await fetchApi<any>('/hubs?size=50')
       const hubMap: Record<string, string> = {}
-      ;(pageData.content || []).forEach((hub: any) => {
+      ;(pageData?.content || []).forEach((hub: any) => {
         hubMap[hub.hubId] = hub.name
       })
       setHubs(hubMap)
@@ -55,7 +55,7 @@ export default function CompaniesPage() {
     try {
       setLoading(true)
       const pageData = await fetchApi<any>('/companies?size=50')
-      setCompanies(pageData.content || [])
+      setCompanies(pageData?.content || [])
     } catch (error) {
       console.error("Failed to fetch companies:", error)
       toast.error("업체 목록을 불러오지 못했습니다.")

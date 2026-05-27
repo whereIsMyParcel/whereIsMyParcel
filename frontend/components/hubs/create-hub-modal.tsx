@@ -69,11 +69,7 @@ export function CreateHubModal({ onSuccess }: { onSuccess: () => void }) {
     form.setValue("address", fullAddress);
 
     // 좌표 변환 (Geocoding)
-    const apiKey = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
-    if (!apiKey) {
-      toast.warning("카카오 API 키가 없습니다. 위도/경도를 직접 입력해주세요.");
-      return;
-    }
+    // 클라이언트에서는 apiKey 여부를 체크하지 않고 서버 라우트(/api/geocode)만 믿고 호출합니다.
 
     try {
       const response = await fetch(`/api/geocode?address=${encodeURIComponent(fullAddress)}`);

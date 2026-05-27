@@ -53,7 +53,7 @@ export default function UsersPage() {
     try {
       const data = await fetchApi<any>('/hubs?size=50')
       const hubMap: Record<string, string> = {}
-      ;(data.content || []).forEach((h: any) => { hubMap[h.hubId] = h.name })
+      ;(data?.content || []).forEach((h: any) => { hubMap[h.hubId] = h.name })
       setHubs(hubMap)
     } catch (error) {
       console.error("Failed to fetch hubs:", error)
@@ -64,7 +64,7 @@ export default function UsersPage() {
     try {
       setLoading(true)
       const pageData = await fetchApi<any>('/users?size=50')
-      setUsers(pageData.content || [])
+      setUsers(pageData?.content || [])
     } catch (error) {
       console.error("Failed to fetch users:", error)
       toast.error("사용자 목록을 불러오지 못했습니다.")

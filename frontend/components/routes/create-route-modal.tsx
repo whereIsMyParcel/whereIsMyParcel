@@ -57,7 +57,7 @@ export function CreateRouteModal({ onSuccess }: CreateRouteModalProps) {
   useEffect(() => {
     if (open) {
       fetchApi<any>('/hubs?size=50')
-        .then(res => setHubs(res.content || []))
+        .then(res => setHubs(res?.content || []))
         .catch(err => console.error("Failed to load hubs", err));
     }
   }, [open]);

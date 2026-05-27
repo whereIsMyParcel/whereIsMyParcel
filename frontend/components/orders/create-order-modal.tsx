@@ -83,10 +83,10 @@ export function CreateOrderModal({ open, onOpenChange, onSuccess }: CreateOrderM
   useEffect(() => {
     if (open) {
       fetchApi<any>('/companies?size=100').then((data) => {
-        setCompanies(data.content || [])
+        setCompanies(data?.content || [])
       }).catch(console.error)
       fetchApi<any>('/products?size=100').then((data) => {
-        setProducts(data.content || [])
+        setProducts(data?.content || [])
       }).catch(console.error)
     } else {
       form.reset()
@@ -104,7 +104,7 @@ export function CreateOrderModal({ open, onOpenChange, onSuccess }: CreateOrderM
       form.setValue("companyMemberId", "")
       fetchApi<any>(`/companies/${selectedCompanyId}/member?size=100`)
         .then((data) => {
-          setCompanyMembers(data.content || [])
+          setCompanyMembers(data?.content || [])
         })
         .catch(() => {
           setCompanyMembers([])
@@ -120,7 +120,7 @@ export function CreateOrderModal({ open, onOpenChange, onSuccess }: CreateOrderM
       form.setValue("productVariantId", "")
       fetchApi<any>(`/products/${selectedProductId}/variants`)
         .then((data: any) => {
-          setVariants(Array.isArray(data) ? data : (data.content || []))
+          setVariants(Array.isArray(data) ? data : (data?.content || []))
         })
         .catch(() => {
           setVariants([])
@@ -152,7 +152,7 @@ export function CreateOrderModal({ open, onOpenChange, onSuccess }: CreateOrderM
       const payload = {
         companyMemberId: values.companyMemberId,
         requestMemo: values.requestMemo || "",
-        requestedDeliveryAt: new Date(values.requestedDeliveryAt).toISOString().replace("Z", ""),
+        requestedDeliveryAt: values.requestedDeliveryAt.length === 16 ? values.requestedDeliveryAt + ":00" : values.requestedDeliveryAt,
         recipientName: values.recipientName,
         recipientPhone: values.recipientPhone,
         zipCode: values.zipCode,

@@ -14,7 +14,7 @@ function forwardHeaders(request: NextRequest): Record<string, string> {
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const response = await fetch(
-      `http://localhost:8086/api/v1/ai-slack/${params.id}`,
+      `${process.env.AI_SLACK_SERVICE_URL || 'http://localhost:8086'}/api/v1/ai-slack/${params.id}`,
       { headers: forwardHeaders(request) }
     )
     const data = await response.json()
@@ -28,7 +28,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     const body = await request.text()
     const response = await fetch(
-      `http://localhost:8086/api/v1/ai-slack/${params.id}`,
+      `${process.env.AI_SLACK_SERVICE_URL || 'http://localhost:8086'}/api/v1/ai-slack/${params.id}`,
       { method: 'PUT', headers: forwardHeaders(request), body }
     )
     const data = await response.json()
@@ -41,7 +41,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const response = await fetch(
-      `http://localhost:8086/api/v1/ai-slack/${params.id}`,
+      `${process.env.AI_SLACK_SERVICE_URL || 'http://localhost:8086'}/api/v1/ai-slack/${params.id}`,
       { method: 'DELETE', headers: forwardHeaders(request) }
     )
     return NextResponse.json({}, { status: response.status })

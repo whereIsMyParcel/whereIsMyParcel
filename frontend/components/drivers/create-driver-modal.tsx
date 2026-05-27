@@ -70,7 +70,7 @@ export function CreateDriverModal({ open, onOpenChange, onSuccess }: CreateDrive
   useEffect(() => {
     if (open) {
       fetchApi<any>('/hubs?size=50').then((data) => {
-        setHubs(data.content || [])
+        setHubs(data?.content || [])
       }).catch(() => {
         toast.error("허브 목록을 불러오지 못했습니다.")
       })
