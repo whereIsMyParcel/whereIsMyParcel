@@ -86,11 +86,19 @@ services:
       - where-is-my-parcel-network
 
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:3.5.0
     container_name: loki
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
     labels:
       org.springframework.boot.ignore: "true"
@@ -98,7 +106,7 @@ services:
       - where-is-my-parcel-network
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.4.1
     container_name: prometheus
     ports:
       - "9090:9090"
@@ -109,6 +117,12 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.enable-lifecycle'
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
     labels:
       org.springframework.boot.ignore: "true"
@@ -116,7 +130,7 @@ services:
       - where-is-my-parcel-network
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.6.1
     container_name: grafana
     ports:
       - "3000:3000"
@@ -127,7 +141,14 @@ services:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
     labels:
       org.springframework.boot.ignore: "true"
@@ -229,8 +250,8 @@ services:
       KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID:-user-service-admin}
       KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-user-service-admin-secret}
       ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
-      SENTRY_DSN: ${SENTRY_DSN}
-
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      LOKI_URL: http://loki:3100
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
@@ -384,5 +405,6 @@ networks:
 volumes:
   postgres-data:
   redis-data:
+  loki-data:
   prometheus-data:
   grafana-data:
