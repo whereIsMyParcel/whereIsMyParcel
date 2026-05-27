@@ -24,13 +24,13 @@ whereIsMyParcel은 Prometheus, Grafana, Loki, Zipkin, Sentry를 조합하여 메
 
 `infra/docker-compose.yml`에 모니터링 스택이 정의되어 있다.
 
-| 컨테이너    | 이미지                     | 포트  | 역할                      |
-|------------|--------------------------|-------|--------------------------|
-| prometheus | prom/prometheus:latest    | 9090  | 메트릭 수집 및 저장          |
-| grafana    | grafana/grafana:latest    | 3000  | 메트릭·로그 시각화 대시보드    |
-| loki       | grafana/loki:latest       | 3100  | 로그 집계 저장소             |
-| zipkin     | openzipkin/zipkin:3       | 9411  | 분산 트레이싱 수집 및 조회    |
-| sentry     | sentry.io (외부 SaaS)     | -     | 에러 추적 및 알림            |
+| 컨테이너    | 이미지                          | 포트  | 역할                      |
+|------------|-------------------------------|-------|--------------------------|
+| prometheus | prom/prometheus:v3.4.1        | 9090  | 메트릭 수집 및 저장          |
+| grafana    | grafana/grafana:11.6.1        | 3000  | 메트릭·로그 시각화 대시보드    |
+| loki       | grafana/loki:3.5.0            | 3100  | 로그 집계 저장소             |
+| zipkin     | openzipkin/zipkin:3           | 9411  | 분산 트레이싱 수집 및 조회    |
+| sentry     | sentry.io (외부 SaaS)          | -     | 에러 추적 및 알림            |
 
 ### 로컬 실행
 
@@ -93,6 +93,13 @@ management:
         include: health, info, prometheus
 ```
 
+> Config Server가 로컬 `application.yaml` 설정을 덮어쓸 수 있으므로, Docker Compose 실행 시에는 환경변수로 명시적으로 설정한다.
+>
+> ```yaml
+> # docker-compose.yml environment 블록
+> MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+> ```
+
 ### 의존성 (루트 `build.gradle`)
 
 ```groovy
@@ -130,9 +137,23 @@ datasources:
 
 Loki4j Logback Appender를 사용하여 서비스 로그를 Loki로 직접 푸시한다.
 
+### 적용 범위
+
+`logback-spring.xml`은 **전체 서비스**에 적용되어 있다.
+
+| 서비스 | 적용 여부 |
+|--------|---------|
+| api-gateway | ✅ |
+| user-service | ✅ |
+| hub-service | ✅ |
+| company-service | ✅ |
+| order-service | ✅ |
+| shipment-service | ✅ |
+| ai-slack-service | ✅ |
+
 ### 설정 파일
 
-`services/user-service/src/main/resources/logback-spring.xml`
+`services/{service-name}/src/main/resources/logback-spring.xml`
 
 ```xml
 <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
@@ -202,7 +223,7 @@ management:
       probability: 1.0   # 100% 샘플링 (개발 환경)
   zipkin:
     tracing:
-      endpoint: ${ZIPKIN_URL:http://localhost:9411}/api/v2/spans
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411}/api/v2/spans
 ```
 
 > 운영 환경에서는 `probability`를 `0.1` ~ `0.3` 수준으로 낮추는 것을 권장한다.
@@ -216,13 +237,15 @@ implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
 ### 환경변수
 
-| 변수               | 기본값                   | 설명             |
-|-------------------|------------------------|----------------|
-| `ZIPKIN_ENDPOINT` | `http://localhost:9411` | Zipkin 서버 URL |
+| 변수               | 기본값                              | 설명             |
+|-------------------|------------------------------------|----------------|
+| `ZIPKIN_ENDPOINT` | `http://localhost:9411/api/v2/spans` | Zipkin 트레이스 수신 URL |
 
 ---
 
 ## Sentry 에러 추적
+
+> **현재 적용 범위**: user-service만 적용. 향후 다른 서비스로 확장 예정.
 
 5xx 예외를 실시간으로 캡처하여 Sentry 대시보드 및 Slack으로 알림을 보낸다.
 
@@ -252,6 +275,9 @@ sentry:
 
 - `SENTRY_DSN` 미설정 시 Sentry 자동 비활성화
 
+> **주의**: `SENTRY_DSN`은 `.env` 파일에서만 관리하고, docker-compose `environment` 블록에 직접 추가하지 않는다.
+> `environment` 블록에 `SENTRY_DSN: ${SENTRY_DSN:-}` 형태로 추가하면 호스트 셸에 해당 변수가 없을 경우 빈 문자열로 치환되어 `.env` 값을 덮어쓴다.
+
 ### 의존성 (루트 `build.gradle`)
 
 ```groovy
@@ -280,8 +306,9 @@ implementation 'io.sentry:sentry-logback:7.22.0'
 
 `.env` 파일 또는 Docker Compose `environment` 블록에서 설정한다.
 
-| 변수               | 설명                    |
-|-------------------|------------------------|
-| `ZIPKIN_ENDPOINT` | Zipkin 트레이스 수신 URL  |
-| `LOKI_URL`        | Loki 로그 푸시 URL       |
-| `SENTRY_DSN`      | Sentry 에러 수집 DSN     |
+| 변수                                       | 설명                                         |
+|-------------------------------------------|---------------------------------------------|
+| `ZIPKIN_ENDPOINT`                         | Zipkin 트레이스 수신 URL                       |
+| `LOKI_URL`                                | Loki 로그 푸시 URL                            |
+| `SENTRY_DSN`                              | Sentry 에러 수집 DSN (`.env`에서만 관리)        |
+| `MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE` | Actuator 노출 엔드포인트 (docker-compose 환경) |
