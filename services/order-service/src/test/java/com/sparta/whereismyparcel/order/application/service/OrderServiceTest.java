@@ -12,6 +12,7 @@ import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaFailedException;
 import com.sparta.whereismyparcel.order.domain.repository.OrderRepository;
+import com.sparta.whereismyparcel.order.infrastructure.client.AiSlackFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.ShipmentFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
@@ -50,6 +51,9 @@ class OrderServiceTest {
     private ShipmentFeignClient shipmentFeignClient;
 
     @Mock
+    private AiSlackFeignClient aiSlackFeignClient;
+
+    @Mock
     private OrderCreateSaga orderCreateSaga;
 
     @InjectMocks
@@ -70,12 +74,15 @@ class OrderServiceTest {
             order.confirm();
             return null;
         }).given(orderCreateSaga).execute(any(), any());
+        given(aiSlackFeignClient.createAiAnalysisRequest(any(), any()))
+                .willReturn(ApiResponse.success(UUID.randomUUID()));
 
         // when
         OrderCreateResponse response = orderService.createOrder(userId, request);
 
         // then
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.CONFIRMED);
+        then(aiSlackFeignClient).should().createAiAnalysisRequest(any(), any());
     }
 
     @Test
@@ -112,6 +119,33 @@ class OrderServiceTest {
 
         // then
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.FAILED);
+        then(aiSlackFeignClient).should(never()).createAiAnalysisRequest(any(), any());
+    }
+
+    @Test
+    @DisplayName("AI 분석 요청에 실패해도 주문 생성 성공 응답은 유지된다")
+    void createOrderSuccessEvenIfAiAnalysisRequestFails() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        OrderCreateRequest request = createRequest();
+        given(companyFeignClient.validateProducts(any(), any()))
+                .willReturn(ApiResponse.success(createValidationResponse(request)));
+        given(orderRepository.save(any())).willAnswer(i -> i.getArgument(0));
+        willAnswer(invocation -> {
+            Order order = invocation.getArgument(0);
+            order.reserveStock();
+            order.confirm();
+            return null;
+        }).given(orderCreateSaga).execute(any(), any());
+        given(aiSlackFeignClient.createAiAnalysisRequest(any(), any()))
+                .willThrow(new RuntimeException("AI service unavailable"));
+
+        // when
+        OrderCreateResponse response = orderService.createOrder(userId, request);
+
+        // then
+        assertThat(response.orderStatus()).isEqualTo(OrderStatus.CONFIRMED);
+        then(aiSlackFeignClient).should().createAiAnalysisRequest(any(), any());
     }
 
     @Test
