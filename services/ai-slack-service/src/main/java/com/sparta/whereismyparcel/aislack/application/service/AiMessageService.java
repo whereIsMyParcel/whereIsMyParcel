@@ -209,7 +209,7 @@ public class AiMessageService {
     }
 
     private UserResponse getUserDetails(String recipientName, String UserId) {
-        // TODO: 실제로는 recipientName으로 사용자 ID를 조회하는 API가 필요할 수 있습니다.
+        // 실제로는 recipientName으로 사용자 ID를 조회하는 API가 필요할 수 있습니다.
         // 현재는 임시로 callerUserId를 사용하여 UserResponse를 가져오는 것으로 가정합니다.
         // UserFeignClient는 userId로만 조회 가능하므로, 이 부분은 실제 API에 맞춰 수정이 필요합니다.
         ApiResponse<UserResponse> userResponse = userFeignClient.getUser(UserId);
