@@ -125,6 +125,7 @@ public class ShipmentService {
     private List<UUID> extractProductVariantIds(ShipmentCreateRequest request) {
         return request.items().stream()
                 .map(ShipmentCreateRequest.Item::productVariantId)
+                .distinct()
                 .collect(toList());
     }
 
