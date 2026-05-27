@@ -16,10 +16,7 @@ import com.sparta.whereismyparcel.shipment.presentation.dto.request.DecreaseInve
 import com.sparta.whereismyparcel.shipment.presentation.dto.request.GetDestinationHubIdRequest;
 import com.sparta.whereismyparcel.shipment.presentation.dto.request.ShipmentCreateRequest;
 import com.sparta.whereismyparcel.shipment.presentation.dto.request.ShipmentSearchRequest;
-import com.sparta.whereismyparcel.shipment.presentation.dto.response.GetProductHubIdResponse;
-import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShipmentCreateResponse;
-import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShipmentViewResponse;
-import com.sparta.whereismyparcel.shipment.presentation.dto.response.ShortestPathResponse;
+import com.sparta.whereismyparcel.shipment.presentation.dto.response.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -296,6 +293,18 @@ public class ShipmentService {
         shipment.start();
 
         inventoryClient.decrease(DecreaseInventoryRequest.from(shipment.getItems()));
+    }
+
+    public List<ShipmentInfoResponse> getShipmentByOrderId(UUID orderId) {
+        List<Shipment> shipments = shipmentRepository.findAllByOrderId(orderId);
+
+        if (shipments.isEmpty()) {
+            throw new ShipmentNotFoundException();
+        }
+
+        return shipments.stream()
+                .map(ShipmentInfoResponse::from)
+                .toList();
     }
 
     private void validateUpdatePermission(List<Shipment> shipments, UUID managerId) {
