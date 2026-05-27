@@ -2,16 +2,17 @@ package com.sparta.whereismyparcel.company.domain.entity;
 
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLRestriction;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
 @Getter
-@Table(name = "p_companies")
+@Table(name = "p_companies", schema = "company_db")
 @SQLRestriction("deleted_at IS NULL")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Company extends BaseEntity {
@@ -19,7 +20,7 @@ public class Company extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "company_id", nullable = false,  updatable = false)
-    private UUID id;
+    private UUID companyId;
 
     @Column(name = "hub_id", nullable = false)
     private UUID hubId;
@@ -28,8 +29,8 @@ public class Company extends BaseEntity {
     @Column(name = "company_type", nullable = false, length = 30)
     private CompanyType companyType;
 
-    @Column(name = "name", nullable = false, length = 100)
-    private String name;
+    @Column(name = "company_name", nullable = false, length = 100)
+    private String companyName;
 
     @Column(name = "business_number", nullable = false, length = 30)
     private String businessNumber;
@@ -49,11 +50,6 @@ public class Company extends BaseEntity {
     @Column(name = "address_detail", length = 255)
     private String addressDetail;
 
-    @OneToMany(mappedBy = "company", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = false)
-    private List<CompanyMember> companyMembers = new ArrayList<>();
-
-    // 위도 경도 추후 추가 예정
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
     private CompanyStatus status;
@@ -62,7 +58,7 @@ public class Company extends BaseEntity {
     private Company(
             UUID hubId,
             CompanyType companyType,
-            String name,
+            String companyName,
             String businessNumber,
             String managerName,
             String managerPhone,
@@ -72,7 +68,7 @@ public class Company extends BaseEntity {
     ) {
         this.hubId = hubId;
         this.companyType = companyType;
-        this.name = name;
+        this.companyName = companyName;
         this.businessNumber = businessNumber;
         this.managerName = managerName;
         this.managerPhone = managerPhone;
@@ -85,19 +81,18 @@ public class Company extends BaseEntity {
     public static Company create(
             UUID hubId,
             CompanyType companyType,
-            String name,
+            String companyName,
             String businessNumber,
             String managerName,
             String managerPhone,
             String zipCode,
             String address,
-            String addressDetail,
-            UUID managerUserId
+            String addressDetail
     ) {
         Company company = Company.builder()
                 .hubId(hubId)
                 .companyType(companyType)
-                .name(name)
+                .companyName(companyName)
                 .businessNumber(businessNumber)
                 .managerName(managerName)
                 .managerPhone(managerPhone)
@@ -106,14 +101,12 @@ public class Company extends BaseEntity {
                 .addressDetail(addressDetail)
                 .build();
 
-        CompanyMember.addMember(managerUserId, company, CompanyRole.MANAGER);
-
         return company;
     }
 
     public void updateDetails(
             CompanyType companyType,
-            String name,
+            String companyName,
             String managerName,
             String managerPhone,
             String zipCode,
@@ -122,7 +115,7 @@ public class Company extends BaseEntity {
             CompanyStatus status
     ) {
         this.companyType = companyType;
-        this.name = name;
+        this.companyName = companyName;
         this.managerName = managerName;
         this.managerPhone = managerPhone;
         this.zipCode = zipCode;
@@ -131,16 +124,8 @@ public class Company extends BaseEntity {
         this.status = status;
     }
 
-    public void addMember(CompanyMember companyMember) {
-        this.companyMembers.add(companyMember);
-    }
-
     public void delete(String userId) {
         super.softDelete(userId);
         this.status = CompanyStatus.INACTIVE;
-
-        if (this.companyMembers != null) {
-            this.companyMembers.forEach(companyMember -> {companyMember.delete(userId);});
-        }
     }
 }

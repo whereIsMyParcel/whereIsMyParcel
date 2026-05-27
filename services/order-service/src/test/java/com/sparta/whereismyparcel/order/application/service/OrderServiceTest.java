@@ -5,6 +5,7 @@ import com.sparta.whereismyparcel.order.application.saga.OrderCreateSaga;
 import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
 import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
+import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderSearchDateRangeException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
 import com.sparta.whereismyparcel.order.domain.exception.OrderErrorCode;
 import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
@@ -15,6 +16,7 @@ import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient
 import com.sparta.whereismyparcel.order.infrastructure.client.ShipmentFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
+import com.sparta.whereismyparcel.order.presentation.dto.request.OrderUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -323,6 +325,207 @@ class OrderServiceTest {
         assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
     }
 
+    @Test
+    @DisplayName("검색 시작일이 종료일보다 이후이면 주문 목록을 조회할 수 없다")
+    void getOrdersWithInvalidDateRangeThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        LocalDateTime startDate = LocalDateTime.now().plusDays(1);
+        LocalDateTime endDate = LocalDateTime.now();
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.getOrders(
+                userId,
+                "MASTER",
+                null,
+                null,
+                startDate,
+                endDate,
+                pageable
+        )).isInstanceOf(InvalidOrderSearchDateRangeException.class);
+    }
+
+    @Test
+    @DisplayName("주문자는 PENDING 상태 주문의 요청 정보를 수정할 수 있다")
+    void updatePendingOrderByOwner() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderUpdateResponse response = orderService.updateOrder(userId, "COMPANY_MANAGER", orderId, request);
+
+        // then
+        assertThat(response.requestMemo()).isEqualTo(request.requestMemo());
+        assertThat(response.deliveryDeadline()).isEqualTo(request.deliveryDeadline());
+        assertThat(order.getRequestMemo()).isEqualTo(request.requestMemo());
+        assertThat(order.getDeliveryDeadline()).isEqualTo(request.deliveryDeadline());
+    }
+
+    @Test
+    @DisplayName("MASTER는 STOCK_RESERVED 상태 주문의 요청 정보를 수정할 수 있다")
+    void updateStockReservedOrderByMaster() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(UUID.randomUUID().toString());
+        order.reserveStock();
+        OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderUpdateResponse response = orderService.updateOrder(userId, "MASTER", orderId, request);
+
+        // then
+        assertThat(response.orderStatus()).isEqualTo(OrderStatus.STOCK_RESERVED);
+        assertThat(response.requestMemo()).isEqualTo(request.requestMemo());
+        assertThat(response.deliveryDeadline()).isEqualTo(request.deliveryDeadline());
+    }
+
+    @Test
+    @DisplayName("요청 정보 일부만 수정하면 나머지 값은 유지된다")
+    void updateOrderPartiallyKeepsExistingValue() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        LocalDateTime originalDeliveryDeadline = order.getDeliveryDeadline();
+        OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", null);
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderUpdateResponse response = orderService.updateOrder(userId, "COMPANY_MANAGER", orderId, request);
+
+        // then
+        assertThat(response.requestMemo()).isEqualTo(request.requestMemo());
+        assertThat(response.deliveryDeadline()).isEqualTo(originalDeliveryDeadline);
+        assertThat(order.getDeliveryDeadline()).isEqualTo(originalDeliveryDeadline);
+    }
+
+    @Test
+    @DisplayName("주문자가 아닌 사용자는 주문 요청 정보를 수정할 수 없다")
+    void updateOrderByNonOwnerThrowsException() {
+        // given
+        String ownerId = UUID.randomUUID().toString();
+        String otherUserId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(ownerId);
+        OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.updateOrder(otherUserId, "COMPANY_MANAGER", orderId, request))
+                .isInstanceOf(OrderNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("CONFIRMED 상태 주문은 요청 정보를 수정할 수 없다")
+    void updateConfirmedOrderThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        order.reserveStock();
+        order.confirm();
+        OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.updateOrder(userId, "COMPANY_MANAGER", orderId, request))
+                .isInstanceOf(InvalidOrderStatusException.class);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주문은 요청 정보를 수정할 수 없다")
+    void updateOrderNotFoundThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        OrderUpdateRequest request = new OrderUpdateRequest("변경 요청사항", LocalDateTime.now().plusDays(5));
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> orderService.updateOrder(userId, "MASTER", orderId, request))
+                .isInstanceOf(OrderNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("MASTER는 주문을 삭제할 수 있다")
+    void deleteOrderByMaster() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        order.fail();
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        orderService.deleteOrder(userId, "MASTER", orderId);
+
+        // then
+        assertThat(order.getDeletedAt()).isNotNull();
+        assertThat(order.getDeletedBy()).isEqualTo(userId);
+        assertThat(order.getOrderItems())
+                .allSatisfy(item -> {
+                    assertThat(item.getDeletedAt()).isNotNull();
+                    assertThat(item.getDeletedBy()).isEqualTo(userId);
+                });
+    }
+
+    @Test
+    @DisplayName("PENDING 상태 주문은 삭제할 수 없다")
+    void deletePendingOrderThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.of(order));
+
+        // when & then
+        assertThatThrownBy(() -> orderService.deleteOrder(userId, "MASTER", orderId))
+                .isInstanceOf(InvalidOrderStatusException.class);
+        assertThat(order.getDeletedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("MASTER가 아닌 사용자는 주문을 삭제할 수 없다")
+    void deleteOrderByNonMasterThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+
+        // when & then
+        assertThatThrownBy(() -> orderService.deleteOrder(userId, "COMPANY_MANAGER", orderId))
+                .isInstanceOf(OrderNotFoundException.class);
+        then(orderRepository).should(never()).findByOrderIdAndDeletedAtIsNull(any());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주문은 삭제할 수 없다")
+    void deleteOrderNotFoundThrowsException() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        given(orderRepository.findByOrderIdAndDeletedAtIsNull(orderId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> orderService.deleteOrder(userId, "MASTER", orderId))
+                .isInstanceOf(OrderNotFoundException.class);
+    }
+
     private OrderCreateRequest createRequest() {
         return new OrderCreateRequest(
                 UUID.randomUUID(),
@@ -340,7 +543,7 @@ class OrderServiceTest {
     private SkuValidationResponse createValidationResponse(OrderCreateRequest request) {
         List<SkuValidationResponse.Item> items = request.items().stream()
                 .map(i -> new SkuValidationResponse.Item(
-                        i.productVariantId(), "상품명", "옵션명", 10_000L))
+                        i.productVariantId(), "SKU-001", "옵션명", 10_000, "ON_SALE"))
                 .toList();
         return new SkuValidationResponse(items);
     }
@@ -359,6 +562,7 @@ class OrderServiceTest {
                 orderedBy,
                 List.of(OrderItem.create(
                         UUID.randomUUID(),
+                        "SKU-001",
                         "상품명",
                         "옵션명",
                         10_000L,

@@ -2,7 +2,8 @@ package com.sparta.whereismyparcel.hub.presentation.controller;
 
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.common.security.UserRole;
-import com.sparta.whereismyparcel.hub.application.service.HubService;
+import com.sparta.whereismyparcel.hub.application.service.HubCommandService;
+import com.sparta.whereismyparcel.hub.application.service.HubQueryService;
 import com.sparta.whereismyparcel.hub.domain.exception.ForbiddenException;
 import com.sparta.whereismyparcel.hub.presentation.controller.util.PaginationController;
 import com.sparta.whereismyparcel.hub.presentation.dto.request.CreateHubRequest;
@@ -24,7 +25,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class HubController {
 
-    private final HubService hubService;
+    private final HubCommandService hubCommandService;
+    private final HubQueryService hubQueryService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<HubResponse>> createHub(
@@ -32,20 +34,20 @@ public class HubController {
             @RequestBody @Valid CreateHubRequest request) {
         validateAdminRole(role);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(hubService.createHub(
+                .body(ApiResponse.created(hubCommandService.createHub(
                         request.name(), request.address(), request.latitude(), request.longitude())));
     }
 
     @GetMapping("/{hubId}")
     public ResponseEntity<ApiResponse<HubResponse>> getHub(@PathVariable UUID hubId) {
-        return ResponseEntity.ok(ApiResponse.success(hubService.getHub(hubId)));
+        return ResponseEntity.ok(ApiResponse.success(hubQueryService.getHub(hubId)));
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<HubResponse>>> getHubs(
             @PageableDefault(size = 10) Pageable pageable) {
         PaginationController.validatePageSize(pageable);
-        return ResponseEntity.ok(ApiResponse.success(hubService.getHubs(pageable)));
+        return ResponseEntity.ok(ApiResponse.success(hubQueryService.getHubs(pageable)));
     }
 
     @PatchMapping("/{hubId}")
@@ -54,7 +56,7 @@ public class HubController {
             @PathVariable UUID hubId,
             @RequestBody @Valid UpdateHubRequest request) {
         validateAdminRole(role);
-        return ResponseEntity.ok(ApiResponse.success(hubService.updateHub(
+        return ResponseEntity.ok(ApiResponse.success(hubCommandService.updateHub(
                 hubId, request.name(), request.address(), request.latitude(), request.longitude())));
     }
 
@@ -64,7 +66,7 @@ public class HubController {
             @RequestHeader("X-User-Id") String userId,
             @PathVariable UUID hubId) {
         validateAdminRole(role);
-        hubService.deleteHub(hubId, userId);
+        hubCommandService.deleteHub(hubId, userId);
         return ResponseEntity.ok(ApiResponse.ok());
     }
 

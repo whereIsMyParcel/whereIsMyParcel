@@ -4,7 +4,7 @@ import com.sparta.whereismyparcel.shipment.domain.entity.Shipment;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentAlreadyStartedException;
 import com.sparta.whereismyparcel.shipment.domain.exception.ShipmentUpdateDeniedException;
 import com.sparta.whereismyparcel.shipment.domain.repository.ShipmentRepository;
-import com.sparta.whereismyparcel.shipment.infrastructure.client.OrderClient;
+import com.sparta.whereismyparcel.shipment.infrastructure.client.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -20,8 +20,13 @@ import static org.mockito.Mockito.*;
 class ShipmentServiceTest {
 
     private ShipmentRepository shipmentRepository;
+    private DeliveryManagerService deliveryManagerService;
     private ShipmentService shipmentService;
     private OrderClient orderClient;
+    private ProductClient productClient;
+    private CompanyClient companyClient;
+    private HubClient hubClient;
+    private InventoryClient inventoryClient;
 
     private UUID orderId;
     private UUID managerId;
@@ -29,8 +34,22 @@ class ShipmentServiceTest {
     @BeforeEach
     void setUp() {
         shipmentRepository = mock(ShipmentRepository.class);
+        deliveryManagerService = mock(DeliveryManagerService.class);
         orderClient = mock(OrderClient.class);
-        shipmentService = new ShipmentService(shipmentRepository, orderClient);
+        productClient = mock(ProductClient.class);
+        companyClient = mock(CompanyClient.class);
+        hubClient = mock(HubClient.class);
+        inventoryClient = mock(InventoryClient.class);
+
+        shipmentService = new ShipmentService(
+                shipmentRepository,
+                deliveryManagerService,
+                orderClient,
+                productClient,
+                companyClient,
+                hubClient,
+                inventoryClient
+        );
 
         orderId = UUID.randomUUID();
         managerId = UUID.randomUUID();
@@ -197,8 +216,6 @@ class ShipmentServiceTest {
             verify(orderClient, never())
                     .complete(anyString(), any(UUID.class));
         }
-
-
     }
 
     private Shipment cancelableShipment(boolean canCancel) {

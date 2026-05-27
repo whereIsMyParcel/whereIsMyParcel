@@ -3,6 +3,7 @@ package com.sparta.whereismyparcel.user.domain.repository;
 import com.sparta.whereismyparcel.user.domain.entity.User;
 import com.sparta.whereismyparcel.user.domain.UserRole;
 import com.sparta.whereismyparcel.user.domain.UserStatus;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -26,6 +27,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 	Optional<User> findBySlackId(String slackId);
 
 	Optional<User> findByBusinessNumber(String businessNumber);
+
+	List<User> findAllByCompanyId(UUID companyId);
 
 	@Query("SELECT u FROM User u WHERE (:role IS NULL OR u.role = :role) AND (:status IS NULL OR u.status = :status)")
 	Page<User> findAllByFilter(@Param("role") UserRole role, @Param("status") UserStatus status, Pageable pageable);

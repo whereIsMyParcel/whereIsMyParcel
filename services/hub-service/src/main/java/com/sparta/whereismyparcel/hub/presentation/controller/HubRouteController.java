@@ -2,7 +2,8 @@ package com.sparta.whereismyparcel.hub.presentation.controller;
 
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.common.security.UserRole;
-import com.sparta.whereismyparcel.hub.application.service.HubRouteService;
+import com.sparta.whereismyparcel.hub.application.service.HubRouteCommandService;
+import com.sparta.whereismyparcel.hub.application.service.HubRouteQueryService;
 import com.sparta.whereismyparcel.hub.domain.exception.ForbiddenException;
 import com.sparta.whereismyparcel.hub.presentation.controller.util.PaginationController;
 import com.sparta.whereismyparcel.hub.presentation.dto.request.CreateHubRouteRequest;
@@ -24,7 +25,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class HubRouteController {
 
-    private final HubRouteService hubRouteService;
+    private final HubRouteCommandService hubRouteCommandService;
+    private final HubRouteQueryService hubRouteQueryService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<HubRouteResponse>> createHubRoute(
@@ -32,19 +34,19 @@ public class HubRouteController {
             @RequestBody @Valid CreateHubRouteRequest request) {
         validateAdminRole(role);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(hubRouteService.createHubRoute(request)));
+                .body(ApiResponse.created(hubRouteCommandService.createHubRoute(request)));
     }
 
     @GetMapping("/{hubRouteId}")
     public ResponseEntity<ApiResponse<HubRouteResponse>> getHubRoute(@PathVariable UUID hubRouteId) {
-        return ResponseEntity.ok(ApiResponse.success(hubRouteService.getHubRoute(hubRouteId)));
+        return ResponseEntity.ok(ApiResponse.success(hubRouteQueryService.getHubRoute(hubRouteId)));
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<HubRouteResponse>>> getHubRoutes(
             @PageableDefault(size = 10) Pageable pageable) {
         PaginationController.validatePageSize(pageable);
-        return ResponseEntity.ok(ApiResponse.success(hubRouteService.getHubRoutes(pageable)));
+        return ResponseEntity.ok(ApiResponse.success(hubRouteQueryService.getHubRoutes(pageable)));
     }
 
     @PatchMapping("/{hubRouteId}")
@@ -53,7 +55,7 @@ public class HubRouteController {
             @PathVariable UUID hubRouteId,
             @RequestBody @Valid UpdateHubRouteRequest request) {
         validateAdminRole(role);
-        return ResponseEntity.ok(ApiResponse.success(hubRouteService.updateHubRoute(hubRouteId, request)));
+        return ResponseEntity.ok(ApiResponse.success(hubRouteCommandService.updateHubRoute(hubRouteId, request)));
     }
 
     @DeleteMapping("/{hubRouteId}")
@@ -62,7 +64,7 @@ public class HubRouteController {
             @RequestHeader("X-User-Id") String userId,
             @PathVariable UUID hubRouteId) {
         validateAdminRole(role);
-        hubRouteService.deleteHubRoute(hubRouteId, userId);
+        hubRouteCommandService.deleteHubRoute(hubRouteId, userId);
         return ResponseEntity.ok(ApiResponse.ok());
     }
 

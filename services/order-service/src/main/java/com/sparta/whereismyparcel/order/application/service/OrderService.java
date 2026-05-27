@@ -7,6 +7,7 @@ import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
 import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsException;
+import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderSearchDateRangeException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
 import com.sparta.whereismyparcel.order.domain.exception.OrderNotFoundException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedException;
@@ -18,11 +19,13 @@ import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.Shipme
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.StockCancelRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
+import com.sparta.whereismyparcel.order.presentation.dto.request.OrderUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCompleteResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDetailResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderListResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderUpdateResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -67,14 +70,15 @@ public class OrderService {
         List<OrderItem> orderItems = request.items().stream()
                 .map(i -> {
                     SkuValidationResponse.Item skuInfo = validation.items().stream()
-                            .filter(v -> v.skuId().equals(i.productVariantId()))
+                            .filter(v -> v.id().equals(i.productVariantId()))
                             .findFirst()
                             .orElseThrow(InvalidOrderItemsException::new);
                     return OrderItem.create(
                             i.productVariantId(),
-                            skuInfo.productName(),
-                            skuInfo.optionName(),
-                            skuInfo.unitPrice(),
+                            skuInfo.skuCode(),
+                            skuInfo.variantName(),
+                            skuInfo.variantName(),
+                            skuInfo.variantPrice().longValue(),
                             i.quantity()
                     );
                 })
@@ -96,8 +100,12 @@ public class OrderService {
 
         orderRepository.save(order);
 
-        List<OrderCreateSagaContext.OrderItemInfo> itemInfos = request.items().stream()
-                .map(i -> new OrderCreateSagaContext.OrderItemInfo(i.productVariantId(), i.quantity()))
+        List<OrderCreateSagaContext.OrderItemInfo> itemInfos = orderItems.stream()
+                .map(item -> new OrderCreateSagaContext.OrderItemInfo(
+                        item.getProductVariantId(),
+                        item.getSkuCode(),
+                        item.getQuantity()
+                ))
                 .toList();
         OrderCreateSagaContext context = new OrderCreateSagaContext(
                 order.getOrderId(), userId, itemInfos);
@@ -124,6 +132,8 @@ public class OrderService {
             LocalDateTime endDate,
             Pageable pageable
     ) {
+        validateSearchDateRange(startDate, endDate);
+
         return orderRepository.searchOrders(
                 userId,
                 isMaster(role),
@@ -140,6 +150,25 @@ public class OrderService {
                 .orElseThrow(OrderNotFoundException::new);
 
         return OrderDetailResponse.from(order);
+    }
+
+    @Transactional
+    public OrderUpdateResponse updateOrder(
+            String userId,
+            String role,
+            UUID orderId,
+            OrderUpdateRequest request
+    ) {
+        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+                .orElseThrow(OrderNotFoundException::new);
+
+        if (!isMaster(role)) {
+            validateOrderOwner(order, userId);
+        }
+
+        order.updateRequestInfo(request.requestMemo(), request.deliveryDeadline());
+
+        return OrderUpdateResponse.from(order);
     }
 
     @Transactional
@@ -186,6 +215,22 @@ public class OrderService {
         return OrderCompleteResponse.from(order);
     }
 
+    @Transactional
+    public void deleteOrder(String userId, String role, UUID orderId) {
+        if (!isMaster(role)) {
+            throw new OrderNotFoundException();
+        }
+
+        Order order = orderRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+                .orElseThrow(OrderNotFoundException::new);
+
+        if (!order.isDeletable()) {
+            throw new InvalidOrderStatusException();
+        }
+
+        order.delete(userId);
+    }
+
     private void validateOrderOwner(Order order, String userId) {
         if (!order.getOrderedBy().equals(userId)) {
             throw new OrderNotFoundException();
@@ -202,12 +247,18 @@ public class OrderService {
         return MASTER_ROLE.equals(role);
     }
 
+    private void validateSearchDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new InvalidOrderSearchDateRangeException();
+        }
+    }
+
     private void cancelStockReservation(String userId, Order order) {
         StockCancelRequest request = new StockCancelRequest(
                 order.getOrderId(),
                 order.getOrderItems().stream()
                         .map(item -> new StockCancelRequest.Item(
-                                item.getProductVariantId(),
+                                item.getSkuCode(),
                                 item.getQuantity()
                         ))
                         .toList()
