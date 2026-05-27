@@ -1,13 +1,16 @@
+/*
 package com.sparta.whereismyparcel.aislack.infrastructure.client.dto.request;
 
 import jakarta.validation.constraints.NotEmpty;
 
 import java.util.List;
 
+*/
 /*
  * Google Gemini API 요청 DTO
  * Gemini의 표준 입력 스키마인 { "contents": [ { "parts": [ { "text": "..." } ] } ] } 구조를 따릅니다.
- */
+ *//*
+
 public record GeminiRequest(
         @NotEmpty(message = "콘텐츠 바디는 비어있을 수 없습니다.")
         List<Content> contents,
@@ -30,4 +33,4 @@ public record GeminiRequest(
             List<String> stopSequences
     ) {}
 
-}
+}*/
