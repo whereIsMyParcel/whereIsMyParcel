@@ -1,4 +1,4 @@
-package com.sparta.whereismyparcel.user.infrastructure.config;
+package com.sparta.whereismyparcel.common.filter;
 
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
@@ -7,13 +7,9 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.MDC;
-import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
-@Component
-@Order(1)
 public class MdcLoggingFilter implements Filter {
 
     @Override
