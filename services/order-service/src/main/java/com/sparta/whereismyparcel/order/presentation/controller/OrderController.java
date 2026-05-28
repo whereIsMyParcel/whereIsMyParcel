@@ -21,6 +21,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -37,6 +38,7 @@ public class OrderController {
 
     private final OrderService orderService;
 
+    @PreAuthorize("hasAnyRole('MASTER', 'COMPANY_MANAGER')")
     @PostMapping
     public ResponseEntity<ApiResponse<OrderCreateResponse>> createOrder(
             @RequestBody @Valid OrderCreateRequest request
@@ -45,6 +47,7 @@ public class OrderController {
                 .body(ApiResponse.created(orderService.createOrder(CurrentUser.userId(), request)));
     }
 
+    @PreAuthorize("hasAnyRole('MASTER', 'COMPANY_MANAGER')")
     @GetMapping
     public ResponseEntity<ApiResponse<Page<OrderListResponse>>> getOrders(
             @RequestParam(required = false) OrderStatus status,
@@ -64,6 +67,7 @@ public class OrderController {
         )));
     }
 
+    @PreAuthorize("hasAnyRole('MASTER', 'COMPANY_MANAGER')")
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderDetailResponse>> getOrder(
             @PathVariable UUID orderId
@@ -73,6 +77,7 @@ public class OrderController {
         ));
     }
 
+    @PreAuthorize("hasAnyRole('MASTER', 'COMPANY_MANAGER')")
     @PatchMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderUpdateResponse>> updateOrder(
             @PathVariable UUID orderId,
@@ -83,13 +88,17 @@ public class OrderController {
         ));
     }
 
+    @PreAuthorize("hasAnyRole('MASTER', 'COMPANY_MANAGER')")
     @PatchMapping("/{orderId}/cancel")
     public ResponseEntity<ApiResponse<OrderCancelResponse>> cancelOrder(
             @PathVariable UUID orderId
     ) {
-        return ResponseEntity.ok(ApiResponse.success(orderService.cancelOrder(CurrentUser.userId(), orderId)));
+        return ResponseEntity.ok(ApiResponse.success(
+                orderService.cancelOrder(CurrentUser.userId(), CurrentUser.role(), orderId)
+        ));
     }
 
+    @PreAuthorize("hasRole('MASTER')")
     @DeleteMapping("/{orderId}")
     public ResponseEntity<ApiResponse<Void>> deleteOrder(
             @PathVariable UUID orderId
