@@ -111,7 +111,7 @@ public class AiMessageService {
             aiMessage = aiMessageTransactionService.getAndPrepareAiMessageForAnalysis(aiMessageId); // CHANGED
 
             // 1.5. Slack 알림 발송에 필요한 정보 미리 가져오기 (AI 호출 전)
-            order = getOrderDetails(aiMessage.getOrderId(), "ai-slack-internal-service"); // ADDED
+            order = getOrderDetails(aiMessage.getOrderId()); // ADDED
             shipments = getShipmentDetails(aiMessage.getOrderId(), "ai-slack-internal-service"); // ADDED
             recipientUser = getUserDetails(order.recipientName(), "ai-slack-internal-service"); // ADDED
 
