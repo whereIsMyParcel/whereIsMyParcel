@@ -1,10 +1,17 @@
 # 📦 WhereIsMyParcel
 > MSA 기반 B2B 물류 허브 및 배송 경로 최적화 관리 시스템
 
-![Java](https://img.shields.io/badge/java-17-%23ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/spring_boot-3.5.x-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
-![Spring Cloud](https://img.shields.io/badge/spring_cloud-2025.0.x-6DB33F?style=for-the-badge&logo=spring&logoColor=white)
-![Gradle](https://img.shields.io/badge/Gradle-02303A.svg?style=for-the-badge&logo=Gradle&logoColor=white)
+<p align="left">
+  <img src="https://img.shields.io/badge/java-17-%23ED8B00?style=for-the-badge&logo=openjdk&logoColor=white">
+  <img src="https://img.shields.io/badge/spring_boot-3.5.x-6DB33F?style=for-the-badge&logo=springboot&logoColor=white">
+  <img src="https://img.shields.io/badge/spring_cloud-2025.0.x-6DB33F?style=for-the-badge&logo=spring&logoColor=white">
+  <img src="https://img.shields.io/badge/Gradle-02303A.svg?style=for-the-badge&logo=Gradle&logoColor=white">
+  <br>
+  <img src="https://img.shields.io/badge/postgresql-4169E1?style=for-the-badge&logo=postgresql&logoColor=white">
+  <img src="https://img.shields.io/badge/redis-%23DD0031.svg?style=for-the-badge&logo=redis&logoColor=white">
+  <img src="https://img.shields.io/badge/Keycloak-222329?style=for-the-badge&logo=keycloak&logoColor=6298e0">
+  <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white">
+</p>
 
 <br/>
 
@@ -20,8 +27,8 @@
 ---
 
 ## 📌 1. 프로젝트 개요
-**WhereIsMyParcel**은 전국 17개 물류 허브와 각 생산/수령 업체를 연동하여 상품의 생산부터 배송까지의 전 과정을 효율적으로 관리하는 **B2B 물류 시스템**입니다. 
-단일 서버의 한계를 극복하기 위해 **MSA(Microservice Architecture)** 로 구축되었으며, 각 도메인별 서비스가 독립적으로 배포 및 확장 가능하도록 설계되었습니다.
+**WhereIsMyParcel**은 전국 17개 물류 허브와 각 생산/수령 업체를 연동하여 상품의 생산부터 배송까지의 전 과정을 효율적으로 관리하는 **B2B 물류 시스템**입니다.  
+단일 서버의 한계를 극복하기 위해 **MSA(Microservice Architecture)** 로 구축되었으며, 각 도메인별 서비스가 독립적으로 배포 및 확장 가능하도록 설계되었습니다.  
 최단 경로 알고리즘, AI 기반 배송 기한 예측, 경로 최적화 및 상태 머신(State Machine)을 활용한 안전한 주문 관리를 통해 자동화되고 신뢰성 높은 물류 프로세스를 제공합니다.
 
 ---
@@ -30,7 +37,6 @@
 
 ### 2.1 인프라 아키텍처 설계도
 <img width="1728" height="1080" alt="인프라" src="https://github.com/user-attachments/assets/f2e381c6-dad4-4a2c-9c21-5e270fffd1ff" />
-
 
 ### 2.2 마이크로서비스(MSA) 구성
 - **Eureka Server**: 서비스 디스커버리 및 레지스트리 관리
@@ -60,14 +66,15 @@
 
 ## 💻 4. 기술 스택
 
-### Backend & Architecture
+### Backend & Security
 - **Language**: Java 17
 - **Framework**: Spring Boot 3.5.x
 - **Cloud/MSA**: Spring Cloud 2025.0.x (Eureka, Gateway, Config, OpenFeign)
+- **Security(IAM)**: Keycloak (인증/인가 및 Role 기반 접근 제어)
 
 ### Database & Caching
 - **RDBMS**: PostgreSQL
-- **NoSQL/Cache**: Redis (세션 및 빠른 재고 캐싱 등)
+- **NoSQL/Cache**: Redis (세션 관리 및 빠른 데이터 캐싱)
 
 ### Monitoring & Logging
 - **Metrics**: Prometheus, Micrometer
@@ -76,7 +83,7 @@
 
 ### External API & AI
 - **AI/ML**: Google Gemini API
-- **Map/Route**: Naver Map API
+- **Map/Route**: KaKao Map API
 - **Notification**: Slack Webhook API
 
 ### Build & Deploy
@@ -98,33 +105,33 @@
 - 로컬 환경 내 `.env` 파일 구성 (API Key 등)
 
 ### 로컬 실행 순서
+
 1. **저장소 클론 및 환경변수 설정**
-   ```bash
+```bash
    git clone https://github.com/your-username/whereIsMyParcel.git
    cd whereIsMyParcel
-   cp .env.example .env  # 본인의 환경에 맞게 변수 수정
-   ```
+   cp .env.example .env
+```
 
-2. **인프라(DB, Redis, 모니터링 등) 컨테이너 구동**
-   ```bash
+2. **인프라(DB, Redis, Keycloak 등) 컨테이너 구동**
+```bash
    docker-compose up -d
-   ```
+```
 
 3. **프로젝트 빌드 (멀티 모듈 전체)**
-   ```bash
+```bash
    ./gradlew clean build -x test
-   ```
+```
 
 4. **MSA 서비스 순차적 실행** (반드시 Eureka, Config가 먼저 기동되어야 합니다.)
    - `services:eureka-server`
    - `services:config-server`
    - `services:api-gateway`
-   - 이후 도메인 서비스들 실행 (`user-service`, `order-service` 등)
+   - 이후 도메인 서비스들 실행
 
 ---
 
 ## 📚 7. API 문서
 시스템이 구동된 후, API Gateway를 거쳐 각 마이크로서비스의 API 명세를 확인할 수 있습니다.
+
 - **Swagger UI**: `http://localhost:8080/swagger-ui.html`
-
-
