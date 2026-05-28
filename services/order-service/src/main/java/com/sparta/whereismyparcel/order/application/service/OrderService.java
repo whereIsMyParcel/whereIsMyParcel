@@ -279,15 +279,17 @@ public class OrderService {
 
         order.validateCancelableTime(LocalDateTime.now(), ORDER_CANCEL_LIMIT);
 
+        String ownerId = order.getOrderedBy();
+
         switch (order.getOrderStatus()) {
             case PENDING -> order.cancel();
             case STOCK_RESERVED -> {
-                cancelStockReservation(userId, order);
+                cancelStockReservation(ownerId, order);
                 order.cancel();
             }
             case CONFIRMED -> {
-                cancelShipments(userId, order);
-                cancelStockReservation(userId, order);
+                cancelShipments(ownerId, order);
+                cancelStockReservation(ownerId, order);
                 order.cancel();
             }
             default -> throw new InvalidOrderStatusException();
