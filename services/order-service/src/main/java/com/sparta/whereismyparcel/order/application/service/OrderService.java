@@ -265,11 +265,13 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderCancelResponse cancelOrder(String userId, UUID orderId) {
+    public OrderCancelResponse cancelOrder(String userId, String role, UUID orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
-        validateOrderOwner(order, userId);
+        if (!isMaster(role)) {
+            validateOrderOwner(order, userId);
+        }
 
         if (!isCancelableStatus(order.getOrderStatus())) {
             throw new InvalidOrderStatusException();
@@ -277,15 +279,17 @@ public class OrderService {
 
         order.validateCancelableTime(LocalDateTime.now(), ORDER_CANCEL_LIMIT);
 
+        String ownerId = order.getOrderedBy();
+
         switch (order.getOrderStatus()) {
             case PENDING -> order.cancel();
             case STOCK_RESERVED -> {
-                cancelStockReservation(userId, order);
+                cancelStockReservation(ownerId, order);
                 order.cancel();
             }
             case CONFIRMED -> {
-                cancelShipments(userId, order);
-                cancelStockReservation(userId, order);
+                cancelShipments(ownerId, order);
+                cancelStockReservation(ownerId, order);
                 order.cancel();
             }
             default -> throw new InvalidOrderStatusException();

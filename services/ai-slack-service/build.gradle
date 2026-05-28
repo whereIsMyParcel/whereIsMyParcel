@@ -39,6 +39,9 @@ dependencies {
 	implementation 'org.springframework.retry:spring-retry'
 	implementation 'org.springframework:spring-aspects'
 
+	// Jackson Java 8 Date/Time Module 추가
+	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
 	runtimeOnly 'org.postgresql:postgresql'
 
 	compileOnly 'org.projectlombok:lombok'
