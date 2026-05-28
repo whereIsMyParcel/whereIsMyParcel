@@ -25,15 +25,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.*;
 
-@Transactional(readOnly = true)
 @RequiredArgsConstructor
 @Service
 public class ShipmentService {
@@ -123,14 +119,18 @@ public class ShipmentService {
             UUID originHubId,
             UUID destinationHubId
     ) {
+        List<ShortestPathResponse.RouteSegmentResponse> routes;
 
-        var shortestPath = Optional.ofNullable(
-                        hubClient.getShortestPath(originHubId, destinationHubId)
-                )
-                .map(ApiResponse::data)
-                .orElseThrow(ShipmentRouteNotFoundException::new);
-
-        List<ShortestPathResponse.RouteSegmentResponse> routes = shortestPath.routes();
+        if (originHubId.equals(destinationHubId)) {
+            routes = Collections.emptyList();
+        } else {
+            //from 허브 ~ to 허브 다른 경우만, 최적 경로 조회 api 호출
+            routes = Optional.ofNullable(
+                            hubClient.getShortestPath(originHubId, destinationHubId)
+                    )
+                    .map(ApiResponse::data)
+                    .orElseThrow(ShipmentRouteNotFoundException::new).routes();
+        }
 
         UUID companyManagerId =
                 deliveryManagerService.assignCompanyDeliveryManagers(destinationHubId, 1)
@@ -149,15 +149,13 @@ public class ShipmentService {
         );
 
         shipment.addItems(createShipmentItems(shipment, request.items()));
-        shipment.addHistories(createShipmentHistories(shipment, routes));
+        if (!routes.isEmpty()) {
+            shipment.addHistories(createShipmentHistories(shipment, routes));
+        }
 
         return shipment;
     }
 
-    @Transactional
-    public List<Shipment> saveShipments(List<Shipment> shipments) {
-        return shipmentRepository.saveAll(shipments);
-    }
 
     /**
      * 요청 상품 옵션 ID 추출
@@ -270,7 +268,6 @@ public class ShipmentService {
             Shipment shipment,
             List<ShortestPathResponse.RouteSegmentResponse> routes
     ) {
-
         // 허브 배송 담당자 배정
         List<UUID> hubManagers =
                 deliveryManagerService.assignHubDeliveryManagers(routes.size());
@@ -315,6 +312,7 @@ public class ShipmentService {
         shipment.delete(userId);
     }
 
+    @Transactional(readOnly = true)
     public ShipmentViewResponse getShipment(String userId, UUID shipmentId) {
         Shipment shipment = shipmentRepository.findById(shipmentId)
                 .orElseThrow(ShipmentNotFoundException::new);
@@ -322,6 +320,7 @@ public class ShipmentService {
         return ShipmentViewResponse.from(shipment);
     }
 
+    @Transactional(readOnly = true)
     public Page<ShipmentViewResponse> search(ShipmentSearchRequest request, Pageable pageable) {
         return shipmentRepository.search(request, pageable)
                 .map(ShipmentViewResponse::from);
@@ -346,6 +345,7 @@ public class ShipmentService {
         );
     }
 
+    @Transactional(readOnly = true)
     public List<ShipmentInfoResponse> getShipmentByOrderId(UUID orderId) {
         List<Shipment> shipments = shipmentRepository.findAllByOrderId(orderId);
 
