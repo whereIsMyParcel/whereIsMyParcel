@@ -219,6 +219,7 @@ services:
       ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       LOKI_URL: http://loki:3100
+      APP_CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
     restart: unless-stopped
     networks:
       - where-is-my-parcel-network
