@@ -25,6 +25,6 @@ public interface CompanyClient {
 
     @GetMapping("/internal/v1/products/search-hub")
     ApiResponse<List<GetProductHubIdResponse>> getHubMappingsByProductIds(
-            @RequestParam List<UUID> productVariantIds
+            @RequestParam("productVariantId") List<UUID> productVariantIds
     );
 }
