@@ -2,8 +2,8 @@ package com.sparta.whereismyparcel.aislack.infrastructure.client;
 
 import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.ShipmentResponse;
 import com.sparta.whereismyparcel.common.exception.ServiceUnavailableException;
-
 import com.sparta.whereismyparcel.common.response.ApiResponse;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
@@ -17,9 +17,16 @@ public class ShipmentFeignClientFallbackFactory implements FallbackFactory<Shipm
 
 	@Override
 	public ShipmentFeignClient create(Throwable cause) {
-		log.warn("[CircuitBreaker] shipment-service 호출 실패", cause);
-		return (userId, orderId) -> {
-			throw new ServiceUnavailableException();
+		if (cause instanceof CallNotPermittedException) {
+			log.warn("[CircuitBreaker] shipment-service 호출 차단 (Circuit Open)");
+		} else {
+			log.warn("[CircuitBreaker] shipment-service 호출 실패", cause);
+		}
+		return new ShipmentFeignClient() {
+			@Override
+			public ApiResponse<List<ShipmentResponse>> getShipmentByOrderId(String userId, UUID orderId) {
+				throw new ServiceUnavailableException();
+			}
 		};
 	}
 }

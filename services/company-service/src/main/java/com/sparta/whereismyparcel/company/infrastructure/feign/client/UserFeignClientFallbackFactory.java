@@ -1,9 +1,9 @@
 package com.sparta.whereismyparcel.company.infrastructure.feign.client;
 
 import com.sparta.whereismyparcel.common.exception.ServiceUnavailableException;
-
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.company.presentation.dto.response.UserIdResponse;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
@@ -16,7 +16,11 @@ public class UserFeignClientFallbackFactory implements FallbackFactory<UserFeign
 
     @Override
     public UserFeignClient create(Throwable cause) {
-        log.warn("[CircuitBreaker] user-service 호출 실패", cause);
+        if (cause instanceof CallNotPermittedException) {
+            log.warn("[CircuitBreaker] user-service 호출 차단 (Circuit Open)");
+        } else {
+            log.warn("[CircuitBreaker] user-service 호출 실패", cause);
+        }
         return new UserFeignClient() {
             @Override
             public ApiResponse<UserIdResponse> getUserIdByBusinessNumber(String businessNumber) {

@@ -1,12 +1,12 @@
 package com.sparta.whereismyparcel.order.infrastructure.client;
 
 import com.sparta.whereismyparcel.common.exception.ServiceUnavailableException;
-
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.StockCancelRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.StockReservationRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuValidationResponse;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.StockReservationResponse;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
@@ -20,7 +20,11 @@ public class CompanyFeignClientFallbackFactory implements FallbackFactory<Compan
 
     @Override
     public CompanyFeignClient create(Throwable cause) {
-        log.warn("[CircuitBreaker] company-service 호출 실패", cause);
+        if (cause instanceof CallNotPermittedException) {
+            log.warn("[CircuitBreaker] company-service 호출 차단 (Circuit Open)");
+        } else {
+            log.warn("[CircuitBreaker] company-service 호출 실패", cause);
+        }
         return new CompanyFeignClient() {
             @Override
             public ApiResponse<List<SkuValidationResponse>> validateProducts(String userId, List<UUID> productVariantIds) {

@@ -1,12 +1,12 @@
 package com.sparta.whereismyparcel.shipment.infrastructure.client;
 
 import com.sparta.whereismyparcel.common.exception.ServiceUnavailableException;
-
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.shipment.presentation.dto.request.DecreaseInventoryRequest;
 import com.sparta.whereismyparcel.shipment.presentation.dto.request.GetDestinationHubIdRequest;
 import com.sparta.whereismyparcel.shipment.presentation.dto.response.GetDestinationHubIdResponse;
 import com.sparta.whereismyparcel.shipment.presentation.dto.response.GetProductHubIdResponse;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
@@ -20,7 +20,11 @@ public class CompanyClientFallbackFactory implements FallbackFactory<CompanyClie
 
 	@Override
 	public CompanyClient create(Throwable cause) {
-		log.warn("[CircuitBreaker] company-service 호출 실패", cause);
+		if (cause instanceof CallNotPermittedException) {
+			log.warn("[CircuitBreaker] company-service 호출 차단 (Circuit Open)");
+		} else {
+			log.warn("[CircuitBreaker] company-service 호출 실패", cause);
+		}
 		return new CompanyClient() {
 			@Override
 			public ApiResponse<GetDestinationHubIdResponse> getDestinationHubId(GetDestinationHubIdRequest request) {
