@@ -25,7 +25,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.*;
@@ -121,7 +126,7 @@ public class ShipmentService {
     ) {
         List<ShortestPathResponse.RouteSegmentResponse> routes;
 
-        if (originHubId.equals(destinationHubId)) {
+        if (Objects.equals(originHubId, destinationHubId)) {
             routes = Collections.emptyList();
         } else {
             //from 허브 ~ to 허브 다른 경우만, 최적 경로 조회 api 호출
