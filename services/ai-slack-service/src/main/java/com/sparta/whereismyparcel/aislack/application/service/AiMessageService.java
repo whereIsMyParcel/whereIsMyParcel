@@ -63,7 +63,7 @@ public class AiMessageService {
         UUID orderId = request.orderId();
 
         // 1. 주문, 배송, 사용자 정보 가져오기
-        OrderResponse order = getOrderDetails(orderId, callerUserId);
+        OrderResponse order = getOrderDetails(orderId);
         List<ShipmentResponse> shipments = getShipmentDetails(orderId, callerUserId);
         UserResponse recipientUser = getUserDetails(order.recipientName(), callerUserId);
 
@@ -83,12 +83,11 @@ public class AiMessageService {
      * 이 메서드는 외부 API 호출을 담당하므로 트랜잭션이 필요 없습니다.
      * @param orderId 주문 ID
      * @param request 최적 발송 시한 정보를 담은 DTO
-     * @param callerUserId 요청을 시작한 사용자 ID
      */
     // @Transactional 제거: 외부 API 호출은 트랜잭션 범위 밖에서 수행
-    public void patchDeliveryDeadlineToOrderService(UUID orderId, DeliveryDeadlinePatchRequest request, String callerUserId) { // MODIFIED
+    public void patchDeliveryDeadlineToOrderService(UUID orderId, DeliveryDeadlinePatchRequest request) { // MODIFIED
         log.info("Order 서비스에 finalDispatchDeadline 패치 요청: orderId={}, finalDispatchDeadline={}", orderId, request.finalDispatchDeadline()); // MODIFIED
-        ApiResponse<Void> response = orderFeignClient.patchDeliveryDeadline(callerUserId, orderId, request); // MODIFIED
+        ApiResponse<Void> response = orderFeignClient.patchDeliveryDeadline(orderId, request); // MODIFIED
         if (!response.success()) {
             throw new BusinessException(AiSlackErrorCode.ORDER_SERVICE_COMMUNICATION_FAILED, "Order 서비스에 finalDispatchDeadline 패치 실패: " + response.message());
         }
@@ -131,8 +130,8 @@ public class AiMessageService {
 
             // 4. Order 서비스에 delivery_deadline 패치 (외부 API)
             DeliveryDeadlinePatchRequest patchRequest = new DeliveryDeadlinePatchRequest(finalDispatchDeadline);
-            patchDeliveryDeadlineToOrderService(aiMessage.getOrderId(), patchRequest, "ai-slack-internal-service"); // MODIFIED
-            log.info("Order 서비스에 최종 발송 시한 패치 완료: orderId={}, finalDispatchDeadline={}", aiMessage.getOrderId(), finalDispatchDeadline); // MODIFIED
+            patchDeliveryDeadlineToOrderService(aiMessage.getOrderId(), patchRequest);
+            log.info("Order 서비스에 최종 발송 시한 패치 완료: orderId={}, finalDispatchDeadline={}", aiMessage.getOrderId(), finalDispatchDeadline);
 
             // 5. Slack 알림 발송 (ADDED)
             slackMessageService.sendSlackNotification(
@@ -160,8 +159,8 @@ public class AiMessageService {
         // finally 블록에서 save를 호출할 필요 없음. 각 상태 업데이트 메서드에서 save를 처리.
     }
 
-    private OrderResponse getOrderDetails(UUID orderId, String userId) {
-        ApiResponse<OrderResponse> orderResponse = orderFeignClient.getOrder(userId, orderId);
+    private OrderResponse getOrderDetails(UUID orderId) {
+        ApiResponse<OrderResponse> orderResponse = orderFeignClient.getOrder(orderId);
         if (!orderResponse.success() || orderResponse.data() == null) {
             throw new BusinessException(AiSlackErrorCode.INVALID_AI_REQUEST_DATA, "주문 정보를 가져오지 못했습니다: " + orderResponse.message());
         }
@@ -169,7 +168,7 @@ public class AiMessageService {
     }
 
     private List<ShipmentResponse> getShipmentDetails(UUID orderId, String userId) {
-        ApiResponse<List<ShipmentResponse>> shipmentResponse = shipmentFeignClient.getShipmentByOrderId(userId, orderId);
+        ApiResponse<List<ShipmentResponse>> shipmentResponse = shipmentFeignClient.getShipmentByOrderId(orderId);
         if (!shipmentResponse.success() || shipmentResponse.data() == null || shipmentResponse.data().isEmpty()) {
             throw new BusinessException(AiSlackErrorCode.INVALID_AI_REQUEST_DATA, "배송 정보를 가져오지 못했습니다: " + shipmentResponse.message());
         }
