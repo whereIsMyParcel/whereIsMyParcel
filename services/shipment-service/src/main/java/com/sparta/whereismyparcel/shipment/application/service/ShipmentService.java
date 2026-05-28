@@ -42,6 +42,7 @@ public class ShipmentService {
     private final OrderClient orderClient;
     private final CompanyClient companyClient;
     private final HubClient hubClient;
+    private final ShipmentWriter shipmentWriter;
 
     @Transactional
     public void cancel(String userId, UUID orderId) {
@@ -100,7 +101,7 @@ public class ShipmentService {
         // 출발 허브별 배송 생성
         List<Shipment> shipments = buildShipments(request, productsByHub, destinationHubId);
         // 저장
-        List<Shipment> saved = saveShipments(shipments);
+        List<Shipment> saved = shipmentWriter.save(shipments);
 
         return saved.stream()
                 .map(ShipmentCreateResponse::from)

@@ -28,6 +28,7 @@ class ShipmentServiceTest {
     private OrderClient orderClient;
     private CompanyClient companyClient;
     private HubClient hubClient;
+    private ShipmentWriter shipmentWriter;
 
     private UUID orderId;
     private UUID managerId;
@@ -39,13 +40,15 @@ class ShipmentServiceTest {
         orderClient = mock(OrderClient.class);
         companyClient = mock(CompanyClient.class);
         hubClient = mock(HubClient.class);
+        shipmentWriter = mock(ShipmentWriter.class);
 
         shipmentService = new ShipmentService(
                 shipmentRepository,
                 deliveryManagerService,
                 orderClient,
                 companyClient,
-                hubClient
+                hubClient,
+                shipmentWriter
         );
 
         orderId = UUID.randomUUID();
