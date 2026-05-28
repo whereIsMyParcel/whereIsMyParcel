@@ -16,7 +16,6 @@
 5. [ERD (엔티티 관계도)](#5-erd-엔티티-관계도)
 6. [실행 방법 (Quick Start)](#6-실행-방법-quick-start)
 7. [API 문서](#7-api-문서)
-8. [추가 과제 및 To-Do (Future Works)](#8-추가-과제-및-to-do-future-works)
 
 ---
 
@@ -127,4 +126,4 @@
 시스템이 구동된 후, API Gateway를 거쳐 각 마이크로서비스의 API 명세를 확인할 수 있습니다.
 - **Swagger UI**: `http://localhost:8080/swagger-ui.html`
 
--
+
