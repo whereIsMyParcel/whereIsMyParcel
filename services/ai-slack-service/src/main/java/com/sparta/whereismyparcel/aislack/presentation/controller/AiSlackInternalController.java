@@ -32,6 +32,7 @@ public class AiSlackInternalController {
     ) {
         // AiMessageService.createAiAnalysisRequest 메서드의 시그니처에 맞춰 request 객체 전체를 전달
         UUID aiMessageId = aiMessageService.createAiAnalysisRequest(request, callerUserId);
+        aiMessageService.analyzeAiMessage(aiMessageId); // ADDED: AI 분석 시작
         return ApiResponse.created(aiMessageId);
     }
 }

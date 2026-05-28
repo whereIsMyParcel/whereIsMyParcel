@@ -41,6 +41,7 @@ public class AiMessageService {
     private final ChatModel chatModel; // GeminiClient 대신 Spring AI ChatModel 주입
     private final PromptGenerator promptGenerator;
     private final AiMessageTransactionService aiMessageTransactionService; // ADD THIS DEPENDENCY
+    private final SlackMessageService slackMessageService; // ADDED: SlackMessageService 주입
 
     // Self-injection for transactional method calls (REMOVED)
     // private final ApplicationContext applicationContext;
@@ -101,9 +102,18 @@ public class AiMessageService {
     // @Transactional 제거: 외부 API 호출을 포함하므로 트랜잭션 범위 밖에서 실행
     public void analyzeAiMessage(UUID aiMessageId) {
         AiMessage aiMessage = null;
+        OrderResponse order = null; // ADDED
+        List<ShipmentResponse> shipments = null; // ADDED
+        UserResponse recipientUser = null; // ADDED
+
         try {
             // 1. AiMessage 조회 및 재시도 상태로 준비 (새로운 트랜잭션)
             aiMessage = aiMessageTransactionService.getAndPrepareAiMessageForAnalysis(aiMessageId); // CHANGED
+
+            // 1.5. Slack 알림 발송에 필요한 정보 미리 가져오기 (AI 호출 전)
+            order = getOrderDetails(aiMessage.getOrderId(), "ai-slack-internal-service"); // ADDED
+            shipments = getShipmentDetails(aiMessage.getOrderId(), "ai-slack-internal-service"); // ADDED
+            recipientUser = getUserDetails(order.recipientName(), "ai-slack-internal-service"); // ADDED
 
             // 2. Gemini AI 호출 (외부 API) -> ChatModel 연동으로 변경
             log.info("Spring AI ChatModel 기반 Gemini API 호출 시작: aiMessageId={}", aiMessageId);
@@ -123,6 +133,16 @@ public class AiMessageService {
             DeliveryDeadlinePatchRequest patchRequest = new DeliveryDeadlinePatchRequest(finalDispatchDeadline);
             patchDeliveryDeadlineToOrderService(aiMessage.getOrderId(), patchRequest, "ai-slack-internal-service"); // MODIFIED
             log.info("Order 서비스에 최종 발송 시한 패치 완료: orderId={}, finalDispatchDeadline={}", aiMessage.getOrderId(), finalDispatchDeadline); // MODIFIED
+
+            // 5. Slack 알림 발송 (ADDED)
+            slackMessageService.sendSlackNotification(
+                    aiMessageId,
+                    order,
+                    shipments,
+                    recipientUser,
+                    finalDispatchDeadline
+            );
+            log.info("Slack 알림 발송 요청 완료: aiMessageId={}", aiMessageId);
 
         } catch (BusinessException e) {
             log.error("AI 분석 실패: aiMessageId={}, error={}", aiMessageId, e.getMessage());
