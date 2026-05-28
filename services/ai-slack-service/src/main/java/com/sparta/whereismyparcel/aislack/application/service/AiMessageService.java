@@ -2,7 +2,7 @@ package com.sparta.whereismyparcel.aislack.application.service;
 
 import com.sparta.whereismyparcel.aislack.domain.entity.AiMessage;
 import com.sparta.whereismyparcel.aislack.domain.entity.AnalysisStatus;
-import com.sparta.whereismyparcel.aislack.domain.exception.AiSlackErrorCode;
+import com.sparta.whereismyparcel.aislack.domain.exception.*;
 import com.sparta.whereismyparcel.aislack.domain.repository.AiMessageRepository;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.OrderFeignClient;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.ShipmentFeignClient;
@@ -89,7 +89,8 @@ public class AiMessageService {
         log.info("Order 서비스에 finalDispatchDeadline 패치 요청: orderId={}, finalDispatchDeadline={}", orderId, request.finalDispatchDeadline()); // MODIFIED
         ApiResponse<Void> response = orderFeignClient.patchDeliveryDeadline(orderId, request); // MODIFIED
         if (!response.success()) {
-            throw new BusinessException(AiSlackErrorCode.ORDER_SERVICE_COMMUNICATION_FAILED, "Order 서비스에 finalDispatchDeadline 패치 실패: " + response.message());
+            log.error("Order 서비스에 finalDispatchDeadline 패치 실패: " + response.message());
+            throw new OrderServiceCommunicationFailedException();
         }
     }
 
@@ -119,7 +120,8 @@ public class AiMessageService {
             String aiResponseContent = chatModel.call(aiMessage.getRequestContent());
 
             if (aiResponseContent == null || aiResponseContent.isBlank()) {
-                throw new BusinessException(AiSlackErrorCode.AI_RESPONSE_PARSING_FAILED, "Gemini AI 응답이 비어있습니다.");
+                log.error("Gemini AI 응답이 비어있습니다.");
+                throw new AiResponseParsingFailedException();
             }
 
             LocalDateTime finalDispatchDeadline = extractFinalDispatchDeadline(aiResponseContent);
@@ -154,7 +156,7 @@ public class AiMessageService {
             if (aiMessage != null) {
                 aiMessageTransactionService.updateAiMessageStatusOnFailure(aiMessageId); // CHANGED
             }
-            throw new BusinessException(AiSlackErrorCode.AI_PROCESSING_FAILED, e.getMessage());
+            throw new AiProcessingFailedException();
         }
         // finally 블록에서 save를 호출할 필요 없음. 각 상태 업데이트 메서드에서 save를 처리.
     }
@@ -162,7 +164,8 @@ public class AiMessageService {
     private OrderResponse getOrderDetails(UUID orderId) {
         ApiResponse<OrderResponse> orderResponse = orderFeignClient.getOrder(orderId);
         if (!orderResponse.success() || orderResponse.data() == null) {
-            throw new BusinessException(AiSlackErrorCode.INVALID_AI_REQUEST_DATA, "주문 정보를 가져오지 못했습니다: " + orderResponse.message());
+            log.error("주문 정보를 가져오지 못했습니다: " + orderResponse.message());
+            throw new  InvalidAiRequestDataException();
         }
         return orderResponse.data();
     }
@@ -170,7 +173,8 @@ public class AiMessageService {
     private List<ShipmentResponse> getShipmentDetails(UUID orderId, String userId) {
         ApiResponse<List<ShipmentResponse>> shipmentResponse = shipmentFeignClient.getShipmentByOrderId(orderId);
         if (!shipmentResponse.success() || shipmentResponse.data() == null || shipmentResponse.data().isEmpty()) {
-            throw new BusinessException(AiSlackErrorCode.INVALID_AI_REQUEST_DATA, "배송 정보를 가져오지 못했습니다: " + shipmentResponse.message());
+            log.error("배송 정보를 가져오지 못했습니다: " + shipmentResponse.message());
+            throw new InvalidAiRequestDataException();
         }
         return shipmentResponse.data();
     }
@@ -181,7 +185,8 @@ public class AiMessageService {
         // UserFeignClient는 userId 조회 가능하므로, 이 부분은 실제 API에 맞춰 수정이 필요합니다.
         ApiResponse<UserResponse> userResponse = userFeignClient.getUser(UUID.fromString(userId));
         if (!userResponse.success() || userResponse.data() == null) {
-            throw new BusinessException(AiSlackErrorCode.SLACK_ID_NOT_FOUND, "수령인 사용자 정보를 가져오지 못했습니다: " + userResponse.message());
+            log.error("수령인 사용자 정보를 가져오지 못했습니다: " + userResponse.message());
+            throw new SlackIdNotFoundException();
         }
         return userResponse.data();
     }
@@ -196,9 +201,10 @@ public class AiMessageService {
                 return LocalDateTime.parse(deadlineString);
             } catch (DateTimeParseException e) {
                 log.error("Gemini AI 응답에서 최종 발송 시한 파싱 실패: {}", deadlineString, e);
-                throw new BusinessException(AiSlackErrorCode.AI_RESPONSE_PARSING_FAILED, "Gemini AI 응답에서 최종 발송 시한을 파싱할 수 없습니다.");
+                throw new AiResponseParsingFailedException();
             }
         }
-        throw new BusinessException(AiSlackErrorCode.AI_RESPONSE_PARSING_FAILED, "Gemini AI 응답에서 최종 발송 시한을 찾을 수 없습니다.");
+        log.error("Gemini AI 응답에서 최종 발송 시한을 찾을 수 없습니다.");
+        throw new AiResponseParsingFailedException();
     }
 }

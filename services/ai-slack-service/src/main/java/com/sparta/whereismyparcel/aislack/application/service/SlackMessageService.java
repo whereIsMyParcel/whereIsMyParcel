@@ -6,6 +6,9 @@ import com.sparta.whereismyparcel.aislack.domain.entity.AnalysisStatus;
 import com.sparta.whereismyparcel.aislack.domain.entity.SlackMessage;
 import com.sparta.whereismyparcel.aislack.domain.entity.SlackStatus;
 import com.sparta.whereismyparcel.aislack.domain.exception.AiSlackErrorCode;
+import com.sparta.whereismyparcel.aislack.domain.exception.InvalidInputValueException;
+import com.sparta.whereismyparcel.aislack.domain.exception.SlackMessageNotFoundException;
+import com.sparta.whereismyparcel.aislack.domain.exception.SlackMessagePermanentFailedException;
 import com.sparta.whereismyparcel.aislack.domain.repository.SlackMessageRepository;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.OrderResponse;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.dto.response.ShipmentResponse;
@@ -46,7 +49,7 @@ public class SlackMessageService {
      */
     public SlackMessageResponse getSlackMessage(UUID messageId) {
         SlackMessage slackMessage = slackMessageRepository.findById(messageId)
-                .orElseThrow(() -> new BusinessException(AiSlackErrorCode.SLACK_MESSAGE_NOT_FOUND, "Slack message not found with id: " + messageId));
+                .orElseThrow(() -> new SlackMessageNotFoundException());
         return SlackMessageResponse.from(slackMessage);
     }
 
@@ -67,7 +70,7 @@ public class SlackMessageService {
                 SlackStatus slackStatus = SlackStatus.valueOf(status.name());
                 slackMessagesPage = slackMessageRepository.findBySlackStatus(slackStatus, pageable);
             } catch (IllegalArgumentException e) {
-                throw new BusinessException(AiSlackErrorCode.INVALID_INPUT_VALUE, "Invalid SlackStatus value: " + status.name());
+                throw new InvalidInputValueException();
             }
         } else {
             slackMessagesPage = slackMessageRepository.findAll(pageable);
@@ -86,7 +89,7 @@ public class SlackMessageService {
     @Transactional
     public SlackMessageResponse updateAiMessage(UUID messageId, SlackRequest request) {
         SlackMessage slackMessage = slackMessageRepository.findById(messageId)
-                .orElseThrow(() -> new BusinessException(AiSlackErrorCode.SLACK_MESSAGE_NOT_FOUND, "Slack message not found with id: " + messageId));
+                .orElseThrow(() -> new SlackMessageNotFoundException());
 
         slackMessage.updateMessage(request.message());
 
@@ -102,7 +105,7 @@ public class SlackMessageService {
     @Transactional
     public void deleteAiMessage(UUID messageId) {
         if (!slackMessageRepository.existsById(messageId)) {
-            throw new BusinessException(AiSlackErrorCode.SLACK_MESSAGE_NOT_FOUND, "Slack message not found with id: " + messageId);
+            throw  new SlackMessageNotFoundException();
         }
         slackMessageRepository.deleteById(messageId);
     }
@@ -236,14 +239,14 @@ public class SlackMessageService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     protected SlackMessage prepareSlackMessageForRetry(UUID messageId) {
         SlackMessage slackMessage = slackMessageRepository.findById(messageId)
-                .orElseThrow(() -> new BusinessException(AiSlackErrorCode.SLACK_MESSAGE_NOT_FOUND, "Slack message not found with id: " + messageId));
+                .orElseThrow(() ->  new SlackMessageNotFoundException());
 
         // 1. 최대 재시도 횟수(3회)를 초과한 경우 영구 실패 처리
         if (!slackMessage.canRetry()) {
             slackMessage.permanentFailSending();
             slackMessageRepository.save(slackMessage);
             log.warn("Slack 메시지 발송 영구 실패 확정 (재시도 한도 초과): messageId={}", messageId);
-            throw new BusinessException(AiSlackErrorCode.SLACK_MESSAGE_PERMANENT_FAILED, "Slack message permanent failed after multiple retries: " + messageId);
+            throw new SlackMessagePermanentFailedException();
         }
 
         // 2. 재시도를 위해 상태를 READY_TO_SEND로 변경 (retryCount는 초기화하지 않음)
@@ -260,7 +263,7 @@ public class SlackMessageService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     protected void updateSlackMessageStatusAfterSend(UUID messageId, boolean success, String errorDetails) {
         SlackMessage slackMessage = slackMessageRepository.findById(messageId)
-                .orElseThrow(() -> new BusinessException(AiSlackErrorCode.SLACK_MESSAGE_NOT_FOUND, "Slack message not found with id: " + messageId));
+                .orElseThrow(() ->  new SlackMessageNotFoundException());
 
         if (success) {
             slackMessage.succeedSending();
