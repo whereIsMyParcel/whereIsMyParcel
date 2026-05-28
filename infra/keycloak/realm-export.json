@@ -5,7 +5,7 @@
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
-  "accessTokenLifespan": 300,
+  "accessTokenLifespan": 86400,
   "refreshTokenMaxReuse": 0,
   "roles": {
     "realm": [
