@@ -248,6 +248,7 @@ services:
       DB_URL: ${USER_DB_URL:-jdbc:postgresql://postgres:5432/sparta_logistics?currentSchema=user_db}
       DB_USERNAME: ${DB_USERNAME:-sparta}
       DB_PASSWORD: ${DB_PASSWORD:-sparta1234}
+      KEYCLOAK_SERVER_URL: ${KEYCLOAK_SERVER_URL:-http://keycloak:8080}
       KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-http://keycloak:8080/realms/sparta-logistics}
       KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID:-user-service-admin}
       KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-user-service-admin-secret}
