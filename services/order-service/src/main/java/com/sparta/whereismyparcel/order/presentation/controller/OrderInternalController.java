@@ -4,7 +4,6 @@ import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.order.application.service.OrderService;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderDispatchDeadlineUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderAiContextResponse;
-import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCompleteResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDispatchDeadlineUpdateResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -43,9 +42,10 @@ public class OrderInternalController {
     }
 
     @PatchMapping("/{orderId}/complete")
-    public ResponseEntity<ApiResponse<OrderCompleteResponse>> completeOrder(
+    public ResponseEntity<ApiResponse<Void>> completeOrder(
             @PathVariable UUID orderId
     ) {
-        return ResponseEntity.ok(ApiResponse.success(orderService.completeOrder(orderId)));
+        orderService.completeOrder(orderId);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

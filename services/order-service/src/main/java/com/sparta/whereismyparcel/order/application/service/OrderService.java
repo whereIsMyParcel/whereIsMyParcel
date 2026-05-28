@@ -23,9 +23,8 @@ import com.sparta.whereismyparcel.order.infrastructure.client.dto.response.SkuVa
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderDispatchDeadlineUpdateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderUpdateRequest;
-import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderAiContextResponse;
-import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCompleteResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDetailResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDispatchDeadlineUpdateResponse;
@@ -47,8 +46,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.function.Function;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.UUID;
 
 @Slf4j
@@ -75,16 +77,21 @@ public class OrderService {
         List<UUID> productVariantIds = request.items().stream()
                 .map(OrderCreateRequest.OrderItemCreateRequest::productVariantId)
                 .toList();
-        SkuValidationResponse validation = resolveSkuValidation(
+        List<SkuValidationResponse> validations = resolveSkuValidation(
                 companyFeignClient.validateProducts(userId, productVariantIds)
         );
+        Map<UUID, SkuValidationResponse> validationMap = validations.stream()
+                .collect(Collectors.toMap(
+                        SkuValidationResponse::variantId,
+                        Function.identity()
+                ));
 
         List<OrderItem> orderItems = request.items().stream()
                 .map(i -> {
-                    SkuValidationResponse.Item skuInfo = validation.items().stream()
-                            .filter(v -> v.id().equals(i.productVariantId()))
-                            .findFirst()
-                            .orElseThrow(InvalidOrderItemsException::new);
+                    SkuValidationResponse skuInfo = validationMap.get(i.productVariantId());
+                    if (skuInfo == null) {
+                        throw new InvalidOrderItemsException();
+                    }
                     return OrderItem.create(
                             i.productVariantId(),
                             skuInfo.skuCode(),
@@ -288,17 +295,15 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderCompleteResponse completeOrder(UUID orderId) {
+    public void completeOrder(UUID orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
         if (order.getOrderStatus() == OrderStatus.COMPLETED) {
-            return OrderCompleteResponse.from(order);
+            return;
         }
 
         order.complete();
-
-        return OrderCompleteResponse.from(order);
     }
 
     @Transactional
@@ -367,8 +372,8 @@ public class OrderService {
         return "ORD-" + date + "-" + suffix;
     }
 
-    private SkuValidationResponse resolveSkuValidation(ApiResponse<SkuValidationResponse> response) {
-        if (response == null || !response.success() || response.data() == null) {
+    private List<SkuValidationResponse> resolveSkuValidation(ApiResponse<List<SkuValidationResponse>> response) {
+        if (response == null || !response.success() || response.data() == null || response.data().isEmpty()) {
             throw new InvalidOrderItemsException();
         }
         return response.data();

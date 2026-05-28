@@ -14,13 +14,13 @@ import java.util.UUID;
 @FeignClient(name = "company-service")
 public interface CompanyFeignClient {
 
-    @GetMapping("/internal/v1/products")
-    ApiResponse<SkuValidationResponse> validateProducts(
+    @GetMapping("/internal/v1/products/valid")
+    ApiResponse<List<SkuValidationResponse>> validateProducts(
             @RequestHeader("X-User-Id") String userId,
             @RequestParam List<UUID> productVariantIds
     );
 
-    @PostMapping("/internal/v1/inventories")
+    @PostMapping("/internal/v1/inventories/reserve")
     ApiResponse<List<StockReservationResponse>> reserveStock(
             @RequestHeader("X-User-Id") String userId,
             @RequestBody StockReservationRequest request
