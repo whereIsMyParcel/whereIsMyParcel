@@ -197,10 +197,10 @@ class ShipmentTest {
     @DisplayName("배송 시작")
     @Nested
     class Start {
-        @DisplayName("배송 시작 시, HUB_WAITING 상태일 때만 배송 상태 변경 가능하다")
-        @ParameterizedTest(name = "[{index}] status = {0}")
+        @DisplayName("배송 시작 시, HUB_WAITING 상태에서 경로가 있으면 HUB_MOVING으로 변경된다")
+        @ParameterizedTest
         @EnumSource(value = ShipmentStatus.class, names = "HUB_WAITING")
-        void start_success(ShipmentStatus status) {
+        void start_success_with_route(ShipmentStatus status) {
             // given
             Shipment shipment = Shipment.create(
                     UUID.randomUUID(),
@@ -214,12 +214,55 @@ class ShipmentTest {
                     "slack"
             );
 
+            // history 하나 추가 (경로 존재 상태)
+            shipment.addHistories(List.of(
+                    ShipmentHistory.create(
+                            shipment,
+                            UUID.randomUUID(),
+                            1,
+                            UUID.randomUUID(),
+                            UUID.randomUUID(),
+                            ShipmentStatus.HUB_WAITING,
+                            10,
+                            0,
+                            0,
+                            ""
+                    )
+            ));
+
             // when
             shipment.start();
 
             // then
             assertThat(shipment.getShipmentStatus())
                     .isEqualTo(ShipmentStatus.HUB_MOVING);
+        }
+
+        @DisplayName("배송 시작 시, 경로가 없으면 COMPANY_MOVING으로 변경된다")
+        @ParameterizedTest
+        @EnumSource(value = ShipmentStatus.class, names = "HUB_WAITING")
+        void start_success_without_route(ShipmentStatus status) {
+            // given
+            Shipment shipment = Shipment.create(
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    "배송번호 1",
+                    status,
+                    "배송지",
+                    "수령인",
+                    "slack"
+            );
+
+            // histories 없음 (hasNoRouteBetweenHubs = true)
+
+            // when
+            shipment.start();
+
+            // then
+            assertThat(shipment.getShipmentStatus())
+                    .isEqualTo(ShipmentStatus.COMPANY_MOVING);
         }
 
         @DisplayName("배송 시작 시, HUB_WAITING이 아니면 예외 발생한다")
