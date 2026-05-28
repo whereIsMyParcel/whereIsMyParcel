@@ -46,6 +46,42 @@ spring:
               uri: lb://ai-slack-service
               predicates:
                 - Path=/api/v1/ai/**
+            - id: user-service-api-docs
+              uri: lb://user-service
+              predicates:
+                - Path=/v3/api-docs/user-service
+              filters:
+                - RewritePath=/v3/api-docs/user-service, /v3/api-docs
+            - id: hub-service-api-docs
+              uri: lb://hub-service
+              predicates:
+                - Path=/v3/api-docs/hub-service
+              filters:
+                - RewritePath=/v3/api-docs/hub-service, /v3/api-docs
+            - id: company-service-api-docs
+              uri: lb://company-service
+              predicates:
+                - Path=/v3/api-docs/company-service
+              filters:
+                - RewritePath=/v3/api-docs/company-service, /v3/api-docs
+            - id: order-service-api-docs
+              uri: lb://order-service
+              predicates:
+                - Path=/v3/api-docs/order-service
+              filters:
+                - RewritePath=/v3/api-docs/order-service, /v3/api-docs
+            - id: shipment-service-api-docs
+              uri: lb://shipment-service
+              predicates:
+                - Path=/v3/api-docs/shipment-service
+              filters:
+                - RewritePath=/v3/api-docs/shipment-service, /v3/api-docs
+            - id: ai-slack-service-api-docs
+              uri: lb://ai-slack-service
+              predicates:
+                - Path=/v3/api-docs/ai-slack-service
+              filters:
+                - RewritePath=/v3/api-docs/ai-slack-service, /v3/api-docs
   security:
     oauth2:
       resourceserver:
