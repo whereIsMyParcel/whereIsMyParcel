@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.UUID;
 
-@FeignClient(name = "order-service", path = "/internal/v1/orders")
+@FeignClient(name = "order-service", path = "/internal/v1/orders", fallbackFactory = OrderClientFallbackFactory.class)
 public interface OrderClient {
 
     @PatchMapping("/{orderId}/complete")

@@ -12,6 +12,9 @@ spring:
       discovery:
         enabled: true
         service-id: config-server
+    openfeign:
+      circuitbreaker:
+        enabled: true
   datasource:
     url: ${NOTIFICATION_DB_URL:jdbc:postgresql://localhost:5432/sparta_logistics?currentSchema=notification_db}
     username: ${DB_USERNAME:sparta}
@@ -43,3 +46,13 @@ eureka:
 slack:
   bot:
     token: ${SLACK_BOT_TOKEN:xoxb-dummy-token}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        registerHealthIndicator: true

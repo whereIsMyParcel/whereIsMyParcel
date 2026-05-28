@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 import java.util.UUID;
 
-@FeignClient(name = "company-service")
+@FeignClient(name = "company-service", fallbackFactory = CompanyClientFallbackFactory.class)
 public interface CompanyClient {
 
     @PostMapping("/internal/v1/companies/search-hub")

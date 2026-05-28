@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-@FeignClient(name = "company-service")
+@FeignClient(name = "company-service", fallbackFactory = CompanyFeignClientFallbackFactory.class)
 public interface CompanyFeignClient {
 
     @GetMapping("/internal/v1/products/valid")

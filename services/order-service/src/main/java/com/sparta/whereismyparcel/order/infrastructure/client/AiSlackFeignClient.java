@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.UUID;
 
-@FeignClient(name = "ai-slack-service")
+@FeignClient(name = "ai-slack-service", fallbackFactory = AiSlackFeignClientFallbackFactory.class)
 public interface AiSlackFeignClient {
 
     @PostMapping("/internal/v1/ai-slack/analysis-requests")

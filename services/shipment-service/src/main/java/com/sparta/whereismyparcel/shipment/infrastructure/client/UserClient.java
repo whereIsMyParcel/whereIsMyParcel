@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.UUID;
 
-@FeignClient(name = "user-service", path = "/internal/v1/users")
+@FeignClient(name = "user-service", path = "/internal/v1/users", fallbackFactory = UserClientFallbackFactory.class)
 public interface UserClient {
 
     @GetMapping("/by-slack/{slackId}")
