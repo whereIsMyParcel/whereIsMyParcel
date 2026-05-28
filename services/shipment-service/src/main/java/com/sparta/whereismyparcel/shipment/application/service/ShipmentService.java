@@ -42,6 +42,7 @@ public class ShipmentService {
     private final OrderClient orderClient;
     private final CompanyClient companyClient;
     private final HubClient hubClient;
+    private final ShipmentWriter shipmentWriter;
 
     @Transactional
     public void cancel(String userId, UUID orderId) {
@@ -87,36 +88,75 @@ public class ShipmentService {
     }
 
     //region [배송 생성]
-    @Transactional
     public List<ShipmentCreateResponse> create(String userId, ShipmentCreateRequest request) {
-
         // 상품 옵션 ID 추출
         List<UUID> productVariantIds = extractProductVariantIds(request);
-
         // 상품별 출발 허브 조회
         List<GetProductHubIdResponse> hubMappings =
-                companyClient.getHubMappingsByProductIds(productVariantIds)
-                        .data();
-
+                companyClient.getHubMappingsByProductIds(productVariantIds).data();
         // 배송지 기준 최종 도착 허브 조회
         UUID destinationHubId = getDestinationHubId(request);
-
         // 출발 허브 기준 상품 그룹핑
         Map<UUID, List<UUID>> productsByHub = groupProductsByHub(hubMappings);
-
         // 출발 허브별 배송 생성
-        List<Shipment> shipments = productsByHub.entrySet().stream()
-                .map(entry -> createShipment(
-                        request,
-                        entry.getKey(),
-                        destinationHubId
-                ))
-                .toList();
+        List<Shipment> shipments = buildShipments(request, productsByHub, destinationHubId);
+        // 저장
+        List<Shipment> saved = shipmentWriter.save(shipments);
 
-        // 배송 저장 및 응답 반환
-        return shipmentRepository.saveAll(shipments).stream()
+        return saved.stream()
                 .map(ShipmentCreateResponse::from)
                 .toList();
+    }
+
+    private List<Shipment> buildShipments(
+            ShipmentCreateRequest request,
+            Map<UUID, List<UUID>> productsByHub,
+            UUID destinationHubId
+    ) {
+        return productsByHub.keySet().stream()
+                .map(originHubId -> buildShipment(request, originHubId, destinationHubId))
+                .toList();
+    }
+
+    private Shipment buildShipment(
+            ShipmentCreateRequest request,
+            UUID originHubId,
+            UUID destinationHubId
+    ) {
+
+        var shortestPath = Optional.ofNullable(
+                        hubClient.getShortestPath(originHubId, destinationHubId)
+                )
+                .map(ApiResponse::data)
+                .orElseThrow(ShipmentRouteNotFoundException::new);
+
+        List<ShortestPathResponse.RouteSegmentResponse> routes = shortestPath.routes();
+
+        UUID companyManagerId =
+                deliveryManagerService.assignCompanyDeliveryManagers(destinationHubId, 1)
+                        .get(0);
+
+        Shipment shipment = Shipment.create(
+                request.orderId(),
+                originHubId,
+                destinationHubId,
+                companyManagerId,
+                ShipmentNumberGenerator.generate(),
+                ShipmentStatus.HUB_WAITING,
+                buildAddress(request),
+                request.recipientName(),
+                request.recipientPhone()
+        );
+
+        shipment.addItems(createShipmentItems(shipment, request.items()));
+        shipment.addHistories(createShipmentHistories(shipment, routes));
+
+        return shipment;
+    }
+
+    @Transactional
+    public List<Shipment> saveShipments(List<Shipment> shipments) {
+        return shipmentRepository.saveAll(shipments);
     }
 
     /**
