@@ -133,7 +133,7 @@ public class GlobalExceptionHandler {
 
 		return ResponseEntity
 			.status(CommonErrorCode.INTERNAL_SERVER_ERROR.getStatus())
-			.body(ApiResponse.error(CommonErrorCode.INTERNAL_SERVER_ERROR));
+			.body(ApiResponse.error(CommonErrorCode.INTERNAL_SERVER_ERROR, exception.getMessage() + " / " + exception.getClass().getName()));
 	}
 
 	private ApiResponse.FieldError toFieldError(FieldError fieldError) {
