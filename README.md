@@ -29,7 +29,8 @@
 ## 🏗 2. 시스템 아키텍처
 
 ### 2.1 인프라 아키텍처 설계도
-![Infrastructure Architecture](./docs/infra.png)
+<img width="1728" height="1080" alt="인프라" src="https://github.com/user-attachments/assets/f2e381c6-dad4-4a2c-9c21-5e270fffd1ff" />
+
 
 ### 2.2 마이크로서비스(MSA) 구성
 - **Eureka Server**: 서비스 디스커버리 및 레지스트리 관리
@@ -85,7 +86,7 @@
 ---
 
 ## 📊 5. ERD (엔티티 관계도)
-![ERD](./docs/erd.png)
+<img width="2135" height="1383" alt="최종 erd" src="https://github.com/user-attachments/assets/fea8ac69-cc83-4dde-b392-222dbcb0f1d8" />
 
 ---
 
