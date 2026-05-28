@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-@FeignClient(name = "shipment-service")
+@FeignClient(name = "shipment-service", fallbackFactory = ShipmentFeignClientFallbackFactory.class)
 public interface ShipmentFeignClient {
     @PostMapping("/internal/v1/shipments")
     ApiResponse<List<ShipmentCreateResponse>> createShipments(

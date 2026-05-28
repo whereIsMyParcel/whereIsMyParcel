@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.UUID;
 
-@FeignClient(name = "order-service")
+@FeignClient(name = "order-service", fallbackFactory = OrderFeignClientFallbackFactory.class)
 public interface OrderFeignClient {
 
     @GetMapping("/internal/v1/orders/{orderId}")
