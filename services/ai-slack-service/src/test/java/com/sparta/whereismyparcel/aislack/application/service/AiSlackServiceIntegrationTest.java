@@ -102,7 +102,7 @@ class AiSlackServiceIntegrationTest {
                 "test@example.com",
                 "U1234567890"
         );
-        when(userFeignClient.getUser(any(String.class)))
+        when(userFeignClient.getUser(any(UUID.class)))
                 .thenReturn(ApiResponse.success(mockUserResponse));
 
         // When & Then
@@ -119,6 +119,6 @@ class AiSlackServiceIntegrationTest {
         verify(shipmentFeignClient, times(1)).getShipmentByOrderId(userId, orderId);
 
         // Verify that UserFeignClient.getUser was called
-        verify(userFeignClient, times(1)).getUser(userId);
+        verify(userFeignClient, times(1)).getUser(UUID.fromString(userId));
     }
 }
