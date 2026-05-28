@@ -29,10 +29,11 @@ spring:
   ai:
     google:
       genai:
-        api-key: ${GEMINI_API_KEY}
+        api-key: ${GEMINI_API_KEY:dummy-gemini-key}
         chat:
           options:
             model: gemini-2.0-flash
+
 
 eureka:
   client:
@@ -41,4 +42,4 @@ eureka:
 
 slack:
   bot:
-    token: ${SLACK_BOT_TOKEN}
+    token: ${SLACK_BOT_TOKEN:xoxb-dummy-token}

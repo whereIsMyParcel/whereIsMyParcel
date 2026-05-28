@@ -23,7 +23,7 @@ import java.util.UUID;
 @Tag(name = "delivery-manager", description = "배송담당자 관련 API")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/v1/delivery-managers")
+@RequestMapping("/api/v1/delivery-managers")
 public class DeliveryManagerController {
 
     private final DeliveryManagerService deliveryManagerService;

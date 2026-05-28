@@ -41,7 +41,7 @@ spring:
             - id: shipment-service
               uri: lb://shipment-service
               predicates:
-                - Path=/api/v1/shipments/**
+                - Path=/api/v1/shipments/**,/api/v1/delivery-managers/**
             - id: ai-slack-service
               uri: lb://ai-slack-service
               predicates:

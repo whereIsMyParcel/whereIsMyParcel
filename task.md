@@ -1,0 +1,4 @@
+- [x] Implement the CUD (Create, Update, Cancel) UI and API integration for the 'Orders' domain.
+- [x] Implement the CUD (Create, Update, Delete) UI and API integration for the 'Companies' domain.
+- [x] Implement the CUD (Create, Update, Delete) UI and API integration for the 'Products' domain.
+- [x] Implement the CUD (Create, Update, Delete) UI and API integration for the 'Drivers' domain.

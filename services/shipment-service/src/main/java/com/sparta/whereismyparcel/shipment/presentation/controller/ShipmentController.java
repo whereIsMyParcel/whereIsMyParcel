@@ -18,7 +18,7 @@ import java.util.UUID;
 @Tag(name = "shipments", description = "배송 관련 API")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/v1/shipments")
+@RequestMapping("/api/v1/shipments")
 public class ShipmentController {
 
     private final ShipmentService shipmentService;
