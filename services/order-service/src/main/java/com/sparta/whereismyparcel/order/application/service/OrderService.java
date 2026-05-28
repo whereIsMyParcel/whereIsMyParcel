@@ -265,11 +265,13 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderCancelResponse cancelOrder(String userId, UUID orderId) {
+    public OrderCancelResponse cancelOrder(String userId, String role, UUID orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(OrderNotFoundException::new);
 
-        validateOrderOwner(order, userId);
+        if (!isMaster(role)) {
+            validateOrderOwner(order, userId);
+        }
 
         if (!isCancelableStatus(order.getOrderStatus())) {
             throw new InvalidOrderStatusException();

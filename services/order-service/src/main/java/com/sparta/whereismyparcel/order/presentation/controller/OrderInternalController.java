@@ -31,7 +31,7 @@ public class OrderInternalController {
         return ResponseEntity.ok(ApiResponse.success(orderService.getOrderAiContext(orderId)));
     }
 
-    @PatchMapping("/{orderId}/deliverydeadline")
+    @PatchMapping("/{orderId}/finalDispatchDeadline")
     public ResponseEntity<ApiResponse<OrderDispatchDeadlineUpdateResponse>> updateFinalDispatchDeadline(
             @PathVariable UUID orderId,
             @RequestBody @Valid OrderDispatchDeadlineUpdateRequest request

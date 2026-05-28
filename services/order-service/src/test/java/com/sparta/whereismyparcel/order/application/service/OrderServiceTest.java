@@ -160,7 +160,7 @@ class OrderServiceTest {
                 .willReturn(Optional.of(order));
 
         // when
-        OrderCancelResponse response = orderService.cancelOrder(userId, orderId);
+        OrderCancelResponse response = orderService.cancelOrder(userId, "COMPANY_MANAGER", orderId);
 
         // then
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.CANCELLED);
@@ -182,7 +182,7 @@ class OrderServiceTest {
                 .willReturn(ApiResponse.ok());
 
         // when
-        OrderCancelResponse response = orderService.cancelOrder(userId, orderId);
+        OrderCancelResponse response = orderService.cancelOrder(userId, "COMPANY_MANAGER", orderId);
 
         // then
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.CANCELLED);
@@ -207,7 +207,7 @@ class OrderServiceTest {
                 .willReturn(ApiResponse.ok());
 
         // when
-        OrderCancelResponse response = orderService.cancelOrder(userId, orderId);
+        OrderCancelResponse response = orderService.cancelOrder(userId, "COMPANY_MANAGER", orderId);
 
         // then
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.CANCELLED);
@@ -229,7 +229,7 @@ class OrderServiceTest {
                 .willReturn(ApiResponse.error(OrderErrorCode.SAGA_COMPENSATION_FAILED));
 
         // when & then
-        assertThatThrownBy(() -> orderService.cancelOrder(userId, orderId))
+        assertThatThrownBy(() -> orderService.cancelOrder(userId, "COMPANY_MANAGER", orderId))
                 .isInstanceOf(SagaCompensationFailedException.class);
         assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.STOCK_RESERVED);
     }
@@ -249,7 +249,7 @@ class OrderServiceTest {
                 .willReturn(ApiResponse.error(OrderErrorCode.SAGA_COMPENSATION_FAILED));
 
         // when & then
-        assertThatThrownBy(() -> orderService.cancelOrder(userId, orderId))
+        assertThatThrownBy(() -> orderService.cancelOrder(userId, "COMPANY_MANAGER", orderId))
                 .isInstanceOf(SagaCompensationFailedException.class);
         assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.CONFIRMED);
         then(companyFeignClient).should(never()).cancelReservation(any(), any());
@@ -267,7 +267,7 @@ class OrderServiceTest {
                 .willReturn(Optional.of(order));
 
         // when & then
-        assertThatThrownBy(() -> orderService.cancelOrder(userId, orderId))
+        assertThatThrownBy(() -> orderService.cancelOrder(userId, "COMPANY_MANAGER", orderId))
                 .isInstanceOf(InvalidOrderStatusException.class);
         then(companyFeignClient).should(never()).cancelReservation(any(), any());
         then(shipmentFeignClient).should(never()).cancelShipments(any(), any());
@@ -285,8 +285,28 @@ class OrderServiceTest {
                 .willReturn(Optional.of(order));
 
         // when & then
-        assertThatThrownBy(() -> orderService.cancelOrder(otherUserId, orderId))
+        assertThatThrownBy(() -> orderService.cancelOrder(otherUserId, "COMPANY_MANAGER", orderId))
                 .isInstanceOf(OrderNotFoundException.class);
+        then(companyFeignClient).should(never()).cancelReservation(any(), any());
+        then(shipmentFeignClient).should(never()).cancelShipments(any(), any());
+    }
+
+    @Test
+    @DisplayName("MASTER는 다른 사용자의 PENDING 주문을 취소할 수 있다")
+    void cancelPendingOrderByMaster() {
+        // given
+        String masterId = UUID.randomUUID().toString();
+        String ownerId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(ownerId);
+        given(orderRepository.findById(orderId))
+                .willReturn(Optional.of(order));
+
+        // when
+        OrderCancelResponse response = orderService.cancelOrder(masterId, "MASTER", orderId);
+
+        // then
+        assertThat(response.orderStatus()).isEqualTo(OrderStatus.CANCELLED);
         then(companyFeignClient).should(never()).cancelReservation(any(), any());
         then(shipmentFeignClient).should(never()).cancelShipments(any(), any());
     }
