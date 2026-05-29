@@ -1,4 +1,4 @@
-package com.sparta.whereismyparcel.order.domain.entity;
+package com.sparta.whereismyparcel.order.domain;
 
 public enum OrderStatus {
     PENDING,

@@ -1,7 +1,7 @@
 package com.sparta.whereismyparcel.order.presentation.dto.response;
 
 import com.sparta.whereismyparcel.order.domain.entity.Order;
-import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
+import com.sparta.whereismyparcel.order.domain.OrderStatus;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
