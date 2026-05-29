@@ -17,13 +17,11 @@ public interface OrderFeignClient {
 
     @GetMapping("/internal/v1/orders/{orderId}")
     ApiResponse<OrderResponse> getOrder(
-            @RequestHeader("X-User-Id") String userId,
             @PathVariable UUID orderId
     );
 
     @PatchMapping("/internal/v1/orders/{orderId}/finalDispatchDeadline")
     ApiResponse<Void> patchDeliveryDeadline(
-            @RequestHeader("X-User-Id") String userId,
             @PathVariable UUID orderId,
             @RequestBody DeliveryDeadlinePatchRequest request
     );

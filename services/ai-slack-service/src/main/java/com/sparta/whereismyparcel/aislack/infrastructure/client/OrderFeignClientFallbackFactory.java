@@ -24,12 +24,12 @@ public class OrderFeignClientFallbackFactory implements FallbackFactory<OrderFei
 		}
 		return new OrderFeignClient() {
 			@Override
-			public ApiResponse<OrderResponse> getOrder(String userId, UUID orderId) {
+			public ApiResponse<OrderResponse> getOrder(UUID orderId) {
 				throw new ServiceUnavailableException();
 			}
 
 			@Override
-			public ApiResponse<Void> patchDeliveryDeadline(String userId, UUID orderId, DeliveryDeadlinePatchRequest request) {
+			public ApiResponse<Void> patchDeliveryDeadline(UUID orderId, DeliveryDeadlinePatchRequest request) {
 				throw new ServiceUnavailableException();
 			}
 		};

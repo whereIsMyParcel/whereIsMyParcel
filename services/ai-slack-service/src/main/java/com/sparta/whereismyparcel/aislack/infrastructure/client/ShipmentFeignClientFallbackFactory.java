@@ -24,7 +24,7 @@ public class ShipmentFeignClientFallbackFactory implements FallbackFactory<Shipm
 		}
 		return new ShipmentFeignClient() {
 			@Override
-			public ApiResponse<List<ShipmentResponse>> getShipmentByOrderId(String userId, UUID orderId) {
+			public ApiResponse<List<ShipmentResponse>> getShipmentByOrderId(UUID orderId) {
 				throw new ServiceUnavailableException();
 			}
 		};

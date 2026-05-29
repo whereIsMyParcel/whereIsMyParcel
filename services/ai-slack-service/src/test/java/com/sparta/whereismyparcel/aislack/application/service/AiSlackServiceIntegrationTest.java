@@ -71,7 +71,7 @@ class AiSlackServiceIntegrationTest {
                 LocalDateTime.of(2023, 1, 1, 9, 0, 0), // orderedAt
                 Collections.emptyList()
         );
-        when(orderFeignClient.getOrder(any(String.class), any(UUID.class)))
+        when(orderFeignClient.getOrder(any(UUID.class)))
                 .thenReturn(ApiResponse.success(mockOrderResponse));
 
         // ShipmentFeignClient가 유효한 ShipmentResponse 리스트를 반환하도록 모킹
@@ -91,7 +91,7 @@ class AiSlackServiceIntegrationTest {
                 LocalDateTime.of(2023, 1, 1, 12, 0, 0), // shippedAt
                 null // deliveredAt (아직 배송되지 않음)
         );
-        when(shipmentFeignClient.getShipmentByOrderId(any(String.class), any(UUID.class)))
+        when(shipmentFeignClient.getShipmentByOrderId(any(UUID.class)))
                 .thenReturn(ApiResponse.success(List.of(mockShipmentResponse))); // 빈 리스트가 아닌 유효한 리스트 반환
 
         // UserFeignClient가 유효한 UserResponse를 반환하도록 모킹
@@ -113,10 +113,10 @@ class AiSlackServiceIntegrationTest {
                 .andExpect(status().isCreated());
 
         // Verify that OrderFeignClient.getOrder was called
-        verify(orderFeignClient, times(1)).getOrder(userId, orderId);
+        verify(orderFeignClient, times(1)).getOrder(orderId);
 
         // Verify that ShipmentFeignClient.getShipmentByOrderId was called
-        verify(shipmentFeignClient, times(1)).getShipmentByOrderId(userId, orderId);
+        verify(shipmentFeignClient, times(1)).getShipmentByOrderId(orderId);
 
         // Verify that UserFeignClient.getUser was called
         verify(userFeignClient, times(1)).getUser(UUID.fromString(userId));

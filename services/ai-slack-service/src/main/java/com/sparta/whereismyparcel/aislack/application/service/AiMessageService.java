@@ -2,7 +2,7 @@ package com.sparta.whereismyparcel.aislack.application.service;
 
 import com.sparta.whereismyparcel.aislack.domain.entity.AiMessage;
 import com.sparta.whereismyparcel.aislack.domain.entity.AnalysisStatus;
-import com.sparta.whereismyparcel.aislack.domain.exception.AiSlackErrorCode;
+import com.sparta.whereismyparcel.aislack.domain.exception.*;
 import com.sparta.whereismyparcel.aislack.domain.repository.AiMessageRepository;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.OrderFeignClient;
 import com.sparta.whereismyparcel.aislack.infrastructure.client.ShipmentFeignClient;
@@ -41,6 +41,7 @@ public class AiMessageService {
     private final ChatModel chatModel; // GeminiClient 대신 Spring AI ChatModel 주입
     private final PromptGenerator promptGenerator;
     private final AiMessageTransactionService aiMessageTransactionService; // ADD THIS DEPENDENCY
+    private final SlackMessageService slackMessageService; // ADDED: SlackMessageService 주입
 
     // Self-injection for transactional method calls (REMOVED)
     // private final ApplicationContext applicationContext;
@@ -62,7 +63,7 @@ public class AiMessageService {
         UUID orderId = request.orderId();
 
         // 1. 주문, 배송, 사용자 정보 가져오기
-        OrderResponse order = getOrderDetails(orderId, callerUserId);
+        OrderResponse order = getOrderDetails(orderId);
         List<ShipmentResponse> shipments = getShipmentDetails(orderId, callerUserId);
         UserResponse recipientUser = getUserDetails(order.recipientName(), callerUserId);
 
@@ -82,14 +83,14 @@ public class AiMessageService {
      * 이 메서드는 외부 API 호출을 담당하므로 트랜잭션이 필요 없습니다.
      * @param orderId 주문 ID
      * @param request 최적 발송 시한 정보를 담은 DTO
-     * @param callerUserId 요청을 시작한 사용자 ID
      */
     // @Transactional 제거: 외부 API 호출은 트랜잭션 범위 밖에서 수행
-    public void patchDeliveryDeadlineToOrderService(UUID orderId, DeliveryDeadlinePatchRequest request, String callerUserId) { // MODIFIED
+    public void patchDeliveryDeadlineToOrderService(UUID orderId, DeliveryDeadlinePatchRequest request) { // MODIFIED
         log.info("Order 서비스에 finalDispatchDeadline 패치 요청: orderId={}, finalDispatchDeadline={}", orderId, request.finalDispatchDeadline()); // MODIFIED
-        ApiResponse<Void> response = orderFeignClient.patchDeliveryDeadline(callerUserId, orderId, request); // MODIFIED
+        ApiResponse<Void> response = orderFeignClient.patchDeliveryDeadline(orderId, request); // MODIFIED
         if (!response.success()) {
-            throw new BusinessException(AiSlackErrorCode.ORDER_SERVICE_COMMUNICATION_FAILED, "Order 서비스에 finalDispatchDeadline 패치 실패: " + response.message());
+            log.error("Order 서비스에 finalDispatchDeadline 패치 실패: " + response.message());
+            throw new OrderServiceCommunicationFailedException();
         }
     }
 
@@ -101,16 +102,26 @@ public class AiMessageService {
     // @Transactional 제거: 외부 API 호출을 포함하므로 트랜잭션 범위 밖에서 실행
     public void analyzeAiMessage(UUID aiMessageId) {
         AiMessage aiMessage = null;
+        OrderResponse order = null; // ADDED
+        List<ShipmentResponse> shipments = null; // ADDED
+        UserResponse recipientUser = null; // ADDED
+
         try {
             // 1. AiMessage 조회 및 재시도 상태로 준비 (새로운 트랜잭션)
             aiMessage = aiMessageTransactionService.getAndPrepareAiMessageForAnalysis(aiMessageId); // CHANGED
+
+            // 1.5. Slack 알림 발송에 필요한 정보 미리 가져오기 (AI 호출 전)
+            order = getOrderDetails(aiMessage.getOrderId()); // ADDED
+            shipments = getShipmentDetails(aiMessage.getOrderId(), "ai-slack-internal-service"); // ADDED
+            recipientUser = getUserDetails(order.recipientName(), "ai-slack-internal-service"); // ADDED
 
             // 2. Gemini AI 호출 (외부 API) -> ChatModel 연동으로 변경
             log.info("Spring AI ChatModel 기반 Gemini API 호출 시작: aiMessageId={}", aiMessageId);
             String aiResponseContent = chatModel.call(aiMessage.getRequestContent());
 
             if (aiResponseContent == null || aiResponseContent.isBlank()) {
-                throw new BusinessException(AiSlackErrorCode.AI_RESPONSE_PARSING_FAILED, "Gemini AI 응답이 비어있습니다.");
+                log.error("Gemini AI 응답이 비어있습니다.");
+                throw new AiResponseParsingFailedException();
             }
 
             LocalDateTime finalDispatchDeadline = extractFinalDispatchDeadline(aiResponseContent);
@@ -121,8 +132,18 @@ public class AiMessageService {
 
             // 4. Order 서비스에 delivery_deadline 패치 (외부 API)
             DeliveryDeadlinePatchRequest patchRequest = new DeliveryDeadlinePatchRequest(finalDispatchDeadline);
-            patchDeliveryDeadlineToOrderService(aiMessage.getOrderId(), patchRequest, "ai-slack-internal-service"); // MODIFIED
-            log.info("Order 서비스에 최종 발송 시한 패치 완료: orderId={}, finalDispatchDeadline={}", aiMessage.getOrderId(), finalDispatchDeadline); // MODIFIED
+            patchDeliveryDeadlineToOrderService(aiMessage.getOrderId(), patchRequest);
+            log.info("Order 서비스에 최종 발송 시한 패치 완료: orderId={}, finalDispatchDeadline={}", aiMessage.getOrderId(), finalDispatchDeadline);
+
+            // 5. Slack 알림 발송 (ADDED)
+            slackMessageService.sendSlackNotification(
+                    aiMessageId,
+                    order,
+                    shipments,
+                    recipientUser,
+                    finalDispatchDeadline
+            );
+            log.info("Slack 알림 발송 요청 완료: aiMessageId={}", aiMessageId);
 
         } catch (BusinessException e) {
             log.error("AI 분석 실패: aiMessageId={}, error={}", aiMessageId, e.getMessage());
@@ -135,23 +156,25 @@ public class AiMessageService {
             if (aiMessage != null) {
                 aiMessageTransactionService.updateAiMessageStatusOnFailure(aiMessageId); // CHANGED
             }
-            throw new BusinessException(AiSlackErrorCode.AI_PROCESSING_FAILED, e.getMessage());
+            throw new AiProcessingFailedException();
         }
         // finally 블록에서 save를 호출할 필요 없음. 각 상태 업데이트 메서드에서 save를 처리.
     }
 
-    private OrderResponse getOrderDetails(UUID orderId, String userId) {
-        ApiResponse<OrderResponse> orderResponse = orderFeignClient.getOrder(userId, orderId);
+    private OrderResponse getOrderDetails(UUID orderId) {
+        ApiResponse<OrderResponse> orderResponse = orderFeignClient.getOrder(orderId);
         if (!orderResponse.success() || orderResponse.data() == null) {
-            throw new BusinessException(AiSlackErrorCode.INVALID_AI_REQUEST_DATA, "주문 정보를 가져오지 못했습니다: " + orderResponse.message());
+            log.error("주문 정보를 가져오지 못했습니다: " + orderResponse.message());
+            throw new  InvalidAiRequestDataException();
         }
         return orderResponse.data();
     }
 
     private List<ShipmentResponse> getShipmentDetails(UUID orderId, String userId) {
-        ApiResponse<List<ShipmentResponse>> shipmentResponse = shipmentFeignClient.getShipmentByOrderId(userId, orderId);
+        ApiResponse<List<ShipmentResponse>> shipmentResponse = shipmentFeignClient.getShipmentByOrderId(orderId);
         if (!shipmentResponse.success() || shipmentResponse.data() == null || shipmentResponse.data().isEmpty()) {
-            throw new BusinessException(AiSlackErrorCode.INVALID_AI_REQUEST_DATA, "배송 정보를 가져오지 못했습니다: " + shipmentResponse.message());
+            log.error("배송 정보를 가져오지 못했습니다: " + shipmentResponse.message());
+            throw new InvalidAiRequestDataException();
         }
         return shipmentResponse.data();
     }
@@ -162,7 +185,8 @@ public class AiMessageService {
         // UserFeignClient는 userId 조회 가능하므로, 이 부분은 실제 API에 맞춰 수정이 필요합니다.
         ApiResponse<UserResponse> userResponse = userFeignClient.getUser(UUID.fromString(userId));
         if (!userResponse.success() || userResponse.data() == null) {
-            throw new BusinessException(AiSlackErrorCode.SLACK_ID_NOT_FOUND, "수령인 사용자 정보를 가져오지 못했습니다: " + userResponse.message());
+            log.error("수령인 사용자 정보를 가져오지 못했습니다: " + userResponse.message());
+            throw new SlackIdNotFoundException();
         }
         return userResponse.data();
     }
@@ -177,9 +201,10 @@ public class AiMessageService {
                 return LocalDateTime.parse(deadlineString);
             } catch (DateTimeParseException e) {
                 log.error("Gemini AI 응답에서 최종 발송 시한 파싱 실패: {}", deadlineString, e);
-                throw new BusinessException(AiSlackErrorCode.AI_RESPONSE_PARSING_FAILED, "Gemini AI 응답에서 최종 발송 시한을 파싱할 수 없습니다.");
+                throw new AiResponseParsingFailedException();
             }
         }
-        throw new BusinessException(AiSlackErrorCode.AI_RESPONSE_PARSING_FAILED, "Gemini AI 응답에서 최종 발송 시한을 찾을 수 없습니다.");
+        log.error("Gemini AI 응답에서 최종 발송 시한을 찾을 수 없습니다.");
+        throw new AiResponseParsingFailedException();
     }
 }
