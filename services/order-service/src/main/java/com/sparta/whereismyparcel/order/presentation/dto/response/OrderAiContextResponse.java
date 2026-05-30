@@ -2,7 +2,7 @@ package com.sparta.whereismyparcel.order.presentation.dto.response;
 
 import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
-import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
+import com.sparta.whereismyparcel.order.domain.OrderStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,7 +17,7 @@ public record OrderAiContextResponse(
         OrderStatus orderStatus,
         String requestMemo,
         LocalDateTime orderedAt,
-        List<Item> items
+        List<ItemResponse> items
 ) {
     public static OrderAiContextResponse from(Order order) {
         return new OrderAiContextResponse(
@@ -30,7 +30,7 @@ public record OrderAiContextResponse(
                 order.getRequestMemo(),
                 order.getOrderedAt(),
                 order.getOrderItems().stream()
-                        .map(Item::from)
+                        .map(ItemResponse::from)
                         .toList()
         );
     }
@@ -42,7 +42,7 @@ public record OrderAiContextResponse(
         return order.getAddress() + " " + order.getAddressDetail();
     }
 
-    public record Item(
+    public record ItemResponse(
             UUID productVariantId,
             String productNameSnapshot,
             String productOptionSnapshot,
@@ -50,8 +50,8 @@ public record OrderAiContextResponse(
             Integer quantity,
             Long totalPrice
     ) {
-        private static Item from(OrderItem orderItem) {
-            return new Item(
+        private static ItemResponse from(OrderItem orderItem) {
+            return new ItemResponse(
                     orderItem.getProductVariantId(),
                     orderItem.getProductNameSnapshot(),
                     orderItem.getProductOptionSnapshot(),

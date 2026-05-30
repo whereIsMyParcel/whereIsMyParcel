@@ -56,12 +56,14 @@ public class CommonArchitectureRules {
     // 규칙 2. 네이밍 컨벤션
     // -------------------------------------------------------------------------
 
-    // application.service 패키지의 클래스는 Service로 끝나야 함 (단, Abstract/Interface 예외 처리)
+    // application.service 패키지의 클래스는 Service로 끝나야 함
+    // (단, Abstract/Interface/익명 클래스 예외 처리)
     public static final ArchRule SERVICE_NAMING_RULE =
             classes()
                     .that().resideInAPackage("..application.service..")
                     .and().doNotHaveModifier(JavaModifier.ABSTRACT)
                     .and().areNotInterfaces()
+                    .and().areNotAnonymousClasses()
                     .should().haveSimpleNameEndingWith("Service")
                     .because("application.service 패키지의 클래스는 이름이 Service로 끝나야 합니다.");
 
@@ -150,13 +152,13 @@ public class CommonArchitectureRules {
     // 이 규칙은 메서드 내부의 throw 구문을 검증하기 까다롭지만, 의존성을 통해 일부 강제할 수 있습니다.
     // 하지만 완벽한 메서드 내부 구현 체크는 ArchUnit의 기본 기능만으로는 제한적이므로,
     // Exception 자체를 던지는 것이 아닌, 커스텀 Exception 클래스를 상속받도록 강제하는 방식으로 대체할 수 있습니다.
-    
+
     // 일반적인 예외보다는 특정 예외 패키지 내부의 예외만 사용하도록 제한 (여기서는 간단한 의존성 규칙으로 예시)
     public static final ArchRule DO_NOT_THROW_GENERIC_EXCEPTIONS =
             noClasses()
                     .should().dependOnClassesThat().haveFullyQualifiedName("java.lang.RuntimeException")
                     .because("RuntimeException을 직접 사용하는 대신 도메인에 맞는 커스텀 예외를 정의하여 사용하세요.");
-    
+
     // BusinessException 직접 throw 금지 (반드시 구체적인 서브클래스 사용)
     // domain.exception 패키지의 커스텀 예외는 BusinessException을 상속하므로 허용
     public static final ArchRule DO_NOT_THROW_BUSINESS_EXCEPTION_DIRECTLY =
