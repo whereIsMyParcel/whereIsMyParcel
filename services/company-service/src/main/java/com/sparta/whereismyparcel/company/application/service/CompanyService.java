@@ -10,10 +10,7 @@ import com.sparta.whereismyparcel.company.domain.exception.*;
 import com.sparta.whereismyparcel.company.domain.repository.CompanyMemberRepository;
 import com.sparta.whereismyparcel.company.domain.repository.CompanyRepository;
 import com.sparta.whereismyparcel.company.infrastructure.feign.client.UserFeignClient;
-import com.sparta.whereismyparcel.company.presentation.dto.request.CompanySearchHubRequest;
-import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyMemberRequest;
-import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyRegisterRequest;
-import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyUpdateRequest;
+import com.sparta.whereismyparcel.company.presentation.dto.request.*;
 import com.sparta.whereismyparcel.company.presentation.dto.response.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -166,11 +163,11 @@ public class CompanyService {
 
     // 직원 삭제
     @Transactional
-    public void deleteCompanyMember(UUID companyId, CompanyMemberRequest request, String companyManagerId) {
+    public void deleteCompanyMember(UUID companyId, CompanyMemberDelRequest request, String companyManagerId) {
         companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
 
-        CompanyMember companyMember = companyMemberRepository.findByIdAndStatus(request.memberUserId(), CompanyMemberStatus.ACTIVE)
+        CompanyMember companyMember = companyMemberRepository.findByIdAndStatus(request.companyMemberId(), CompanyMemberStatus.ACTIVE)
                 .orElseThrow(CompanyMemberNotFoundException::new);
         if (!companyMember.getCompany().getId().equals(companyId)) {
             throw new CompanyMemberNotFoundException();

@@ -3,6 +3,7 @@ package com.sparta.whereismyparcel.company.presentation.controller;
 import com.sparta.whereismyparcel.common.dto.PageResponse;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.company.application.service.CompanyService;
+import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyMemberDelRequest;
 import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyMemberRequest;
 import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyRegisterRequest;
 import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyUpdateRequest;
@@ -117,7 +118,7 @@ public class CompanyController {
     @PreAuthorize("hasRole('COMPANY_MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deleteCompanyMember(
             @PathVariable UUID companyId,
-            @RequestBody @Valid CompanyMemberRequest request,
+            @RequestBody @Valid CompanyMemberDelRequest request,
             @RequestHeader("X-User-Id") String hubManagerOrMasterId
     ) {
         companyService.deleteCompanyMember(companyId, request, hubManagerOrMasterId);

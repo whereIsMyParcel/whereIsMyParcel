@@ -8,6 +8,7 @@ import com.sparta.whereismyparcel.company.domain.repository.CompanyMemberReposit
 import com.sparta.whereismyparcel.company.domain.repository.CompanyRepository;
 import com.sparta.whereismyparcel.company.infrastructure.feign.client.HubFeignClient;
 import com.sparta.whereismyparcel.company.infrastructure.feign.client.UserFeignClient;
+import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyMemberDelRequest;
 import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyMemberRequest;
 import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyRegisterRequest;
 import com.sparta.whereismyparcel.company.presentation.dto.request.CompanySearchHubRequest;
@@ -224,7 +225,6 @@ public class CompanyServiceTest {
         Company company = createCompany();
 
         given(companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)).willReturn(Optional.of(company));
-        given(userFeignClient.deleteAllUsersInCompany(companyId)).willReturn(ApiResponse.success(null));
         given(userFeignClient.deleteAllUsersInCompany(companyId)).willReturn(null);
 
         // when & then
@@ -321,10 +321,10 @@ public class CompanyServiceTest {
         given(company.getId()).willReturn(companyId);
 
         CompanyMember companyMember = CompanyMember.addMember(UUID.randomUUID(), company);
-        CompanyMemberRequest request = new CompanyMemberRequest(companyMember.getUserId());
+        CompanyMemberDelRequest request = new CompanyMemberDelRequest(companyMember.getUserId());
 
         given(companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)).willReturn(Optional.of(company));
-        given(companyMemberRepository.findByIdAndStatus(request.memberUserId(), CompanyMemberStatus.ACTIVE))
+        given(companyMemberRepository.findByIdAndStatus(request.companyMemberId(), CompanyMemberStatus.ACTIVE))
                 .willReturn(Optional.of(companyMember));
         given(userFeignClient.deleteUserOrClearCompany(companyMember.getUserId())).willReturn(ApiResponse.success(null));
 
@@ -340,7 +340,7 @@ public class CompanyServiceTest {
     void deleteCompanyMemberFailCompanyNotFound() {
         // given
         UUID companyId = UUID.randomUUID();
-        CompanyMemberRequest request = new CompanyMemberRequest(UUID.randomUUID());
+        CompanyMemberDelRequest request = new CompanyMemberDelRequest(UUID.randomUUID());
 
         given(companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)).willReturn(Optional.empty());
 
@@ -362,10 +362,10 @@ public class CompanyServiceTest {
         given(otherCompany.getId()).willReturn(actualCompanyId);
 
         CompanyMember companyMember = CompanyMember.addMember(UUID.randomUUID(), otherCompany);
-        CompanyMemberRequest request = new CompanyMemberRequest(companyMember.getUserId());
+        CompanyMemberDelRequest request = new CompanyMemberDelRequest(companyMember.getUserId());
 
         given(companyRepository.findByIdAndStatus(requestCompanyId, CompanyStatus.ACTIVE)).willReturn(Optional.of(createCompany()));
-        given(companyMemberRepository.findByIdAndStatus(request.memberUserId(), CompanyMemberStatus.ACTIVE))
+        given(companyMemberRepository.findByIdAndStatus(request.companyMemberId(), CompanyMemberStatus.ACTIVE))
                 .willReturn(Optional.of(companyMember));
 
         // when & then
@@ -385,11 +385,11 @@ public class CompanyServiceTest {
         given(company.getId()).willReturn(companyId);
 
         CompanyMember companyMember = CompanyMember.addMember(UUID.randomUUID(), company);
-        CompanyMemberRequest request = new CompanyMemberRequest(companyMember.getUserId());
+        CompanyMemberDelRequest request = new CompanyMemberDelRequest(companyMember.getUserId());
 
 
         given(companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)).willReturn(Optional.of(company));
-        given(companyMemberRepository.findByIdAndStatus(request.memberUserId(), CompanyMemberStatus.ACTIVE))
+        given(companyMemberRepository.findByIdAndStatus(request.companyMemberId(), CompanyMemberStatus.ACTIVE))
                 .willReturn(Optional.of(companyMember));
 
         given(userFeignClient.deleteUserOrClearCompany(companyMember.getUserId())).willReturn(null);

@@ -13,7 +13,7 @@ public interface CompanyMemberRepository extends JpaRepository<CompanyMember, UU
 
     Boolean existsByUserId(UUID userId);
 
-    Optional<CompanyMember> findByIdAndStatus(UUID memberUserId, CompanyMemberStatus status);
+    Optional<CompanyMember> findByIdAndStatus(UUID companyMemberId, CompanyMemberStatus status);
 
     Page<CompanyMember> findByCompanyIdAndStatus(UUID companyId, CompanyMemberStatus status, Pageable pageable);
 }
