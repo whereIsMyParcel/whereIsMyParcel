@@ -107,7 +107,7 @@ class OrderCreateSagaTest {
     }
 
     @Test
-    @DisplayName("배송 생성 실패 후 재고 원복도 실패하면 SagaCompensationFailedException이 발생한다")
+    @DisplayName("배송 생성 실패 후 재고 원복도 실패하면 주문이 COMPENSATION_FAILED 상태가 되고 SagaCompensationFailedException이 발생한다")
     void executeFailOnCompensation() {
         // given
         given(companyFeignClient.reserveStock(any(), any()))
@@ -120,6 +120,7 @@ class OrderCreateSagaTest {
         // when & then
         assertThatThrownBy(() -> orderCreateSaga.execute(order, context))
                 .isInstanceOf(SagaCompensationFailedException.class);
+        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.COMPENSATION_FAILED);
     }
 
     private Order createOrder() {

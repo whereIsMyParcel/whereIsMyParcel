@@ -132,9 +132,9 @@ public class OrderService {
         try {
             orderCreateSaga.execute(order, context);
         } catch (SagaCompensationFailedException e) {
-            log.error("[OrderService] 보상 실패. orderId={}", order.getOrderId(), e);
+            log.error("[OrderService] Saga 보상 실패. orderId={}, status={}", order.getOrderId(), order.getOrderStatus(), e);
         } catch (SagaFailedException e) {
-            log.error("[OrderService] Saga 실패. orderId={}", order.getOrderId(), e);
+            log.error("[OrderService] Saga 실패. orderId={}, status={}", order.getOrderId(), order.getOrderStatus(), e);
         } finally {
             orderRepository.save(order);
         }

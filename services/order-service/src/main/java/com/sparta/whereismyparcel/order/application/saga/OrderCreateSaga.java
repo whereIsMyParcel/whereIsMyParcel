@@ -24,21 +24,8 @@ public class OrderCreateSaga {
     private final ShipmentFeignClient shipmentFeignClient;
 
     public void execute(Order order, OrderCreateSagaContext context) {
-
         try {
-            var request = new StockReservationRequest(
-                    context.getOrderId(),
-                    context.getItems().stream()
-                            .map(i -> new StockReservationRequest.Item(i.skuCode(), i.quantity()))
-                            .toList()
-            );
-            var reservations = resolveSagaResponse(
-                    companyFeignClient.reserveStock(context.getUserId(), request)
-            );
-            context.applyReservation(reservations.stream()
-                    .map(r -> new OrderCreateSagaContext.StockReservation(r.productVariantId(), findSkuCode(context, r.productVariantId()), r.reservedQuantity()))
-                    .toList());
-            order.reserveStock();
+            reserveStock(order, context);
         } catch (Exception e) {
             log.error("[Saga] 재고 예약 실패. orderId={}", context.getOrderId(), e);
             order.fail();
@@ -46,31 +33,63 @@ public class OrderCreateSaga {
         }
 
         try {
-            var request = new ShipmentCreateRequest(
-                    context.getOrderId(),
-                    order.getRecipientName(),
-                    order.getRecipientPhone(),
-                    order.getZipCode(),
-                    order.getAddress(),
-                    order.getAddressDetail(),
-                    context.getItems().stream()
-                            .map(i -> new ShipmentCreateRequest.Item(i.productVariantId(), i.quantity()))
-                            .toList()
-            );
-            var shipmentIds = resolveSagaResponse(
-                    shipmentFeignClient.createShipments(context.getUserId(), request)
-            ).stream()
-                    .map(response -> response.shipmentId())
-                    .toList();
-            context.applyShipmentIds(shipmentIds);
+            createShipments(order, context);
+            order.confirm();
         } catch (Exception e) {
             log.error("[Saga] 배송 생성 실패. orderId={}", context.getOrderId(), e);
-            order.fail();
-            compensateStockReservation(context);
-            throw new SagaFailedException();
+            handleShipmentCreationFailure(order, context);
         }
+    }
 
-        order.confirm();
+    private void reserveStock(Order order, OrderCreateSagaContext context) {
+        var request = new StockReservationRequest(
+                context.getOrderId(),
+                context.getItems().stream()
+                        .map(i -> new StockReservationRequest.Item(i.skuCode(), i.quantity()))
+                        .toList()
+        );
+        var reservations = resolveSagaResponse(
+                companyFeignClient.reserveStock(context.getUserId(), request)
+        );
+        context.applyReservation(reservations.stream()
+                .map(r -> new OrderCreateSagaContext.StockReservation(
+                        r.productVariantId(),
+                        findSkuCode(context, r.productVariantId()),
+                        r.reservedQuantity()
+                ))
+                .toList());
+        order.reserveStock();
+    }
+
+    private void createShipments(Order order, OrderCreateSagaContext context) {
+        var request = new ShipmentCreateRequest(
+                context.getOrderId(),
+                order.getRecipientName(),
+                order.getRecipientPhone(),
+                order.getZipCode(),
+                order.getAddress(),
+                order.getAddressDetail(),
+                context.getItems().stream()
+                        .map(i -> new ShipmentCreateRequest.Item(i.productVariantId(), i.quantity()))
+                        .toList()
+        );
+        var shipmentIds = resolveSagaResponse(
+                shipmentFeignClient.createShipments(context.getUserId(), request)
+        ).stream()
+                .map(response -> response.shipmentId())
+                .toList();
+        context.applyShipmentIds(shipmentIds);
+    }
+
+    private void handleShipmentCreationFailure(Order order, OrderCreateSagaContext context) {
+        try {
+            compensateStockReservation(context);
+            order.fail();           // 보상 성공: 정합성 회복된 실패
+            throw new SagaFailedException();
+        } catch (SagaCompensationFailedException e) {
+            order.failCompensation(); // 보상 실패: 추적 필요한 실패
+            throw e;
+        }
     }
 
     private void compensateStockReservation(OrderCreateSagaContext context) {
