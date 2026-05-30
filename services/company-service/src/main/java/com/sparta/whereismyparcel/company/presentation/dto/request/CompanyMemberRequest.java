@@ -6,6 +6,6 @@ import java.util.UUID;
 
 public record CompanyMemberRequest(
         @NotNull
-        UUID companyMemberId
+        UUID memberUserId
 ) {
 }

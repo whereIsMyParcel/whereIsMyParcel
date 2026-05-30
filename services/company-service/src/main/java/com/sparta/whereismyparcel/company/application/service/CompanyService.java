@@ -132,17 +132,17 @@ public class CompanyService {
         Company company = companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
 
-        Boolean isExistsMember = companyMemberRepository.existsByUserId(request.companyMemberId());
+        Boolean isExistsMember = companyMemberRepository.existsByUserId(request.memberUserId());
         if (isExistsMember) {
             throw new AlreadyRegisterMemberException();
         }
 
-        ApiResponse<Void> updateUserResponse = userFeignClient.updateUserCompanyId(request.companyMemberId(), companyId);
+        ApiResponse<Void> updateUserResponse = userFeignClient.updateUserCompanyId(request.memberUserId(), companyId);
         if (updateUserResponse == null || !updateUserResponse.success()) {
             throw new UserSyncFailedException();
         }
 
-        CompanyMember companyMember = CompanyMember.addMember(request.companyMemberId(), company);
+        CompanyMember companyMember = CompanyMember.addMember(request.memberUserId(), company);
         companyMemberRepository.save(companyMember);
         return CompanyMemberResponse.from(companyMember);
     }
@@ -170,7 +170,7 @@ public class CompanyService {
         companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
 
-        CompanyMember companyMember = companyMemberRepository.findByIdAndStatus(request.companyMemberId(), CompanyMemberStatus.ACTIVE)
+        CompanyMember companyMember = companyMemberRepository.findByIdAndStatus(request.memberUserId(), CompanyMemberStatus.ACTIVE)
                 .orElseThrow(CompanyMemberNotFoundException::new);
         if (!companyMember.getCompany().getId().equals(companyId)) {
             throw new CompanyMemberNotFoundException();
@@ -193,6 +193,4 @@ public class CompanyService {
 
         return CompanySearchHubResponse.from(company.getHubId());
     }
-
-
 }

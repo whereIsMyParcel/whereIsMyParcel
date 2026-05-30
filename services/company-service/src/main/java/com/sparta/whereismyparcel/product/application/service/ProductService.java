@@ -104,66 +104,64 @@ public class ProductService {
 
         // 6. 저장한 2차원 배열([[화이트, 블랙], [260, 270]])을 재귀함수 서비스에 보내 데카르트 곱 연산
         // 데카르트 곱을 자동 생성 [[화이트,260]], [[화이트,270]] ....
-       List<List<ProductOptionValue>> combinations = CartesianProduct.of(optionValue);
+        List<List<ProductOptionValue>> combinations = CartesianProduct.of(optionValue);
 
-       // 7. 자동 생성된 조합목록을 바탕으로 재고에 보관할 조합으로 변경
-       int variantSequence = 1; // SKU 뒷자리 일련번호를 매겨주기위한 시퀀스 카운트
-       for (List<ProductOptionValue> combination :  combinations) {
-           int totalAdditionalPrice = combination.stream()
-                   .mapToInt(ProductOptionValue::getAdditionalPrice)
-                   .sum();
+        // 7. 자동 생성된 조합목록을 바탕으로 재고에 보관할 조합으로 변경
+        int variantSequence = 1; // SKU 뒷자리 일련번호를 매겨주기위한 시퀀스 카운트
+        for (List<ProductOptionValue> combination : combinations) {
+            int totalAdditionalPrice = combination.stream()
+                    .mapToInt(ProductOptionValue::getAdditionalPrice)
+                    .sum();
 
-           int finalVariantPrice = savedProduct.getPrice() +  totalAdditionalPrice;
+            int finalVariantPrice = savedProduct.getPrice() + totalAdditionalPrice;
 
-           // 7-1 기본 상품명을 기준으로 상품명 생성 (나이키 에어포스 '07)
-           StringBuilder variantName = new StringBuilder(savedProduct.getName()).append(" (");
+            // 7-1 기본 상품명을 기준으로 상품명 생성 (나이키 에어포스 '07)
+            StringBuilder variantName = new StringBuilder(savedProduct.getName()).append(" (");
 
-           // 7-2 옵션 값들을 순회하며 이름을 이어 붙임
-           for (int i = 0; i < combination.size(); i++) {
-               variantName.append(combination.get(i).getValue()); // 갑 바인딩 (화이트)
+            // 7-2 옵션 값들을 순회하며 이름을 이어 붙임
+            for (int i = 0; i < combination.size(); i++) {
+                variantName.append(combination.get(i).getValue()); // 갑 바인딩 (화이트)
 
-               // 옵션값이 더 있으면 / 통해 구분
-               if (i < combination.size() - 1) {
-                   variantName.append(" / ");
-               }
-           }
-           // 최종 형태 "나이키 에어포스 '07 (화이트 / 260)
-           variantName.append(")");
+                // 옵션값이 더 있으면 / 통해 구분
+                if (i < combination.size() - 1) {
+                    variantName.append(" / ");
+                }
+            }
+            // 최종 형태 "나이키 에어포스 '07 (화이트 / 260)
+            variantName.append(")");
 
-           // 7-3 SKU코드 자동 부여
-           // [SKU - 상품 UUID 앞8자리 대문자 - 3자리 순차 번호 ( SKU-A748BSC-001)
-           String skuCode = "SKU-" + savedProduct.getId().toString().substring(0, 8).toUpperCase()
-                   + "-" + String.format("%03d", variantSequence++);
+            // 7-3 SKU코드 자동 부여
+            // [SKU - 상품 UUID 앞8자리 대문자 - 3자리 순차 번호 ( SKU-A748BSC-001)
+            String skuCode = "SKU-" + savedProduct.getId().toString().substring(0, 8).toUpperCase()
+                    + "-" + String.format("%03d", variantSequence++);
 
-           // 7-4 옵션 조합 객체 생성
-           ProductVariant variant = ProductVariant.addVariant(
-                   savedProduct,
-                   skuCode,
-                   variantName.toString(),
-                   finalVariantPrice
-           );
+            // 7-4 옵션 조합 객체 생성
+            ProductVariant variant = ProductVariant.addVariant(
+                    savedProduct,
+                    skuCode,
+                    variantName.toString(),
+                    finalVariantPrice
+            );
 
-           // 7-5 실제 옵션의 조합을 db에 저장 -> 영속화
-           ProductVariant savedVariant = productVariantRepository.save(variant);
+            // 7-5 실제 옵션의 조합을 db에 저장 -> 영속화
+            ProductVariant savedVariant = productVariantRepository.save(variant);
 
-           // 7-6 응답용 DTO에 저장
-           variantResponses.add(VariantResponse.from(savedVariant));
+            // 7-6 응답용 DTO에 저장
+            variantResponses.add(VariantResponse.from(savedVariant));
 
-           // 7-7 다대다 연관관계 매핑
-           // 소대장을 하나씩 꺼내 행정병을 통해
-           // 각 중대장 db에 저장
-           for (ProductOptionValue value : combination) {
-               ProductVariantOption.addVariantOption(savedVariant,value);
-           }
-       }
+            // 7-7 다대다 연관관계 매핑
+            // 소대장을 하나씩 꺼내 행정병을 통해
+            // 각 중대장 db에 저장
+            for (ProductOptionValue value : combination) {
+                ProductVariantOption.addVariantOption(savedVariant, value);
+            }
+        }
 
-       // 8. 종합적으로 만들어진 상품을 응답
-       return ProductResponse.from(savedProduct,optionResponses,variantResponses);
+        // 8. 종합적으로 만들어진 상품을 응답
+        return ProductResponse.from(savedProduct, optionResponses, variantResponses);
     }
 
     // 상품 조회
-    // TODO : 삭제된 상품도 전부 보여줘야 한다고 생각이 드는데 그러면 @SQLRestriction을 지우면 됩니다
-    // TODO : 어떻게 하면 좋을까요?
     public ProductResponse getProduct(UUID productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(ProductNotFoundException::new);
@@ -183,7 +181,7 @@ public class ProductService {
                 product.getVariants().stream()
                         .map(VariantResponse::from)
                         .toList();
-        return ProductResponse.from(product,optionResponses,variantResponses);
+        return ProductResponse.from(product, optionResponses, variantResponses);
     }
 
     // 상품 목록 조회
@@ -198,7 +196,7 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(ProductNotFoundException::new);
 
-        return  product.getVariants().stream()
+        return product.getVariants().stream()
                 .map(VariantResponse::from)
                 .toList();
     }
@@ -270,7 +268,7 @@ public class ProductService {
 
     // 옵션 값 상태 변경
     @Transactional
-    public List<VariantResponse> updateOptionStatus(UUID productId, UUID optionValueId ,OptionValueStatusRequest request) {
+    public List<VariantResponse> updateOptionStatus(UUID productId, UUID optionValueId, OptionValueStatusRequest request) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(ProductNotFoundException::new);
 
@@ -290,11 +288,11 @@ public class ProductService {
             targetValue.stopSelling();
 
             targetValue.getVariantOptions().stream()
-                .map(ProductVariantOption::getVariants)
-                .forEach(ProductVariant::stopSelling);
+                    .map(ProductVariantOption::getVariants)
+                    .forEach(ProductVariant::stopSelling);
 
         } else if (request.status() == ProductStatus.ACTIVE) {
-            if (product.getStatus() == ProductStatus.ACTIVE || product.getStatus() == ProductStatus.DELETED) {
+            if (product.getStatus() == ProductStatus.INACTIVE || product.getStatus() == ProductStatus.DELETED) {
                 throw new UnsupportedProductStatus();
             }
             if (targetValue.getStatus() == ProductStatus.ACTIVE) {
@@ -350,7 +348,7 @@ public class ProductService {
     /**
      * 주문 생성 전 상품 상태 확인 (Order ➡︎ Product)
      */
-    public List<VariantResponse> validateVariantById(List<UUID> productVariantIds){
+    public List<VariantResponse> validateVariantById(List<UUID> productVariantIds) {
         if (productVariantIds == null || productVariantIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -363,7 +361,7 @@ public class ProductService {
     /**
      * 배송 생성시 주문 상품들의 허브 조회 (Shipment ➡︎ Product) 리스트 조회
      */
-    public List<VariantHubResponse> getVariantHub (List<UUID> productVariantIds){
+    public List<VariantHubResponse> getVariantHub(List<UUID> productVariantIds) {
         if (productVariantIds == null || productVariantIds.isEmpty()) {
             return Collections.emptyList();
         }
