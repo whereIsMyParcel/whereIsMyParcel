@@ -1,7 +1,7 @@
 package com.sparta.whereismyparcel.order.application.saga;
 
 import com.sparta.whereismyparcel.common.response.ApiResponse;
-import com.sparta.whereismyparcel.order.domain.entity.Order;
+import com.sparta.whereismyparcel.order.application.service.OrderCreationStateService;
 import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedException;
 import com.sparta.whereismyparcel.order.domain.exception.SagaFailedException;
 import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient;
@@ -22,26 +22,27 @@ public class OrderCreateSaga {
 
     private final CompanyFeignClient companyFeignClient;
     private final ShipmentFeignClient shipmentFeignClient;
+    private final OrderCreationStateService orderCreationStateService;
 
-    public void execute(Order order, OrderCreateSagaContext context) {
+    public void execute(OrderCreateSagaContext context) {
         try {
-            reserveStock(order, context);
+            reserveStock(context);
         } catch (Exception e) {
             log.error("[Saga] 재고 예약 실패. orderId={}", context.getOrderId(), e);
-            order.fail();
+            orderCreationStateService.markFailed(context.getOrderId());
             throw new SagaFailedException();
         }
 
         try {
-            createShipments(order, context);
-            order.confirm();
+            createShipments(context);
+            orderCreationStateService.markConfirmed(context.getOrderId());
         } catch (Exception e) {
             log.error("[Saga] 배송 생성 실패. orderId={}", context.getOrderId(), e);
-            handleShipmentCreationFailure(order, context);
+            handleShipmentCreationFailure(context);
         }
     }
 
-    private void reserveStock(Order order, OrderCreateSagaContext context) {
+    private void reserveStock(OrderCreateSagaContext context) {
         var request = new StockReservationRequest(
                 context.getOrderId(),
                 context.getItems().stream()
@@ -58,17 +59,17 @@ public class OrderCreateSaga {
                         r.reservedQuantity()
                 ))
                 .toList());
-        order.reserveStock();
+        orderCreationStateService.markStockReserved(context.getOrderId());
     }
 
-    private void createShipments(Order order, OrderCreateSagaContext context) {
+    private void createShipments(OrderCreateSagaContext context) {
         var request = new ShipmentCreateRequest(
                 context.getOrderId(),
-                order.getRecipientName(),
-                order.getRecipientPhone(),
-                order.getZipCode(),
-                order.getAddress(),
-                order.getAddressDetail(),
+                context.getRecipientName(),
+                context.getRecipientPhone(),
+                context.getZipCode(),
+                context.getAddress(),
+                context.getAddressDetail(),
                 context.getItems().stream()
                         .map(i -> new ShipmentCreateRequest.Item(i.productVariantId(), i.quantity()))
                         .toList()
@@ -81,13 +82,13 @@ public class OrderCreateSaga {
         context.applyShipmentIds(shipmentIds);
     }
 
-    private void handleShipmentCreationFailure(Order order, OrderCreateSagaContext context) {
+    private void handleShipmentCreationFailure(OrderCreateSagaContext context) {
         try {
             compensateStockReservation(context);
-            order.fail();           // 보상 성공: 정합성 회복된 실패
+            orderCreationStateService.markFailed(context.getOrderId());
             throw new SagaFailedException();
         } catch (SagaCompensationFailedException e) {
-            order.failCompensation(); // 보상 실패: 추적 필요한 실패
+            orderCreationStateService.markCompensationFailed(context.getOrderId());
             throw e;
         }
     }
