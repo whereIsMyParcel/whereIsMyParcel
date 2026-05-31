@@ -36,7 +36,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -55,7 +54,6 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class OrderService {
 
@@ -73,7 +71,6 @@ public class OrderService {
     private final OrderCreateSaga orderCreateSaga;
     private final OrderCreationStateService orderCreationStateService;
 
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public OrderCreateResponse createOrder(String userId, OrderCreateRequest request) {
         // 1. SKU 검증
         List<UUID> productVariantIds = request.items().stream()
@@ -141,6 +138,7 @@ public class OrderService {
         return OrderCreateResponse.from(order);
     }
 
+    @Transactional(readOnly = true)
     public Page<OrderListResponse> getOrders(
             String userId,
             String role,
@@ -213,6 +211,7 @@ public class OrderService {
         return keyword.trim();
     }
 
+    @Transactional(readOnly = true)
     public OrderDetailResponse getOrder(String userId, String role, UUID orderId) {
         Order order = orderRepository.findDetailByOrderId(orderId, userId, isMaster(role))
                 .orElseThrow(OrderNotFoundException::new);
@@ -220,6 +219,7 @@ public class OrderService {
         return OrderDetailResponse.from(order);
     }
 
+    @Transactional(readOnly = true)
     public OrderAiContextResponse getOrderAiContext(UUID orderId) {
         Order order = orderRepository.findWithOrderItemsByOrderId(orderId)
                 .orElseThrow(OrderNotFoundException::new);

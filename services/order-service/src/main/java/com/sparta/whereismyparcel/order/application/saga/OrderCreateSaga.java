@@ -6,6 +6,7 @@ import com.sparta.whereismyparcel.order.domain.exception.SagaCompensationFailedE
 import com.sparta.whereismyparcel.order.domain.exception.SagaFailedException;
 import com.sparta.whereismyparcel.order.infrastructure.client.CompanyFeignClient;
 import com.sparta.whereismyparcel.order.infrastructure.client.ShipmentFeignClient;
+import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.ShipmentCancelRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.ShipmentCreateRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.StockCancelRequest;
 import com.sparta.whereismyparcel.order.infrastructure.client.dto.request.StockReservationRequest;
@@ -35,10 +36,18 @@ public class OrderCreateSaga {
 
         try {
             createShipments(context);
-            orderCreationStateService.markConfirmed(context.getOrderId());
         } catch (Exception e) {
             log.error("[Saga] 배송 생성 실패. orderId={}", context.getOrderId(), e);
             handleShipmentCreationFailure(context);
+            return;
+        }
+
+        try {
+            orderCreationStateService.markConfirmed(context.getOrderId());
+        } catch (Exception e) {
+            log.error("[Saga] 배송 생성 후 주문 확정 저장 실패. orderId={}, shipmentIds={}",
+                    context.getOrderId(), context.getShipmentIds(), e);
+            handleConfirmationFailure(context);
         }
     }
 
@@ -90,6 +99,28 @@ public class OrderCreateSaga {
         } catch (SagaCompensationFailedException e) {
             orderCreationStateService.markCompensationFailed(context.getOrderId());
             throw e;
+        }
+    }
+
+    private void handleConfirmationFailure(OrderCreateSagaContext context) {
+        try {
+            compensateCreatedShipments(context);
+            compensateStockReservation(context);
+            orderCreationStateService.markFailed(context.getOrderId());
+            throw new SagaFailedException();
+        } catch (SagaCompensationFailedException e) {
+            orderCreationStateService.markCompensationFailed(context.getOrderId());
+            throw e;
+        }
+    }
+
+    private void compensateCreatedShipments(OrderCreateSagaContext context) {
+        try {
+            var request = new ShipmentCancelRequest(context.getOrderId());
+            ensureCompensationSuccess(shipmentFeignClient.cancelShipments(context.getUserId(), request));
+        } catch (Exception e) {
+            log.error("[Saga] 배송 취소 보상 실패. orderId={}", context.getOrderId(), e);
+            throw new SagaCompensationFailedException();
         }
     }
 
