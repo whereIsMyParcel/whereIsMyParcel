@@ -40,8 +40,6 @@ order.complete();
 
 `OrderItem`은 주문 당시 상품 정보를 스냅샷으로 저장합니다. 주문 이후 상품명이나 가격이 변경되더라도 해당 주문의 상품 정보는 주문 당시 기준으로 유지되어야 합니다.
 
-주요 필드는 다음과 같습니다.
-
 | 필드 | 설명 |
 |---|---|
 | `productVariantId` | 상품 옵션 ID |
@@ -73,13 +71,13 @@ public enum OrderStatus {
 |---|---|
 | `PENDING` | 주문이 생성되었고 재고 예약이 아직 확정되지 않은 상태 |
 | `STOCK_RESERVED` | 재고 예약이 성공한 상태 |
-| `CONFIRMED` | 재고 예약과 배송 생성이 모두 성공한 상태 |
+| `CONFIRMED` | 재고 예약과 배송 생성, 주문 확정 상태 저장이 모두 성공한 상태 |
 | `CANCELLED` | 주문이 취소된 상태 |
 | `COMPLETED` | 배송 완료가 반영된 상태 |
 | `FAILED` | 주문 생성이 실패했지만 필요한 보상이 완료된 상태 |
-| `COMPENSATION_FAILED` | 보상 처리까지 실패해 외부 서비스 상태 확인이 필요한 상태 |
+| `COMPENSATION_FAILED` | 외부 서비스에 이미 반영된 작업의 보상 처리까지 실패해 운영자 확인이 필요한 상태 |
 
-`COMPENSATION_FAILED`는 일반 실패와 구분되는 운영 추적 상태입니다. 예를 들어 재고 예약은 성공했지만 배송 생성이 실패했고, 재고 예약 취소 보상까지 실패하면 Company Service에 예약 재고가 남아 있을 수 있습니다. 이 경우 `FAILED`로만 표현하면 실제 불일치 가능성을 추적하기 어렵기 때문에 별도 상태로 분리합니다.
+`COMPENSATION_FAILED`는 일반 실패와 구분되는 운영 추적 상태입니다. 재고 예약 취소 실패뿐 아니라, 배송 생성 이후 주문 확정 저장 실패 상황에서 배송 취소 또는 재고 예약 취소 보상이 실패한 경우도 포함할 수 있습니다. 즉, 주문 생성 Saga 중 외부 서비스에 반영된 작업을 되돌리지 못했을 가능성이 있는 상태입니다.
 
 ---
 
@@ -112,7 +110,7 @@ PENDING -> STOCK_RESERVED
 STOCK_RESERVED -> CONFIRMED
 ```
 
-배송 생성까지 성공했을 때 호출합니다. 현재 상태가 `STOCK_RESERVED`가 아니면 `InvalidOrderStatusException`이 발생합니다.
+배송 생성까지 성공하고 주문 확정 상태 저장까지 가능할 때 호출합니다. 현재 상태가 `STOCK_RESERVED`가 아니면 `InvalidOrderStatusException`이 발생합니다.
 
 ### 6.3 fail()
 
@@ -121,10 +119,11 @@ PENDING        -> FAILED
 STOCK_RESERVED -> FAILED
 ```
 
-주문 생성 Saga 중 일반 실패가 발생했을 때 호출합니다.
+주문 생성 Saga 중 일반 실패가 발생했고 필요한 보상이 모두 성공했을 때 호출합니다.
 
 - `PENDING -> FAILED`: 재고 예약 자체가 실패한 경우
 - `STOCK_RESERVED -> FAILED`: 배송 생성 실패 후 재고 예약 취소 보상이 성공한 경우
+- `STOCK_RESERVED -> FAILED`: 배송 생성 성공 후 주문 확정 저장 실패가 발생했지만 배송 취소와 재고 예약 취소 보상이 모두 성공한 경우
 
 `FAILED`는 정합성이 회복된 실패 상태에 가깝습니다.
 
@@ -134,7 +133,12 @@ STOCK_RESERVED -> FAILED
 STOCK_RESERVED -> COMPENSATION_FAILED
 ```
 
-보상 처리까지 실패했을 때 호출합니다. 현재는 재고 예약 성공 이후 배송 생성 실패, 그리고 재고 예약 취소 보상 실패 시 사용합니다.
+주문 생성 Saga에서 외부 작업 보상 처리까지 실패했을 때 호출합니다.
+
+예시는 다음과 같습니다.
+
+- 배송 생성 실패 후 재고 예약 취소 보상이 실패한 경우
+- 배송 생성 성공 후 주문 확정 저장이 실패했고, 이후 배송 취소 또는 재고 예약 취소 보상이 실패한 경우
 
 `failCompensation()`은 `STOCK_RESERVED` 상태에서만 허용됩니다. `PENDING` 상태에서는 아직 보상할 외부 성공 작업이 없으므로 `COMPENSATION_FAILED`로 전이할 수 없습니다.
 
@@ -166,10 +170,14 @@ CONFIRMED -> COMPLETED
 PENDING
   ├─ 재고 예약 실패 -> FAILED
   └─ 재고 예약 성공 -> STOCK_RESERVED
-        ├─ 배송 생성 성공 -> CONFIRMED
-        └─ 배송 생성 실패
-              ├─ 재고 예약 취소 성공 -> FAILED
-              └─ 재고 예약 취소 실패 -> COMPENSATION_FAILED
+        ├─ 배송 생성 실패
+        │     ├─ 재고 예약 취소 성공 -> FAILED
+        │     └─ 재고 예약 취소 실패 -> COMPENSATION_FAILED
+        └─ 배송 생성 성공
+              ├─ 주문 확정 저장 성공 -> CONFIRMED
+              └─ 주문 확정 저장 실패
+                    ├─ 배송 취소 + 재고 예약 취소 성공 -> FAILED
+                    └─ 배송 취소 또는 재고 예약 취소 실패 -> COMPENSATION_FAILED
 ```
 
 이 상태 머신의 핵심은 `FAILED`와 `COMPENSATION_FAILED`를 구분하는 것입니다.
@@ -179,6 +187,8 @@ PENDING
 | 재고 예약 실패 | `FAILED` | 외부 성공 작업 없음 |
 | 배송 생성 실패 + 재고 예약 취소 성공 | `FAILED` | 보상 성공, 정합성 회복 |
 | 배송 생성 실패 + 재고 예약 취소 실패 | `COMPENSATION_FAILED` | 재고 예약이 남아 있을 수 있음 |
+| 배송 생성 성공 + 주문 확정 저장 실패 + 배송/재고 보상 성공 | `FAILED` | 보상 성공, 정합성 회복 |
+| 배송 생성 성공 + 주문 확정 저장 실패 + 배송/재고 보상 실패 | `COMPENSATION_FAILED` | 배송 또는 재고 예약이 남아 있을 수 있음 |
 
 ---
 
@@ -243,7 +253,7 @@ CONFIRMED -> finalDispatchDeadline 업데이트 가능
 | `InvalidOrderStatusException` | 허용되지 않은 상태 전이 |
 | `OrderNotFoundException` | 주문 없음 또는 접근 권한 없음 |
 | `SagaFailedException` | 주문 생성 Saga 일반 실패 |
-| `SagaCompensationFailedException` | 보상 처리 실패 |
+| `SagaCompensationFailedException` | 외부 작업 보상 처리 실패 |
 
 ---
 
@@ -270,20 +280,9 @@ CONFIRMED -> finalDispatchDeadline 업데이트 가능
 
 현재는 최종 상태만 Order row에 남습니다. 향후 상태 변경 이력을 별도 테이블로 관리하면 장애 분석과 운영 추적에 도움이 됩니다.
 
-기록 후보:
-
-- orderId
-- 이전 상태
-- 이후 상태
-- 변경 사유
-- 실패 메시지
-- 변경 시각
-
 ### 14.2 보상 실패 재처리
 
 `COMPENSATION_FAILED` 상태를 기반으로 관리자 재처리 기능을 만들 수 있습니다.
-
-예시:
 
 ```text
 GET  /admin/orders?status=COMPENSATION_FAILED
