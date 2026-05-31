@@ -15,6 +15,9 @@ import com.sparta.whereismyparcel.inventory.presentation.dto.response.StockReser
 import com.sparta.whereismyparcel.product.domain.entity.ProductVariant;
 import com.sparta.whereismyparcel.product.domain.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,6 +74,11 @@ public class InventoryService {
     /**
      * 주문 생성 시 수량 예약 선점 (Order ➡︎ Inventory)
      */
+    @Retryable(
+            retryFor = {PessimisticLockingFailureException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 500)
+    )
     @Transactional
     public List<StockReservationResponse> reserveOrderStock(StockReservationRequest request) {
         List<StockReservationRequest.Item> sortedItems = request.items().stream()
