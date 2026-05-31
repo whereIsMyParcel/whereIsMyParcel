@@ -4,7 +4,7 @@
 
 ## 아키텍처 설계
 
-- 현재 단계에선느 시스템 복잡도를 낮추고 개발 생산성을 위해 하나의 어플리케이션 서버(모듈)내에 세 도메인을 배치하되, DB 스키마는 분리해놨습니다.
+- 현재 단계에서는 시스템 복잡도를 낮추고 개발 생산성을 위해 하나의 어플리케이션 서버(모듈)내에 세 도메인을 배치하되, DB 스키마는 분리해놨습니다.
 - JPA의 내부 객체 연관관계를 설정하였지만, 향후 완전한 MSA 분리시 서비스간 결합도를 낮추기 위해 서비스 레이어를 분리하여 작성했습니다.
 - Microservice Architecture(MSA) 환경에서 타 서비스와의 정밀한 데이터 동기화를 위해 `Feign Client` 통신을 적극적으로 활용합니다.
 
@@ -73,7 +73,6 @@ Product
 
 - **동작 메커니즘 (How it works)**
 
-
     1. 최상위 부모 생성: 입력받은 상품 기본 정보로 Product 엔티티를 영속화합니다.
 
     2. 옵션 트리 빌드: 요청으로 들어온 옵션 그룹(ex: 색상:[블랙, 화이트], 사이즈:[260, 270])을 순회하며 ProductOption과 ProductOptionValue를 먼저 데이터베이스에 안착시킵니다.
@@ -123,7 +122,7 @@ Product
 
     - `MASTER` / `HUB_MANAGER`: 업체 등록/삭제, 소속 직원 삭제 권한 보유
 
-    - `COMPANY_MANAGER`: 본인 소속 업체의 직원 등록 및 상품/재고 관리 권한 보유]
+    - `COMPANY_MANAGER`: 본인 소속 업체의 직원 등록 및 상품/재고 관리 권한 보유
 
 ## API 엔트포인트 명세
 
@@ -131,17 +130,17 @@ Product
 
 - Company
 
-| Method   | URL                                               | Description           | Required Role / Header                       |
-|:---------|:--------------------------------------------------|:----------------------|:---------------------------------------------|
-| `POST`   | `/api/v1/companies`                               | 신규 업체 등록              | `MASTER`, `HUB_MANAGER`                      |
-| `GET`    | `/api/v1/companies/{companyId}`                   | 특정 업체 단건 조회           | `ALL`                                        |
-| `GET`    | `/api/v1/companies`                               | 전체 업체 목록 조회 (Paging)  | `ALL`                                        |
-| `PATCH`  | `/api/v1/companies/{companyId}`                   | 업체 정보 수정              | `COMPANY_MANAGER`                            |
-| `DELETE` | `/api/v1/companies/{companyId}`                   | 특정 업체 삭제              | `MASTER`, `HUB_MANAGER` / Header: X-User-Id" |
-| `POST`   | `/api/v1/companies/{companyId}/member`            | 업체 소속 멤버(직원) 등록       | `COMPANY_MANAGER`                            |
-| `GET`    | `/api/v1/companies/{companyId}/member/{memberId}` | 업체 멤버 단건 조회           | `ALL`                                        |
-| `GET`    | `/api/v1/companies/{companyId}/member`            | 업체별 멤버 목록 조회 (Paging) | `ALL`                                        |
-| `DELETE` | `/api/v1/companies/{companyId}/member`            | 업체 멤버 삭제(해제)          | `COMPANY_MANAGER` / Header: X-User-Id        |
+| Method   | URL                                               | Description           | Required Role / Header                      |
+|:---------|:--------------------------------------------------|:----------------------|:--------------------------------------------|
+| `POST`   | `/api/v1/companies`                               | 신규 업체 등록              | `MASTER`, `HUB_MANAGER`                     |
+| `GET`    | `/api/v1/companies/{companyId}`                   | 특정 업체 단건 조회           | `ALL`                                       |
+| `GET`    | `/api/v1/companies`                               | 전체 업체 목록 조회 (Paging)  | `ALL`                                       |
+| `PATCH`  | `/api/v1/companies/{companyId}`                   | 업체 정보 수정              | `COMPANY_MANAGER`                           |
+| `DELETE` | `/api/v1/companies/{companyId}`                   | 특정 업체 삭제              | `MASTER`, `HUB_MANAGER` / Header: X-User-Id |
+| `POST`   | `/api/v1/companies/{companyId}/member`            | 업체 소속 멤버(직원) 등록       | `COMPANY_MANAGER`                           |
+| `GET`    | `/api/v1/companies/{companyId}/member/{memberId}` | 업체 멤버 단건 조회           | `ALL`                                       |
+| `GET`    | `/api/v1/companies/{companyId}/member`            | 업체별 멤버 목록 조회 (Paging) | `ALL`                                       |
+| `DELETE` | `/api/v1/companies/{companyId}/member`            | 업체 멤버 삭제(해제)          | `COMPANY_MANAGER` / Header: X-User-Id       |
 
 - Product
 
