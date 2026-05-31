@@ -172,6 +172,13 @@ public class Order extends BaseEntity {
         this.orderStatus = OrderStatus.FAILED;
     }
 
+    public void failCompensation() {
+        if (this.orderStatus != OrderStatus.STOCK_RESERVED) {
+            throw new InvalidOrderStatusException();
+        }
+        this.orderStatus = OrderStatus.COMPENSATION_FAILED;
+    }
+
     public void complete() {
         if (this.orderStatus != OrderStatus.CONFIRMED) {
             throw new InvalidOrderStatusException();
