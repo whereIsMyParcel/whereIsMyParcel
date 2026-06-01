@@ -119,9 +119,9 @@ public class CompanyController {
     public ResponseEntity<ApiResponse<Void>> deleteCompanyMember(
             @PathVariable UUID companyId,
             @RequestBody @Valid CompanyMemberDelRequest request,
-            @RequestHeader("X-User-Id") String hubManagerOrMasterId
+            @RequestHeader("X-User-Id") String companyManagerId
     ) {
-        companyService.deleteCompanyMember(companyId, request, hubManagerOrMasterId);
+        companyService.deleteCompanyMember(companyId, request, companyManagerId);
         return ResponseEntity.ok(ApiResponse.ok());
     }
 }
