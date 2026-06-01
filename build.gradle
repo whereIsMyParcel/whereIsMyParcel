@@ -39,8 +39,8 @@ configure(subprojects.findAll { it.buildFile.exists() }) {
 		implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 		implementation 'io.micrometer:micrometer-registry-prometheus'
 		implementation 'com.github.loki4j:loki-logback-appender:1.5.2'
-		implementation 'io.sentry:sentry-spring-boot-starter-jakarta:7.22.0'
-		implementation 'io.sentry:sentry-logback:7.22.0'
+		implementation 'io.sentry:sentry-spring-boot-starter-jakarta:8.43.0'
+		implementation 'io.sentry:sentry-logback:8.43.0'
 	}
 
 	// 서비스 모듈들에 공통 테스트 환경(ArchUnit 포함) 적용
