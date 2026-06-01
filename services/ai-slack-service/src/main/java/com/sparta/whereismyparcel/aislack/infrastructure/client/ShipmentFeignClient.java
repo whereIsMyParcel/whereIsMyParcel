@@ -10,12 +10,11 @@ import org.springframework.web.bind.annotation.PathVariable; // @PathVariable �
 import java.util.List;
 import java.util.UUID;
 
-@FeignClient(name = "shipment-service")
+@FeignClient(name = "shipment-service", fallbackFactory = ShipmentFeignClientFallbackFactory.class)
 public interface ShipmentFeignClient {
 
     @GetMapping("/internal/v1/shipments/{orderId}")
     ApiResponse<List<ShipmentResponse>> getShipmentByOrderId(
-            @RequestHeader("X-User-Id") String userId,
             @PathVariable UUID orderId // @PathVariable로 변경
     );
 

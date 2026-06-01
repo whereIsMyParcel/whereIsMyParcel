@@ -20,7 +20,7 @@ public class PromptGenerator {
                 - 배송 담당자의 근무 시간은 항시 '09:00 ~ 18:00'입니다. 근무 시간 외에는 배송이 진행되지 않거나 지연됨을 고려해야 합니다
                  [출력 요구사항]
                 - 위 정보를 모두 연산하여 납기를 맞추기 위한 최종 발송 시한을 계산하세요.
-                - 응답 형식은 반드시 'YYYY-MM-DD HH:mm:ss' 형태를 포함한 명확한 최종 발송 시한 일시가 드러나야 합니다.
+                - 응답 형식은 반드시 'DEADLINE:YYYY-MM-DDTHH:mm:ss' 형태를 포함한 명확한 최종 발송 시한 일시가 드러나야 합니다.
                 """);
 
         promptBuilder.append("Order Details:\n");

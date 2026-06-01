@@ -12,18 +12,16 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.UUID;
 
-@FeignClient(name = "order-service")
+@FeignClient(name = "order-service", fallbackFactory = OrderFeignClientFallbackFactory.class)
 public interface OrderFeignClient {
 
     @GetMapping("/internal/v1/orders/{orderId}")
     ApiResponse<OrderResponse> getOrder(
-            @RequestHeader("X-User-Id") String userId,
             @PathVariable UUID orderId
     );
 
     @PatchMapping("/internal/v1/orders/{orderId}/finalDispatchDeadline")
     ApiResponse<Void> patchDeliveryDeadline(
-            @RequestHeader("X-User-Id") String userId,
             @PathVariable UUID orderId,
             @RequestBody DeliveryDeadlinePatchRequest request
     );

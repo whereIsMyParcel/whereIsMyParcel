@@ -10,10 +10,7 @@ import com.sparta.whereismyparcel.company.domain.exception.*;
 import com.sparta.whereismyparcel.company.domain.repository.CompanyMemberRepository;
 import com.sparta.whereismyparcel.company.domain.repository.CompanyRepository;
 import com.sparta.whereismyparcel.company.infrastructure.feign.client.UserFeignClient;
-import com.sparta.whereismyparcel.company.presentation.dto.request.CompanySearchHubRequest;
-import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyMemberRequest;
-import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyRegisterRequest;
-import com.sparta.whereismyparcel.company.presentation.dto.request.CompanyUpdateRequest;
+import com.sparta.whereismyparcel.company.presentation.dto.request.*;
 import com.sparta.whereismyparcel.company.presentation.dto.response.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -132,17 +129,17 @@ public class CompanyService {
         Company company = companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
 
-        Boolean isExistsMember = companyMemberRepository.existsByUserId(request.companyMemberId());
+        Boolean isExistsMember = companyMemberRepository.existsByUserId(request.memberUserId());
         if (isExistsMember) {
             throw new AlreadyRegisterMemberException();
         }
 
-        ApiResponse<Void> updateUserResponse = userFeignClient.updateUserCompanyId(request.companyMemberId(), companyId);
+        ApiResponse<Void> updateUserResponse = userFeignClient.updateUserCompanyId(request.memberUserId(), companyId);
         if (updateUserResponse == null || !updateUserResponse.success()) {
             throw new UserSyncFailedException();
         }
 
-        CompanyMember companyMember = CompanyMember.addMember(request.companyMemberId(), company);
+        CompanyMember companyMember = CompanyMember.addMember(request.memberUserId(), company);
         companyMemberRepository.save(companyMember);
         return CompanyMemberResponse.from(companyMember);
     }
@@ -166,7 +163,7 @@ public class CompanyService {
 
     // 직원 삭제
     @Transactional
-    public void deleteCompanyMember(UUID companyId, CompanyMemberRequest request, String companyManagerId) {
+    public void deleteCompanyMember(UUID companyId, CompanyMemberDelRequest request, String companyManagerId) {
         companyRepository.findByIdAndStatus(companyId, CompanyStatus.ACTIVE)
                 .orElseThrow(CompanyNotFoundException::new);
 
@@ -193,6 +190,4 @@ public class CompanyService {
 
         return CompanySearchHubResponse.from(company.getHubId());
     }
-
-
 }

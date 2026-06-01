@@ -12,6 +12,9 @@ spring:
       discovery:
         enabled: true
         service-id: config-server
+    openfeign:
+      circuitbreaker:
+        enabled: true
   datasource:
     url: ${COMPANY_DB_URL:jdbc:postgresql://localhost:5432/sparta_logistics?currentSchema=company_db,product_db,inventory_db}
     username: ${DB_USERNAME:sparta}
@@ -31,3 +34,13 @@ eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        registerHealthIndicator: true

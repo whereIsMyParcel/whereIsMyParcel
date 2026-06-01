@@ -4,8 +4,7 @@ import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.order.application.saga.OrderCreateSaga;
 import com.sparta.whereismyparcel.order.application.saga.OrderCreateSagaContext;
 import com.sparta.whereismyparcel.order.domain.entity.Order;
-import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
-import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
+import com.sparta.whereismyparcel.order.domain.OrderStatus;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderSearchDateRangeException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
@@ -55,7 +54,6 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class OrderService {
 
@@ -71,9 +69,10 @@ public class OrderService {
     private final ShipmentFeignClient shipmentFeignClient;
     private final AiSlackFeignClient aiSlackFeignClient;
     private final OrderCreateSaga orderCreateSaga;
+    private final OrderCreationStateService orderCreationStateService;
 
-    @Transactional
     public OrderCreateResponse createOrder(String userId, OrderCreateRequest request) {
+        // 1. SKU 검증
         List<UUID> productVariantIds = request.items().stream()
                 .map(OrderCreateRequest.OrderItemCreateRequest::productVariantId)
                 .toList();
@@ -86,16 +85,14 @@ public class OrderService {
                         Function.identity()
                 ));
 
-        List<OrderItem> orderItems = request.items().stream()
+        // 2. context 생성
+        List<OrderCreateSagaContext.OrderItemInfo> itemInfos = request.items().stream()
                 .map(i -> {
                     SkuValidationResponse skuInfo = validationMap.get(i.productVariantId());
-                    if (skuInfo == null) {
-                        throw new InvalidOrderItemsException();
-                    }
-                    return OrderItem.create(
+                    if (skuInfo == null) throw new InvalidOrderItemsException();
+                    return new OrderCreateSagaContext.OrderItemInfo(
                             i.productVariantId(),
                             skuInfo.skuCode(),
-                            skuInfo.variantName(),
                             skuInfo.variantName(),
                             skuInfo.variantPrice().longValue(),
                             i.quantity()
@@ -103,7 +100,8 @@ public class OrderService {
                 })
                 .toList();
 
-        Order order = Order.create(
+        OrderCreateSagaContext context = new OrderCreateSagaContext(
+                userId,
                 request.companyMemberId(),
                 generateOrderNumber(),
                 request.recipientName(),
@@ -113,39 +111,34 @@ public class OrderService {
                 request.addressDetail(),
                 request.requestMemo(),
                 request.requestedDeliveryAt(),
-                userId,
-                orderItems
+                itemInfos
         );
 
-        orderRepository.save(order);
+        // 3. PENDING 주문 저장
+        UUID orderId = orderCreationStateService.createPendingOrder(context);
+        context.applyOrderId(orderId);
 
-        List<OrderCreateSagaContext.OrderItemInfo> itemInfos = orderItems.stream()
-                .map(item -> new OrderCreateSagaContext.OrderItemInfo(
-                        item.getProductVariantId(),
-                        item.getSkuCode(),
-                        item.getQuantity()
-                ))
-                .toList();
-        OrderCreateSagaContext context = new OrderCreateSagaContext(
-                order.getOrderId(), userId, itemInfos);
-
+        // 4. Saga 실행
         try {
-            orderCreateSaga.execute(order, context);
+            orderCreateSaga.execute(context);
         } catch (SagaCompensationFailedException e) {
-            log.error("[OrderService] 보상 실패. orderId={}", order.getOrderId(), e);
+            log.error("[OrderService] Saga 보상 실패. orderId={}", orderId, e);
         } catch (SagaFailedException e) {
-            log.error("[OrderService] Saga 실패. orderId={}", order.getOrderId(), e);
-        } finally {
-            orderRepository.save(order);
+            log.error("[OrderService] Saga 실패. orderId={}", orderId, e);
         }
 
+        // 5. DB에 커밋된 최신 상태 조회
+        Order order = orderCreationStateService.getOrder(orderId);
+
+        // 6. CONFIRMED이면 AI Trigger
         if (order.getOrderStatus() == OrderStatus.CONFIRMED) {
-            registerAiAnalysisAfterCommit(userId, order.getOrderId());
+            registerAiAnalysisAfterCommit(userId, orderId);
         }
 
         return OrderCreateResponse.from(order);
     }
 
+    @Transactional(readOnly = true)
     public Page<OrderListResponse> getOrders(
             String userId,
             String role,
@@ -218,6 +211,7 @@ public class OrderService {
         return keyword.trim();
     }
 
+    @Transactional(readOnly = true)
     public OrderDetailResponse getOrder(String userId, String role, UUID orderId) {
         Order order = orderRepository.findDetailByOrderId(orderId, userId, isMaster(role))
                 .orElseThrow(OrderNotFoundException::new);
@@ -225,6 +219,7 @@ public class OrderService {
         return OrderDetailResponse.from(order);
     }
 
+    @Transactional(readOnly = true)
     public OrderAiContextResponse getOrderAiContext(UUID orderId) {
         Order order = orderRepository.findWithOrderItemsByOrderId(orderId)
                 .orElseThrow(OrderNotFoundException::new);
@@ -372,7 +367,6 @@ public class OrderService {
     private String generateOrderNumber() {
         String date = LocalDate.now().format(ORDER_NUMBER_DATE_FORMAT);
         String suffix = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-
         return "ORD-" + date + "-" + suffix;
     }
 

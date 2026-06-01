@@ -1,5 +1,6 @@
 package com.sparta.whereismyparcel.order.domain.entity;
 
+import com.sparta.whereismyparcel.order.domain.OrderStatus;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
 import com.sparta.whereismyparcel.order.domain.exception.OrderCancelTimeExpiredException;
@@ -210,6 +211,50 @@ class OrderTest {
         assertThatThrownBy(order::confirm)
                 .isInstanceOf(InvalidOrderStatusException.class);
         assertThatThrownBy(order::cancel)
+                .isInstanceOf(InvalidOrderStatusException.class);
+        assertThatThrownBy(order::complete)
+                .isInstanceOf(InvalidOrderStatusException.class);
+    }
+
+    @Test
+    @DisplayName("STOCK_RESERVED 상태 주문은 COMPENSATION_FAILED로 변경할 수 있다")
+    void failCompensationStockReservedOrder() {
+        // given
+        Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
+        order.reserveStock();
+
+        // when
+        order.failCompensation();
+
+        // then
+        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.COMPENSATION_FAILED);
+    }
+
+    @Test
+    @DisplayName("PENDING 상태 주문은 COMPENSATION_FAILED로 변경할 수 없다")
+    void failCompensationPendingOrderThrowsException() {
+        // given
+        Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
+
+        // when & then
+        assertThatThrownBy(order::failCompensation)
+                .isInstanceOf(InvalidOrderStatusException.class);
+    }
+
+    @Test
+    @DisplayName("COMPENSATION_FAILED 상태 주문은 다른 상태로 변경할 수 없다")
+    void changeCompensationFailedOrderStatusThrowsException() {
+        // given
+        Order order = createOrder(List.of(createOrderItem(10_000L, 1)));
+        order.reserveStock();
+        order.failCompensation();
+
+        // when & then
+        assertThatThrownBy(order::confirm)
+                .isInstanceOf(InvalidOrderStatusException.class);
+        assertThatThrownBy(order::cancel)
+                .isInstanceOf(InvalidOrderStatusException.class);
+        assertThatThrownBy(order::fail)
                 .isInstanceOf(InvalidOrderStatusException.class);
         assertThatThrownBy(order::complete)
                 .isInstanceOf(InvalidOrderStatusException.class);

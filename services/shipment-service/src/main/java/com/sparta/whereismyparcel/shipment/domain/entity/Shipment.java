@@ -126,6 +126,7 @@ public class Shipment extends BaseEntity {
                 .deliveryAddress(deliveryAddress)
                 .recipientName(recipientName)
                 .recipientSlackId(recipientSlackId)
+                .histories(new ArrayList<>())
                 .build();
     }
 
@@ -167,7 +168,7 @@ public class Shipment extends BaseEntity {
         this.histories = histories;
     }
 
-    public void addItems(List<ShipmentItem> items){
+    public void addItems(List<ShipmentItem> items) {
         this.items = items;
     }
 
@@ -175,8 +176,19 @@ public class Shipment extends BaseEntity {
         if (this.shipmentStatus != ShipmentStatus.HUB_WAITING) {
             throw new ShipmentCannotBeStartedException();
         }
-        this.shipmentStatus = ShipmentStatus.HUB_MOVING;
+
+        if (hasNoRouteBetweenHubs()) {
+            /*from 허브 ~ to 허브 동일한 경우, 배송 경로가 생성되지 않는다
+            이 경우엔 배송 시작 시, 업체 이동 중으로 변경*/
+            this.shipmentStatus = ShipmentStatus.COMPANY_MOVING;
+        } else {
+            this.shipmentStatus = ShipmentStatus.HUB_MOVING;
+        }
         this.shippedAt = LocalDateTime.now();
+    }
+
+    private boolean hasNoRouteBetweenHubs() {
+        return histories.isEmpty();
     }
 
     public void delete(String userId) {

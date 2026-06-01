@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,6 +30,7 @@ public class InventoryService {
     private final InventoryRepository inventoryRepository;
     private final ProductVariantRepository productVariantRepository;
 
+    // 재고 등록
     @Transactional
     public AddInventoryResponse addStock(AddInventoryRequest request) {
         ProductVariant productVariant = productVariantRepository.findById(request.productVariantId())
@@ -53,6 +55,7 @@ public class InventoryService {
         return AddInventoryResponse.from(inventory);
     }
 
+    // 재고 확인
     public InventoryCheckResponse checkStock(UUID productVariantId) {
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
                 .orElseThrow(ProductVariantNotFoundException::new);
@@ -71,7 +74,7 @@ public class InventoryService {
     @Transactional
     public List<StockReservationResponse> reserveOrderStock(StockReservationRequest request) {
         List<StockReservationRequest.Item> sortedItems = request.items().stream()
-                .sorted(java.util.Comparator.comparing(StockReservationRequest.Item::skuCode))
+                .sorted(Comparator.comparing(StockReservationRequest.Item::skuCode))
                 .toList();
 
         return sortedItems.stream()

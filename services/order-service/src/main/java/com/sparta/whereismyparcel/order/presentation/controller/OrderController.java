@@ -3,7 +3,7 @@ package com.sparta.whereismyparcel.order.presentation.controller;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.common.util.PageableUtils;
 import com.sparta.whereismyparcel.order.application.service.OrderService;
-import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
+import com.sparta.whereismyparcel.order.domain.OrderStatus;
 import com.sparta.whereismyparcel.order.infrastructure.security.CurrentUser;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderCreateRequest;
 import com.sparta.whereismyparcel.order.presentation.dto.request.OrderUpdateRequest;

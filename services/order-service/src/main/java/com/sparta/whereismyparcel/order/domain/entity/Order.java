@@ -1,6 +1,7 @@
 package com.sparta.whereismyparcel.order.domain.entity;
 
 import com.sparta.whereismyparcel.common.entity.BaseEntity;
+import com.sparta.whereismyparcel.order.domain.OrderStatus;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderItemsException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
 import com.sparta.whereismyparcel.order.domain.exception.OrderCancelTimeExpiredException;
@@ -169,6 +170,13 @@ public class Order extends BaseEntity {
             throw new InvalidOrderStatusException();
         }
         this.orderStatus = OrderStatus.FAILED;
+    }
+
+    public void failCompensation() {
+        if (this.orderStatus != OrderStatus.STOCK_RESERVED) {
+            throw new InvalidOrderStatusException();
+        }
+        this.orderStatus = OrderStatus.COMPENSATION_FAILED;
     }
 
     public void complete() {

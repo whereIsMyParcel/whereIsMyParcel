@@ -5,6 +5,8 @@ import com.sparta.whereismyparcel.aislack.domain.entity.AnalysisStatus;
 import com.sparta.whereismyparcel.aislack.presentation.dto.request.SlackRequest;
 import com.sparta.whereismyparcel.aislack.presentation.dto.response.SlackMessageResponse;
 import com.sparta.whereismyparcel.common.response.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "ai-slack", description = "AI & Slack 관련 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/ai-slack")
@@ -26,6 +29,10 @@ public class AiSlackController {
 
     private final SlackMessageService slackMessageService;
 
+    @Operation(
+            summary = "슬랙 메시지 생성",
+            description = "AI 분석 결과를 배달자한테 슬랙 메시지 전송"
+    )
     @GetMapping("/{aiMessageId}")
     @ResponseStatus(HttpStatus.OK)
     public ApiResponse<SlackMessageResponse> getAiMessage(@PathVariable UUID aiMessageId) {
@@ -33,13 +40,10 @@ public class AiSlackController {
         return ApiResponse.success(response);
     }
 
-    /**
-     * AI 슬랙 메시지 목록 조회 (페이징 및 필터링 가능)
-     * @param orderId (선택 사항) 특정 주문 ID에 해당하는 메시지 필터링
-     * @param status (선택 사항) 특정 분석 상태에 해당하는 메시지 필터링
-     * @param pageable 페이징 정보 (page, size, sort)
-     * @return AI 메시지 목록 (Page 객체)
-     */
+    @Operation(
+            summary = "목록 조회",
+            description = "AI 슬랙 메시지 목록 조회 (페이징 및 필터링 가능)"
+    )
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public ApiResponse<Page<SlackMessageResponse>> getAiMessages(
@@ -51,6 +55,10 @@ public class AiSlackController {
         return ApiResponse.success(responses);
     }
 
+    @Operation(
+            summary = "슬랙 메시지 수정",
+            description = "슬랙 메시지 내용 수정"
+    )
     @PutMapping("/{aiMessageId}")
     @ResponseStatus(HttpStatus.OK)
     public ApiResponse<SlackMessageResponse> updateAiMessage(
@@ -61,6 +69,10 @@ public class AiSlackController {
         return ApiResponse.success(response);
     }
 
+    @Operation(
+            summary = "슬랙 메시지 삭제",
+            description = "슬랙 메시지 삭제"
+    )
     @DeleteMapping("/{aiMessageId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public ApiResponse<Void> deleteAiMessage(@PathVariable UUID aiMessageId) {

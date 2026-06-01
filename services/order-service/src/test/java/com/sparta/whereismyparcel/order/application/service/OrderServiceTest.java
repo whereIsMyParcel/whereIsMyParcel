@@ -2,9 +2,10 @@ package com.sparta.whereismyparcel.order.application.service;
 
 import com.sparta.whereismyparcel.common.response.ApiResponse;
 import com.sparta.whereismyparcel.order.application.saga.OrderCreateSaga;
+import com.sparta.whereismyparcel.order.application.saga.OrderCreateSagaContext;
 import com.sparta.whereismyparcel.order.domain.entity.Order;
 import com.sparta.whereismyparcel.order.domain.entity.OrderItem;
-import com.sparta.whereismyparcel.order.domain.entity.OrderStatus;
+import com.sparta.whereismyparcel.order.domain.OrderStatus;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderSearchDateRangeException;
 import com.sparta.whereismyparcel.order.domain.exception.InvalidOrderStatusException;
 import com.sparta.whereismyparcel.order.domain.exception.OrderErrorCode;
@@ -58,86 +59,140 @@ class OrderServiceTest {
     @Mock
     private OrderCreateSaga orderCreateSaga;
 
+    @Mock
+    private OrderCreationStateService orderCreationStateService;
+
     @InjectMocks
     private OrderService orderService;
 
+    // -------------------------------------------------------------------------
+    // createOrder
+    // -------------------------------------------------------------------------
+
     @Test
-    @DisplayName("주문 생성에 성공하면 CONFIRMED 상태의 응답을 반환한다")
+    @DisplayName("주문 생성에 성공하면 CONFIRMED 상태의 응답을 반환하고 AI Trigger가 호출된다")
     void createOrderSuccess() {
+        // given
         String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
         OrderCreateRequest request = createRequest();
+        Order confirmedOrder = createOrderWithStatus(userId, OrderStatus.CONFIRMED);
+
         given(companyFeignClient.validateProducts(any(), any()))
                 .willReturn(ApiResponse.success(createValidationResponse(request)));
-        given(orderRepository.save(any())).willAnswer(i -> i.getArgument(0));
-        willAnswer(invocation -> {
-            Order order = invocation.getArgument(0);
-            order.reserveStock();
-            order.confirm();
-            return null;
-        }).given(orderCreateSaga).execute(any(), any());
+        given(orderCreationStateService.createPendingOrder(any()))
+                .willReturn(orderId);
+        given(orderCreationStateService.getOrder(orderId))
+                .willReturn(confirmedOrder);
         given(aiSlackFeignClient.createAiAnalysisRequest(any(), any()))
                 .willReturn(ApiResponse.success(UUID.randomUUID()));
 
+        // when
         OrderCreateResponse response = orderService.createOrder(userId, request);
 
+        // then
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.CONFIRMED);
+        then(orderCreateSaga).should().execute(any(OrderCreateSagaContext.class));
+        then(orderCreationStateService).should().getOrder(orderId);
         then(aiSlackFeignClient).should().createAiAnalysisRequest(any(), any());
     }
 
     @Test
     @DisplayName("상품 검증에 실패하면 예외가 발생하고 주문은 생성되지 않는다")
     void createOrderFailOnValidation() {
+        // given
         String userId = UUID.randomUUID().toString();
         OrderCreateRequest request = createRequest();
         given(companyFeignClient.validateProducts(any(), any()))
                 .willThrow(new RuntimeException("상품 검증 실패"));
 
+        // when & then
         assertThatThrownBy(() -> orderService.createOrder(userId, request))
                 .isInstanceOf(RuntimeException.class);
+        then(orderCreationStateService).should(never()).createPendingOrder(any());
     }
 
     @Test
-    @DisplayName("Saga 실패 시 주문은 FAILED 상태로 저장된다")
+    @DisplayName("Saga 실패 시 FAILED 상태의 응답을 반환하고 AI Trigger는 호출되지 않는다")
     void createOrderFailOnSaga() {
+        // given
         String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
         OrderCreateRequest request = createRequest();
+        Order failedOrder = createOrderWithStatus(userId, OrderStatus.FAILED);
+
         given(companyFeignClient.validateProducts(any(), any()))
                 .willReturn(ApiResponse.success(createValidationResponse(request)));
-        given(orderRepository.save(any())).willAnswer(i -> i.getArgument(0));
-        willAnswer(invocation -> {
-            Order order = invocation.getArgument(0);
-            order.fail();
-            throw new SagaFailedException();
-        }).given(orderCreateSaga).execute(any(), any());
+        given(orderCreationStateService.createPendingOrder(any()))
+                .willReturn(orderId);
+        willThrow(new SagaFailedException())
+                .given(orderCreateSaga).execute(any(OrderCreateSagaContext.class));
+        given(orderCreationStateService.getOrder(orderId))
+                .willReturn(failedOrder);
 
+        // when
         OrderCreateResponse response = orderService.createOrder(userId, request);
 
+        // then
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.FAILED);
+        then(aiSlackFeignClient).should(never()).createAiAnalysisRequest(any(), any());
+    }
+
+    @Test
+    @DisplayName("Saga 보상 실패 시 COMPENSATION_FAILED 상태의 응답을 반환하고 AI Trigger는 호출되지 않는다")
+    void createOrderFailOnCompensation() {
+        // given
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        OrderCreateRequest request = createRequest();
+        Order compensationFailedOrder = createOrderWithStatus(userId, OrderStatus.COMPENSATION_FAILED);
+
+        given(companyFeignClient.validateProducts(any(), any()))
+                .willReturn(ApiResponse.success(createValidationResponse(request)));
+        given(orderCreationStateService.createPendingOrder(any()))
+                .willReturn(orderId);
+        willThrow(new SagaCompensationFailedException())
+                .given(orderCreateSaga).execute(any(OrderCreateSagaContext.class));
+        given(orderCreationStateService.getOrder(orderId))
+                .willReturn(compensationFailedOrder);
+
+        // when
+        OrderCreateResponse response = orderService.createOrder(userId, request);
+
+        // then
+        assertThat(response.orderStatus()).isEqualTo(OrderStatus.COMPENSATION_FAILED);
         then(aiSlackFeignClient).should(never()).createAiAnalysisRequest(any(), any());
     }
 
     @Test
     @DisplayName("AI 분석 요청에 실패해도 주문 생성 성공 응답은 유지된다")
     void createOrderSuccessEvenIfAiAnalysisRequestFails() {
+        // given
         String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
         OrderCreateRequest request = createRequest();
+        Order confirmedOrder = createOrderWithStatus(userId, OrderStatus.CONFIRMED);
+
         given(companyFeignClient.validateProducts(any(), any()))
                 .willReturn(ApiResponse.success(createValidationResponse(request)));
-        given(orderRepository.save(any())).willAnswer(i -> i.getArgument(0));
-        willAnswer(invocation -> {
-            Order order = invocation.getArgument(0);
-            order.reserveStock();
-            order.confirm();
-            return null;
-        }).given(orderCreateSaga).execute(any(), any());
+        given(orderCreationStateService.createPendingOrder(any()))
+                .willReturn(orderId);
+        given(orderCreationStateService.getOrder(orderId))
+                .willReturn(confirmedOrder);
         given(aiSlackFeignClient.createAiAnalysisRequest(any(), any()))
                 .willThrow(new RuntimeException("AI service unavailable"));
 
+        // when
         OrderCreateResponse response = orderService.createOrder(userId, request);
 
+        // then
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.CONFIRMED);
         then(aiSlackFeignClient).should().createAiAnalysisRequest(any(), any());
     }
+
+    // -------------------------------------------------------------------------
+    // cancelOrder
+    // -------------------------------------------------------------------------
 
     @Test
     @DisplayName("PENDING 상태 주문은 외부 보상 없이 취소된다")
@@ -273,7 +328,6 @@ class OrderServiceTest {
     @Test
     @DisplayName("MASTER가 STOCK_RESERVED 주문 취소 시 실제 주문 소유자 ID로 재고를 원복한다")
     void cancelStockReservedOrderByMasterUsesOwnerId() {
-        // given
         String masterId = UUID.randomUUID().toString();
         String ownerId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
@@ -282,10 +336,8 @@ class OrderServiceTest {
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
         given(companyFeignClient.cancelReservation(any(), any())).willReturn(ApiResponse.ok());
 
-        // when
         OrderCancelResponse response = orderService.cancelOrder(masterId, "MASTER", orderId);
 
-        // then
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.CANCELLED);
         then(companyFeignClient).should().cancelReservation(eq(ownerId), any());
     }
@@ -293,7 +345,6 @@ class OrderServiceTest {
     @Test
     @DisplayName("MASTER가 CONFIRMED 주문 취소 시 실제 주문 소유자 ID로 배송 취소와 재고를 원복한다")
     void cancelConfirmedOrderByMasterUsesOwnerId() {
-        // given
         String masterId = UUID.randomUUID().toString();
         String ownerId = UUID.randomUUID().toString();
         UUID orderId = UUID.randomUUID();
@@ -304,14 +355,16 @@ class OrderServiceTest {
         given(shipmentFeignClient.cancelShipments(any(), any())).willReturn(ApiResponse.ok());
         given(companyFeignClient.cancelReservation(any(), any())).willReturn(ApiResponse.ok());
 
-        // when
         OrderCancelResponse response = orderService.cancelOrder(masterId, "MASTER", orderId);
 
-        // then
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.CANCELLED);
         then(shipmentFeignClient).should().cancelShipments(eq(ownerId), any());
         then(companyFeignClient).should().cancelReservation(eq(ownerId), any());
     }
+
+    // -------------------------------------------------------------------------
+    // completeOrder
+    // -------------------------------------------------------------------------
 
     @Test
     @DisplayName("CONFIRMED 상태 주문은 완료 처리할 수 있다")
@@ -367,6 +420,10 @@ class OrderServiceTest {
         assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
     }
 
+    // -------------------------------------------------------------------------
+    // getOrders
+    // -------------------------------------------------------------------------
+
     @Test
     @DisplayName("검색 시작일이 종료일보다 이후이면 주문 목록을 조회할 수 없다")
     void getOrdersWithInvalidDateRangeThrowsException() {
@@ -379,6 +436,170 @@ class OrderServiceTest {
                 userId, "MASTER", null, null, startDate, endDate, pageable
         )).isInstanceOf(InvalidOrderSearchDateRangeException.class);
     }
+
+    @Test
+    @DisplayName("MASTER는 전체 주문 목록을 조회할 수 있다")
+    void getOrdersByMaster() {
+        String userId = UUID.randomUUID().toString();
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Order order = createOrder(userId);
+        LocalDateTime startDate = LocalDateTime.now().minusDays(1);
+        LocalDateTime endDate = LocalDateTime.now().plusDays(1);
+
+        given(orderRepository.findAll(
+                org.mockito.ArgumentMatchers.<Specification<Order>>any(),
+                eq(pageable)
+        )).willReturn(new PageImpl<>(List.of(order), pageable, 1));
+
+        Page<OrderListResponse> response = orderService.getOrders(
+                userId, "MASTER", OrderStatus.PENDING, "ORD", startDate, endDate, pageable
+        );
+
+        assertThat(response.getTotalElements()).isEqualTo(1);
+        assertThat(response.getContent().get(0).orderStatus()).isEqualTo(OrderStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("MASTER가 아닌 사용자는 본인 주문 목록만 조회한다")
+    void getOrdersByNonMaster() {
+        String userId = UUID.randomUUID().toString();
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Order order = createOrder(userId);
+
+        given(orderRepository.findAll(
+                org.mockito.ArgumentMatchers.<Specification<Order>>any(),
+                eq(pageable)
+        )).willReturn(new PageImpl<>(List.of(order), pageable, 1));
+
+        Page<OrderListResponse> response = orderService.getOrders(
+                userId, "COMPANY_MANAGER", null, null, null, null, pageable
+        );
+
+        assertThat(response.getTotalElements()).isEqualTo(1);
+        assertThat(response.getContent().get(0).orderNumber()).isEqualTo(order.getOrderNumber());
+    }
+
+    // -------------------------------------------------------------------------
+    // getOrder
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("MASTER는 주문 단건 상세를 조회할 수 있다")
+    void getOrderByMaster() {
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+
+        given(orderRepository.findDetailByOrderId(orderId, userId, true))
+                .willReturn(Optional.of(order));
+
+        OrderDetailResponse response = orderService.getOrder(userId, "MASTER", orderId);
+
+        assertThat(response.orderNumber()).isEqualTo(order.getOrderNumber());
+        assertThat(response.items()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("MASTER가 아닌 사용자는 본인 주문 단건 상세만 조회할 수 있다")
+    void getOrderByNonMaster() {
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(userId);
+
+        given(orderRepository.findDetailByOrderId(orderId, userId, false))
+                .willReturn(Optional.of(order));
+
+        OrderDetailResponse response = orderService.getOrder(userId, "COMPANY_MANAGER", orderId);
+
+        assertThat(response.orderNumber()).isEqualTo(order.getOrderNumber());
+        assertThat(response.orderedBy()).isEqualTo(userId);
+    }
+
+    @Test
+    @DisplayName("조회 권한이 없는 주문 단건 상세는 조회할 수 없다")
+    void getOrderWithoutPermissionThrowsException() {
+        String userId = UUID.randomUUID().toString();
+        UUID orderId = UUID.randomUUID();
+
+        given(orderRepository.findDetailByOrderId(orderId, userId, false))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> orderService.getOrder(userId, "COMPANY_MANAGER", orderId))
+                .isInstanceOf(OrderNotFoundException.class);
+    }
+
+    // -------------------------------------------------------------------------
+    // getOrderAiContext
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("AI 프롬프트용 주문 컨텍스트를 조회할 수 있다")
+    void getOrderAiContext() {
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(UUID.randomUUID().toString());
+
+        given(orderRepository.findWithOrderItemsByOrderId(orderId))
+                .willReturn(Optional.of(order));
+
+        OrderAiContextResponse response = orderService.getOrderAiContext(orderId);
+
+        assertThat(response.orderNumber()).isEqualTo(order.getOrderNumber());
+        assertThat(response.recipientName()).isEqualTo(order.getRecipientName());
+        assertThat(response.items()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주문은 AI 프롬프트용 컨텍스트를 조회할 수 없다")
+    void getOrderAiContextNotFoundThrowsException() {
+        UUID orderId = UUID.randomUUID();
+
+        given(orderRepository.findWithOrderItemsByOrderId(orderId))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> orderService.getOrderAiContext(orderId))
+                .isInstanceOf(OrderNotFoundException.class);
+    }
+
+    // -------------------------------------------------------------------------
+    // updateFinalDispatchDeadline
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("AI가 계산한 최종 출고 상한을 주문에 반영할 수 있다")
+    void updateFinalDispatchDeadline() {
+        UUID orderId = UUID.randomUUID();
+        Order order = createOrder(UUID.randomUUID().toString());
+        order.reserveStock();
+        order.confirm();
+        LocalDateTime finalDispatchDeadline = LocalDateTime.now().plusDays(1);
+        OrderDispatchDeadlineUpdateRequest request =
+                new OrderDispatchDeadlineUpdateRequest(finalDispatchDeadline);
+
+        given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
+
+        OrderDispatchDeadlineUpdateResponse response =
+                orderService.updateFinalDispatchDeadline(orderId, request);
+
+        assertThat(response.finalDispatchDeadline()).isEqualTo(finalDispatchDeadline);
+        assertThat(order.getFinalDispatchDeadline()).isEqualTo(finalDispatchDeadline);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 주문에는 최종 출고 상한을 반영할 수 없다")
+    void updateFinalDispatchDeadlineNotFoundThrowsException() {
+        UUID orderId = UUID.randomUUID();
+        OrderDispatchDeadlineUpdateRequest request =
+                new OrderDispatchDeadlineUpdateRequest(LocalDateTime.now().plusDays(1));
+
+        given(orderRepository.findById(orderId)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> orderService.updateFinalDispatchDeadline(orderId, request))
+                .isInstanceOf(OrderNotFoundException.class);
+    }
+
+    // -------------------------------------------------------------------------
+    // updateOrder
+    // -------------------------------------------------------------------------
 
     @Test
     @DisplayName("주문자는 PENDING 상태 주문의 요청 정보를 수정할 수 있다")
@@ -468,6 +689,10 @@ class OrderServiceTest {
                 .isInstanceOf(OrderNotFoundException.class);
     }
 
+    // -------------------------------------------------------------------------
+    // deleteOrder
+    // -------------------------------------------------------------------------
+
     @Test
     @DisplayName("MASTER는 주문을 삭제할 수 있다")
     void deleteOrderByMaster() {
@@ -518,153 +743,9 @@ class OrderServiceTest {
                 .isInstanceOf(OrderNotFoundException.class);
     }
 
-    @Test
-    @DisplayName("MASTER는 전체 주문 목록을 조회할 수 있다")
-    void getOrdersByMaster() {
-        String userId = UUID.randomUUID().toString();
-        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Order order = createOrder(userId);
-        LocalDateTime startDate = LocalDateTime.now().minusDays(1);
-        LocalDateTime endDate = LocalDateTime.now().plusDays(1);
-
-        given(orderRepository.findAll(
-                org.mockito.ArgumentMatchers.<Specification<Order>>any(),
-                eq(pageable)
-        )).willReturn(new PageImpl<>(List.of(order), pageable, 1));
-
-        Page<OrderListResponse> response = orderService.getOrders(
-                userId, "MASTER", OrderStatus.PENDING, "ORD", startDate, endDate, pageable
-        );
-
-        assertThat(response.getTotalElements()).isEqualTo(1);
-        assertThat(response.getContent().get(0).orderStatus()).isEqualTo(OrderStatus.PENDING);
-    }
-
-    @Test
-    @DisplayName("MASTER가 아닌 사용자는 본인 주문 목록만 조회한다")
-    void getOrdersByNonMaster() {
-        String userId = UUID.randomUUID().toString();
-        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Order order = createOrder(userId);
-
-        given(orderRepository.findAll(
-                org.mockito.ArgumentMatchers.<Specification<Order>>any(),
-                eq(pageable)
-        )).willReturn(new PageImpl<>(List.of(order), pageable, 1));
-
-        Page<OrderListResponse> response = orderService.getOrders(
-                userId, "COMPANY_MANAGER", null, null, null, null, pageable
-        );
-
-        assertThat(response.getTotalElements()).isEqualTo(1);
-        assertThat(response.getContent().get(0).orderNumber()).isEqualTo(order.getOrderNumber());
-    }
-
-    @Test
-    @DisplayName("MASTER는 주문 단건 상세를 조회할 수 있다")
-    void getOrderByMaster() {
-        String userId = UUID.randomUUID().toString();
-        UUID orderId = UUID.randomUUID();
-        Order order = createOrder(userId);
-
-        given(orderRepository.findDetailByOrderId(orderId, userId, true))
-                .willReturn(Optional.of(order));
-
-        OrderDetailResponse response = orderService.getOrder(userId, "MASTER", orderId);
-
-        assertThat(response.orderNumber()).isEqualTo(order.getOrderNumber());
-        assertThat(response.items()).hasSize(1);
-    }
-
-    @Test
-    @DisplayName("MASTER가 아닌 사용자는 본인 주문 단건 상세만 조회할 수 있다")
-    void getOrderByNonMaster() {
-        String userId = UUID.randomUUID().toString();
-        UUID orderId = UUID.randomUUID();
-        Order order = createOrder(userId);
-
-        given(orderRepository.findDetailByOrderId(orderId, userId, false))
-                .willReturn(Optional.of(order));
-
-        OrderDetailResponse response = orderService.getOrder(userId, "COMPANY_MANAGER", orderId);
-
-        assertThat(response.orderNumber()).isEqualTo(order.getOrderNumber());
-        assertThat(response.orderedBy()).isEqualTo(userId);
-    }
-
-    @Test
-    @DisplayName("조회 권한이 없는 주문 단건 상세는 조회할 수 없다")
-    void getOrderWithoutPermissionThrowsException() {
-        String userId = UUID.randomUUID().toString();
-        UUID orderId = UUID.randomUUID();
-
-        given(orderRepository.findDetailByOrderId(orderId, userId, false))
-                .willReturn(Optional.empty());
-
-        assertThatThrownBy(() -> orderService.getOrder(userId, "COMPANY_MANAGER", orderId))
-                .isInstanceOf(OrderNotFoundException.class);
-    }
-
-    @Test
-    @DisplayName("AI 프롬프트용 주문 컨텍스트를 조회할 수 있다")
-    void getOrderAiContext() {
-        UUID orderId = UUID.randomUUID();
-        Order order = createOrder(UUID.randomUUID().toString());
-
-        given(orderRepository.findWithOrderItemsByOrderId(orderId))
-                .willReturn(Optional.of(order));
-
-        OrderAiContextResponse response = orderService.getOrderAiContext(orderId);
-
-        assertThat(response.orderNumber()).isEqualTo(order.getOrderNumber());
-        assertThat(response.recipientName()).isEqualTo(order.getRecipientName());
-        assertThat(response.items()).hasSize(1);
-    }
-
-    @Test
-    @DisplayName("존재하지 않는 주문은 AI 프롬프트용 컨텍스트를 조회할 수 없다")
-    void getOrderAiContextNotFoundThrowsException() {
-        UUID orderId = UUID.randomUUID();
-
-        given(orderRepository.findWithOrderItemsByOrderId(orderId))
-                .willReturn(Optional.empty());
-
-        assertThatThrownBy(() -> orderService.getOrderAiContext(orderId))
-                .isInstanceOf(OrderNotFoundException.class);
-    }
-
-    @Test
-    @DisplayName("AI가 계산한 최종 출고 상한을 주문에 반영할 수 있다")
-    void updateFinalDispatchDeadline() {
-        UUID orderId = UUID.randomUUID();
-        Order order = createOrder(UUID.randomUUID().toString());
-        order.reserveStock();
-        order.confirm();
-        LocalDateTime finalDispatchDeadline = LocalDateTime.now().plusDays(1);
-        OrderDispatchDeadlineUpdateRequest request =
-                new OrderDispatchDeadlineUpdateRequest(finalDispatchDeadline);
-
-        given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
-
-        OrderDispatchDeadlineUpdateResponse response =
-                orderService.updateFinalDispatchDeadline(orderId, request);
-
-        assertThat(response.finalDispatchDeadline()).isEqualTo(finalDispatchDeadline);
-        assertThat(order.getFinalDispatchDeadline()).isEqualTo(finalDispatchDeadline);
-    }
-
-    @Test
-    @DisplayName("존재하지 않는 주문에는 최종 출고 상한을 반영할 수 없다")
-    void updateFinalDispatchDeadlineNotFoundThrowsException() {
-        UUID orderId = UUID.randomUUID();
-        OrderDispatchDeadlineUpdateRequest request =
-                new OrderDispatchDeadlineUpdateRequest(LocalDateTime.now().plusDays(1));
-
-        given(orderRepository.findById(orderId)).willReturn(Optional.empty());
-
-        assertThatThrownBy(() -> orderService.updateFinalDispatchDeadline(orderId, request))
-                .isInstanceOf(OrderNotFoundException.class);
-    }
+    // -------------------------------------------------------------------------
+    // fixture
+    // -------------------------------------------------------------------------
 
     private OrderCreateRequest createRequest() {
         return new OrderCreateRequest(
@@ -700,13 +781,22 @@ class OrderServiceTest {
                 LocalDateTime.now().plusDays(3),
                 orderedBy,
                 List.of(OrderItem.create(
-                        UUID.randomUUID(),
-                        "SKU-001",
-                        "상품명",
-                        "옵션명",
-                        10_000L,
-                        2
+                        UUID.randomUUID(), "SKU-001", "상품명", "옵션명", 10_000L, 2
                 ))
         );
+    }
+
+    private Order createOrderWithStatus(String orderedBy, OrderStatus targetStatus) {
+        Order order = createOrder(orderedBy);
+        switch (targetStatus) {
+            case STOCK_RESERVED -> order.reserveStock();
+            case CONFIRMED -> { order.reserveStock(); order.confirm(); }
+            case FAILED -> order.fail();
+            case COMPENSATION_FAILED -> { order.reserveStock(); order.failCompensation(); }
+            case CANCELLED -> order.cancel();
+            case COMPLETED -> { order.reserveStock(); order.confirm(); order.complete(); }
+            default -> { /* PENDING - no action */ }
+        }
+        return order;
     }
 }

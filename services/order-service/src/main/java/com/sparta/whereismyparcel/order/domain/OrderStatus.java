@@ -1,4 +1,4 @@
-package com.sparta.whereismyparcel.order.domain.entity;
+package com.sparta.whereismyparcel.order.domain;
 
 public enum OrderStatus {
     PENDING,
@@ -6,5 +6,6 @@ public enum OrderStatus {
     CONFIRMED,
     CANCELLED,
     COMPLETED,
-    FAILED
+    FAILED,
+    COMPENSATION_FAILED
 }
