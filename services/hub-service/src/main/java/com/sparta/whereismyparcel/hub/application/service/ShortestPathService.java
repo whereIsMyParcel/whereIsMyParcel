@@ -60,7 +60,8 @@ public class ShortestPathService {
     private ShortestPathResponse calculateDijkstra(UUID startNode, UUID endNode) {
         record DijkstraNodeService(UUID id, double distance) {}
 
-        List<HubRoute> allRoutes = hubRouteRepository.findAll();
+        // [최적화] Fetch Join을 사용하여 N+1 쿼리 문제 해결 (메모리 로딩 속도 극대화)
+        List<HubRoute> allRoutes = hubRouteRepository.findAllWithHubs();
 
         // [최적화] 인접 리스트 생성
         Map<UUID, List<HubRoute>> adjacencyList = allRoutes.stream()
