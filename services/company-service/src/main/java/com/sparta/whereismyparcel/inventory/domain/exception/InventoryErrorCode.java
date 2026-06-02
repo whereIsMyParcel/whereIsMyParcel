@@ -16,9 +16,7 @@ public enum InventoryErrorCode implements ErrorCode {
     INVENTORY_NOT_FOUND(HttpStatus.NOT_FOUND, "INVENTORY-004", "해당 허브의 재고 정보를 찾을 수 없습니다."),
     INVENTORY_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "INVENTORY-005", "해당 허브에 이미 등록된 상품 재고입니다."),
 
-    HUB_NOT_FOUND(HttpStatus.NOT_FOUND,"INVENTORY-006", "해당 허브를 찾을 수 없습니다."),
-
-    PRODUCT_VARIANT_NOT_FOUND(HttpStatus.NOT_FOUND, "INVENTORY-007", "해당 옵션 조합을 찾을 수 없습니다.");
+    PRODUCT_VARIANT_NOT_FOUND(HttpStatus.NOT_FOUND, "INVENTORY-006", "해당 옵션 조합을 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String code;

@@ -15,6 +15,9 @@ import com.sparta.whereismyparcel.inventory.presentation.dto.response.StockReser
 import com.sparta.whereismyparcel.product.domain.entity.ProductVariant;
 import com.sparta.whereismyparcel.product.domain.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
