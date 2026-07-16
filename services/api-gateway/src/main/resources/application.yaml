@@ -45,7 +45,7 @@ spring:
             - id: ai-slack-service
               uri: lb://ai-slack-service
               predicates:
-                - Path=/api/v1/ai/**
+                - Path=/api/v1/ai-slack/**
   security:
     oauth2:
       resourceserver:
