@@ -23,7 +23,7 @@ public class UserClientFallbackFactory implements FallbackFactory<UserClient> {
 		}
 		return new UserClient() {
 			@Override
-			public ApiResponse<Boolean> exists(String slackId) {
+			public ApiResponse<UserResponse> exists(String slackId) {
 				throw new ServiceUnavailableException();
 			}
 

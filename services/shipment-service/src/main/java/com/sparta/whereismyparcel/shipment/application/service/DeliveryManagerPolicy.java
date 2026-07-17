@@ -33,7 +33,7 @@ public class DeliveryManagerPolicy {
 
     //slack id 존재하는지 확인
     private void validateSlackId(String slackId) {
-        if (!userClient.exists(slackId).data()) {
+        if (userClient.exists(slackId).data() == null) {
             throw new SlackIdNotFoundException();
         }
     }

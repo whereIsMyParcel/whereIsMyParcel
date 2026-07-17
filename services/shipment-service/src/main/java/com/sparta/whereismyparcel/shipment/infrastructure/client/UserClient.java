@@ -12,7 +12,7 @@ import java.util.UUID;
 public interface UserClient {
 
     @GetMapping("/by-slack/{slackId}")
-    ApiResponse<Boolean> exists(@PathVariable String slackId);
+    ApiResponse<UserResponse> exists(@PathVariable String slackId);
 
     @GetMapping("/{userId}")
     ApiResponse<UserResponse> getUser(@PathVariable("userId") UUID userId);

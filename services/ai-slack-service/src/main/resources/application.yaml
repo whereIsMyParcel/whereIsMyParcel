@@ -13,6 +13,8 @@ spring:
         enabled: true
         service-id: config-server
     openfeign:
+      okhttp:
+        enabled: true
       circuitbreaker:
         enabled: true
   datasource:
