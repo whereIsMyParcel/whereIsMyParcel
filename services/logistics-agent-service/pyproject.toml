@@ -20,6 +20,7 @@ dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",
     "ruff>=0.8.0",
+    "import-linter>=2.0",
 ]
 
 [build-system]
@@ -36,6 +37,70 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI 의존성 주입 관용구 (Depends 등)는 인자 기본값 함수 호출 허용
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Header",
+    "fastapi.Body",
+]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+# 계층 경계 강제 (design §17.4 / §17.6). Java 서비스의 ArchUnit에 대응한다.
+[tool.importlinter]
+root_package = "logistics_agent_service"
+
+[[tool.importlinter.contracts]]
+name = "domain은 바깥 계층에 의존하지 않는다"
+type = "forbidden"
+source_modules = ["logistics_agent_service.domain"]
+forbidden_modules = [
+    "logistics_agent_service.application",
+    "logistics_agent_service.agent",
+    "logistics_agent_service.infrastructure",
+    "logistics_agent_service.presentation",
+    "logistics_agent_service.core",
+]
+
+[[tool.importlinter.contracts]]
+name = "application은 domain에만 의존한다"
+type = "forbidden"
+source_modules = ["logistics_agent_service.application"]
+forbidden_modules = [
+    "logistics_agent_service.agent",
+    "logistics_agent_service.infrastructure",
+    "logistics_agent_service.presentation",
+    "logistics_agent_service.core",
+]
+
+[[tool.importlinter.contracts]]
+name = "presentation은 infrastructure/agent를 직접 호출하지 않는다"
+type = "forbidden"
+source_modules = ["logistics_agent_service.presentation"]
+forbidden_modules = [
+    "logistics_agent_service.infrastructure",
+    "logistics_agent_service.agent",
+]
+
+[[tool.importlinter.contracts]]
+name = "agent는 infrastructure/presentation에 의존하지 않는다"
+type = "forbidden"
+source_modules = ["logistics_agent_service.agent"]
+forbidden_modules = [
+    "logistics_agent_service.infrastructure",
+    "logistics_agent_service.presentation",
+]
+
+[[tool.importlinter.contracts]]
+name = "infrastructure는 presentation/agent에 의존하지 않는다"
+type = "forbidden"
+source_modules = ["logistics_agent_service.infrastructure"]
+forbidden_modules = [
+    "logistics_agent_service.presentation",
+    "logistics_agent_service.agent",
+]
