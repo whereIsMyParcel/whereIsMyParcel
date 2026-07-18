@@ -223,6 +223,31 @@ Order.status = CONFIRMED
 
 same-hub 배송은 배송 경로 테이블에 history가 없을 수 있으므로, shipment status와 shipment item 존재 여부를 함께 확인해야 합니다.
 
+### 7.1 보상 상태 판정 출처 (중요)
+
+보상 상태(`compensationStatus`)의 **1차 판정 출처는 order-service의 Order 상태 머신**이며, company의 `reservedQuantity`가 아니다.
+
+이유: company의 `Inventory`는 `(hubId × productVariant)` 단위 **집계** `reservedQuantity`만 보유하고 orderId를 갖지 않는다. 예약 원장을 Order 쪽(OrderItem)에 둔 결정(주문 취소 재고 원복 설계) 때문에, company 집계로는 "이 주문의 보상 상태"를 알 수 없다. 동일 SKU에 동시 주문이 있으면 `reservedQuantity > 0`이 대상 주문의 보상 실패를 뜻하지 않는다(다른 정상 주문의 예약일 수 있음). 또한 원복 delta가 비멱등이라 집계값 자체가 오염될 수 있다.
+
+따라서 다음과 같이 Order 상태로 판정한다.
+
+```text
+Order.status = FAILED
+=> 예약 전 실패 또는 예약 후 보상 성공 (dangling 재고 없음)
+=> compensationStatus = COMPLETED 또는 NOT_REQUIRED
+
+Order.status = COMPENSATION_FAILED
+=> 예약 성공 후 보상 실패 (dangling 재고 가능)
+=> compensationStatus = FAILED, diagnosisStatus = FAILED_COMPENSATION_FAILED / MANUAL_INTERVENTION_REQUIRED
+
+Order.status = CONFIRMED + Shipment 없음
+=> MANUAL_INTERVENTION_REQUIRED
+```
+
+`Order.status`는 이미 `GET /internal/v1/orders/{orderId}`(`OrderAiContextResponse.orderStatus`)로 노출된다. 위 §7의 `reservedQuantity` 기반 규칙은 **보조 근거(evidence)로만** 사용하고 1차 판정에서는 제외한다.
+
+주의: `FAILED`는 "예약 전 실패"와 "예약 후 보상 성공"을 구분하지 않는다. 안전성(재고 dangling 여부) 관점에선 둘 다 "없음"이라 무방하다. 굳이 구분이 필요하면 order-service가 "STOCK_RESERVED를 거쳤는지"를 노출하도록 보강한다(order 도메인 내부 변경으로 충분, 타 서비스 불필요).
+
 ## 8. Internal API 인증/헤더 정책 검토 결과
 
 현행 서비스 코드를 기준으로 확인한 내용입니다.
@@ -384,7 +409,9 @@ POST /internal/v1/inventories/confirm
 
 MVP의 Agent는 read-only 진단이 원칙이므로 reserve/cancel/confirm은 기본 tool로 실행하지 않습니다. 재현용 또는 후속 승인 액션 후보로만 문서화합니다.
 
-현재 orderId 기반 inventory reservation 조회 API는 확인되지 않았습니다. 이 데이터가 없으면 보상 상태 판정은 제한적이며 `UNKNOWN` 또는 간접 근거 기반으로 처리합니다.
+현재 orderId 기반 inventory reservation 조회 API는 확인되지 않았습니다. company의 `Inventory`는 orderId 없는 집계 `reservedQuantity`만 보유하므로, 이 값으로 주문 단위 보상 상태를 판정하지 않습니다(§7.1 참조). **보상 상태 1차 판정은 order-service의 `Order.status`(`FAILED` / `COMPENSATION_FAILED`)로 하고, `reservedQuantity`는 보조 근거로만** 사용합니다. 이 방향은 예약 원장을 Order에 둔 기존 결정과 일관되며, company-service 설계 변경을 요구하지 않습니다.
+
+주문 단위 정합성 이상 탐지(`DATA_INCONSISTENCY_DETECTED`, 예: "Order는 보상됐다는데 company엔 예약이 남음")는 company에 orderId 스코프 데이터가 없어 MVP 범위에서 제외합니다. 이는 자동 복구용 reconciliation이며 진단 코어가 아닙니다.
 
 ### 9.4 Hub tools
 
