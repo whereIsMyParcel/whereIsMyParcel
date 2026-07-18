@@ -906,33 +906,30 @@ configuration adapter
 
 설정, 로깅, 공통 상수처럼 모든 계층에서 참조 가능한 기반 코드를 둡니다. 비즈니스 로직은 두지 않습니다.
 
-### 17.6 Architecture CI 계획
+### 17.6 Architecture CI
 
-현재 Java CI는 Gradle/ArchUnit 중심이고 Python 프로젝트는 대상이 아닙니다. Python 서비스가 본격 구현되면 별도 CI를 추가합니다.
+Python 서비스 CI는 `.github/workflows/python-ci.yml`에 **별도 워크플로우**로 구성한다(기존 Java `ci.yml`은 건드리지 않는다). `services/logistics-agent-service/**` 변경 시에만 develop/main PR·push에서 실행된다.
 
-초기 Python CI 후보:
+실행 단계:
 
 ```text
 uv sync --locked
 uv run ruff check .
 uv run pytest
+uv run lint-imports
 ```
 
-후속 architecture rule 검증 후보:
+계층 경계는 **import-linter로 CI에서 강제**한다(§17.4). 계약은 `pyproject.toml`의 `[tool.importlinter]`에 정의하며, 현재 강제하는 규칙은 다음과 같다.
 
 ```text
-import-linter
+domain은 application, agent, infrastructure, presentation, core를 import하지 않는다
+application은 agent, infrastructure, presentation, core를 import하지 않는다
+presentation은 infrastructure, agent를 import하지 않는다
+agent는 infrastructure, presentation을 import하지 않는다
+infrastructure는 presentation, agent를 import하지 않는다
 ```
 
-검증할 규칙:
-
-```text
-domain must not import application, presentation, infrastructure, agent
-application must not import presentation
-presentation must not import infrastructure or agent
-agent must not import infrastructure
-infrastructure must not import presentation or agent
-```
+`core`는 합성 루트라 모든 계층을 조립할 수 있어 계약 대상에서 제외한다. `application`이 `agent`/`infrastructure`를 import하지 않도록 막으므로, 워크플로우 실행(agent)과 어댑터(infrastructure)는 application이 정의한 port를 통해 역주입된다.
 
 ## 18. 현재 제약과 후속 이슈 후보
 
