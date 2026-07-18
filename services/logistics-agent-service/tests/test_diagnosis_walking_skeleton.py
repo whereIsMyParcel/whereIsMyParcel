@@ -3,7 +3,9 @@ from fastapi.testclient import TestClient
 from logistics_agent_service.agent.graph.diagnosis_workflow import (
     LangGraphDiagnosisWorkflow,
 )
+from logistics_agent_service.agent.node.nodes import DiagnosisNodes
 from logistics_agent_service.application.service.diagnosis_service import DiagnosisService
+from logistics_agent_service.domain.rules import RuleBasedDiagnosisEngine
 from logistics_agent_service.infrastructure.client.fake_order_context_client import (
     FakeOrderContextClient,
 )
@@ -59,3 +61,14 @@ def test_query_endpoint_end_to_end() -> None:
     assert body["order_number"] == "ORD-20260718-COMPFAIL"
     assert body["diagnosis_id"]
     assert body["report"]
+
+
+def test_nodes_tolerate_none_message() -> None:
+    nodes = DiagnosisNodes(
+        order_port=FakeOrderContextClient(),
+        rule_engine=RuleBasedDiagnosisEngine(),
+        report_port=StubReportGenerator(),
+    )
+
+    assert nodes.normalize_input({"message": None}) == {"message": ""}
+    assert nodes.resolve_order({"message": None}) == {"order_identifier": None}

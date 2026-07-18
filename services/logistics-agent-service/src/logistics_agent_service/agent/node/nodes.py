@@ -31,10 +31,11 @@ class DiagnosisNodes:
         self._report_port = report_port
 
     def normalize_input(self, state: DiagnosisState) -> DiagnosisState:
-        return {"message": state.get("message", "").strip()}
+        message = state.get("message") or ""
+        return {"message": message.strip()}
 
     def resolve_order(self, state: DiagnosisState) -> DiagnosisState:
-        message = state.get("message", "")
+        message = state.get("message") or ""
         match = _ORDER_NUMBER.search(message) or _UUID.search(message)
         return {"order_identifier": match.group(0) if match else None}
 
