@@ -1,6 +1,6 @@
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from logistics_agent_service.application.dto import DiagnosisResult
 from logistics_agent_service.domain.enums import (
@@ -17,12 +17,9 @@ class DiagnosisQueryRequest(BaseModel):
 
 
 class DiagnosisResponse(BaseModel):
-    """운영자 응답 스키마(design §11).
+    """운영자 응답 스키마(design §11). diagnosis_id는 영속 계층이 부여한 값을 쓴다."""
 
-    diagnosis_id는 S2(영속) 도입 전까지 요청마다 새로 생성한다.
-    """
-
-    diagnosis_id: UUID = Field(default_factory=uuid4)
+    diagnosis_id: UUID
     trigger_type: TriggerType
     order_id: UUID | None
     order_number: str | None
@@ -39,6 +36,7 @@ class DiagnosisResponse(BaseModel):
     def from_result(cls, result: DiagnosisResult) -> "DiagnosisResponse":
         diagnosis = result.diagnosis
         return cls(
+            diagnosis_id=result.diagnosis_id,
             trigger_type=result.trigger_type,
             order_id=result.order_id,
             order_number=result.order_number,
