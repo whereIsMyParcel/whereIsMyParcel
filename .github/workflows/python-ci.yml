@@ -1,0 +1,42 @@
+name: logistics-agent CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'services/logistics-agent-service/**'
+      - '.github/workflows/python-ci.yml'
+  push:
+    branches: [develop, main]
+    paths:
+      - 'services/logistics-agent-service/**'
+      - '.github/workflows/python-ci.yml'
+
+jobs:
+  python-checks:
+    name: Python lint / test / import boundaries
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/logistics-agent-service
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: "3.11"
+
+      - name: Install dependencies (locked)
+        run: uv sync --locked
+
+      - name: Ruff
+        run: uv run ruff check .
+
+      - name: Pytest
+        run: uv run pytest
+
+      - name: Import boundaries (import-linter)
+        run: uv run lint-imports
