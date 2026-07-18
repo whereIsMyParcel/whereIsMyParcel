@@ -691,20 +691,58 @@ report readability
 
 ## 15. MVP 구현 순서
 
+수평(인프라 먼저)이 아니라 **얇은 수직 슬라이스**로 쌓는다. 각 슬라이스는 독립적으로 머지·데모·테스트 가능해야 한다. 위험·핵심인 진단 루프(rule + 보상 판정 출처)를 앞으로 당기고, Gemini·DB는 뒤로 미룬다.
+
+### 15.0 먼저 못 박을 것 (코딩 초반)
+
+- **import-linter 계약(§17.6)을 S1부터 적용**. 경계는 나중에 소급하기 어렵다.
+- **agent 노드 → application service/port만 호출(§17.4)**. 노드가 HTTP/DB/LLM adapter를 직접 부르지 않도록 port 인터페이스를 S1에서 확정한다.
+- **응답/리포트 JSON 스키마(§11) 고정**. eval(§14)과 dataset(§13)이 여기에 의존한다.
+
+### 15.1 슬라이스
+
 ```text
-1. logistics-agent-service FastAPI 프로젝트 생성
-2. agent_db schema 및 persistence 모델 생성
-3. internal API client 구현
-4. system header 정책 구현
-5. user query endpoint 구현
-6. incident endpoint 구현
-7. context collector 구현
-8. rule-based diagnosis engine 구현
-9. Gemini report generator 구현
-10. diagnosis/evidence/tool_call/llm_trace 저장
-11. 기본 eval dataset export 구현
-12. Docker Compose 통합
+S0  서비스 골격 + health + 설계 문서 (bootstrap baseline)
+
+S1  Walking skeleton (in-memory, LLM/DB 없음)
+    - user query endpoint
+    - orderId/orderNumber 추출
+    - tool 1개: get_order_ai_context
+    - rule: Order.status -> diagnosisStatus/compensationStatus (§7.1)
+    - report: 템플릿 스텁 (LLM 미사용)
+    - LangGraph 그래프 배선 + application port 인터페이스 + import-linter
+    DoD: 가짜 Order 클라이언트로 end-to-end 진단 응답, 그래프 통과 테스트
+
+S2  Persistence
+    - agent_db schema
+    - agent_diagnosis / agent_evidence / agent_tool_call 저장
+    DoD: S1 결과가 DB에 기록됨
+
+S3  Real tools + 규칙 확장
+    - shipment / inventory / hub / user internal API client
+    - system header 정책(§8.3)
+    - FailureStep 분류 규칙, evidence 수집
+    DoD: 실제 서비스 조회로 실패 단계까지 분류
+
+S4  Gemini report
+    - 스텁 -> ChatModel(Gemini) 리포트 생성
+    - agent_llm_trace 저장, JSON schema adherence 검증
+    DoD: 근거 기반 운영자 리포트 생성 + trace 기록
+
+S5  Incident endpoint
+    - POST /internal/v1/agent/incidents, 같은 진단 코어 재사용
+    DoD: incident 트리거로 동일 진단 흐름 동작
+
+S6  Eval
+    - agent_eval_dataset + JSONL export
+    - eval 기준(§14) 측정
+    DoD: 샘플셋에 대한 정확도 / schema adherence 리포트
+
+S7  Docker Compose 통합
+    DoD: compose up으로 타 서비스와 함께 기동, health/진단 스모크
 ```
+
+모든 슬라이스는 read-only 원칙(§10)을 지킨다. write/recovery 액션은 human-in-the-loop 도입 이후로 미룬다.
 
 ## 16. 후속 확장
 
