@@ -9,6 +9,9 @@ from logistics_agent_service.application.port.order_context_port import OrderCon
 from logistics_agent_service.application.port.report_generator_port import (
     ReportGeneratorPort,
 )
+from logistics_agent_service.application.port.shipment_context_port import (
+    ShipmentContextPort,
+)
 from logistics_agent_service.domain.enums import TriggerType
 from logistics_agent_service.domain.rules import RuleBasedDiagnosisEngine
 
@@ -28,11 +31,13 @@ class DiagnosisNodes:
     def __init__(
         self,
         order_port: OrderContextPort,
+        shipment_port: ShipmentContextPort,
         rule_engine: RuleBasedDiagnosisEngine,
         report_port: ReportGeneratorPort,
         repository: DiagnosisRepositoryPort,
     ) -> None:
         self._order_port = order_port
+        self._shipment_port = shipment_port
         self._rule_engine = rule_engine
         self._report_port = report_port
         self._repository = repository
@@ -49,13 +54,21 @@ class DiagnosisNodes:
     def collect_context(self, state: DiagnosisState) -> DiagnosisState:
         identifier = state.get("order_identifier")
         if not identifier:
-            return {"order_context": None}
-        return {"order_context": self._order_port.get_order_context(identifier)}
+            return {"order_context": None, "shipment_statuses": None}
+
+        order_context = self._order_port.get_order_context(identifier)
+        shipment_statuses = None
+        if order_context is not None:
+            shipment_statuses = self._shipment_port.get_shipment_statuses(
+                order_context.order_id
+            )
+        return {"order_context": order_context, "shipment_statuses": shipment_statuses}
 
     def diagnose(self, state: DiagnosisState) -> DiagnosisState:
         context = state.get("order_context")
         order_status = context.order_status if context else None
-        return {"diagnosis": self._rule_engine.diagnose(order_status)}
+        diagnosis = self._rule_engine.diagnose(order_status, state.get("shipment_statuses"))
+        return {"diagnosis": diagnosis}
 
     def generate_report(self, state: DiagnosisState) -> DiagnosisState:
         report = self._report_port.generate(state["diagnosis"], state.get("order_context"))

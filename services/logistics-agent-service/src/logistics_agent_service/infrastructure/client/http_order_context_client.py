@@ -31,6 +31,9 @@ class HttpOrderContextClient:
     `GET /internal/v1/orders/{orderId}`를 호출한다. system header는 주입된
     httpx.Client의 기본 헤더로 전달한다(§8.3 service account).
 
+    조회 실패(전송 오류·5xx)·not-found·business-failure는 모두 None으로 강등한다
+    (→ 진단은 UNKNOWN). 진단 도구가 order-service 장애로 함께 죽지 않도록 한다.
+
     현재 order 내부 API는 orderId(UUID)로만 조회 가능하므로, orderNumber 식별자는
     해석하지 않고 None을 반환한다(orderNumber 조회는 후속 슬라이스).
     """
@@ -43,10 +46,15 @@ class HttpOrderContextClient:
         if order_id is None:
             return None
 
-        response = self._client.get(f"/internal/v1/orders/{order_id}")
+        try:
+            response = self._client.get(f"/internal/v1/orders/{order_id}")
+        except httpx.HTTPError:
+            return None
+
         if response.status_code == httpx.codes.NOT_FOUND:
             return None
-        response.raise_for_status()
+        if response.is_error:
+            return None
 
         body = response.json()
         data = body.get("data")
