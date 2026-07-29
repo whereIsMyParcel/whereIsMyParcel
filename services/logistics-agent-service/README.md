@@ -12,11 +12,13 @@ Implemented:
 - uv-based Python project metadata + Dockerfile
 - Diagnosis walking skeleton (S1): LangGraph workflow, rule-based engine, `POST /api/v1/agent/diagnoses/query`
 - Layer-boundary enforcement (import-linter) + Python CI
+- Diagnosis result persistence (S2): `agent_db` via SQLAlchemy (in-memory fallback without `DATABASE_URL`)
+- Real order-service HTTP client (S3): `GET /internal/v1/orders/{orderId}` + system headers (fake fallback without `ORDER_SERVICE_BASE_URL`)
 
 Out of current scope (later slices):
 
-- Real order-service HTTP client — currently an in-memory fake (S3)
-- Database persistence (S2)
+- shipment/hub internal clients + `FailureStep` rule expansion (S3b)
+- orderNumber lookup — order internal API is orderId-only
 - Gemini report generation — currently a template stub (S4)
 - Incident endpoint (S5)
 - Docker Compose integration (S7)
@@ -27,6 +29,14 @@ Out of current scope (later slices):
 uv sync
 uv run uvicorn logistics_agent_service.main:app --reload --host 0.0.0.0 --port 8090
 ```
+
+## Configuration
+
+Environment variables (all optional; unset → local fallbacks):
+
+- `ORDER_SERVICE_BASE_URL` — order-service base URL. Unset → in-memory fake order client.
+- `DATABASE_URL` — `agent_db` connection string. Unset → in-memory diagnosis store.
+- `GEMINI_API_KEY` — reserved for report generation (S4).
 
 ## Endpoints
 
