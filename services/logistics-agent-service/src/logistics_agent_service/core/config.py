@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     environment: str = "local"
 
     gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.0-flash"
     database_url: str | None = None
     order_service_base_url: str | None = None
     shipment_service_base_url: str | None = None

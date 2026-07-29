@@ -1,6 +1,7 @@
 from functools import lru_cache
 
 import httpx
+from google import genai
 
 from logistics_agent_service.agent.graph.diagnosis_workflow import (
     LangGraphDiagnosisWorkflow,
@@ -9,6 +10,9 @@ from logistics_agent_service.application.port.diagnosis_repository_port import (
     DiagnosisRepositoryPort,
 )
 from logistics_agent_service.application.port.order_context_port import OrderContextPort
+from logistics_agent_service.application.port.report_generator_port import (
+    ReportGeneratorPort,
+)
 from logistics_agent_service.application.port.shipment_context_port import (
     ShipmentContextPort,
 )
@@ -25,6 +29,9 @@ from logistics_agent_service.infrastructure.client.http_order_context_client imp
 )
 from logistics_agent_service.infrastructure.client.http_shipment_context_client import (
     HttpShipmentContextClient,
+)
+from logistics_agent_service.infrastructure.llm.gemini_report_generator import (
+    GeminiReportGenerator,
 )
 from logistics_agent_service.infrastructure.llm.stub_report_generator import (
     StubReportGenerator,
@@ -78,6 +85,15 @@ def _build_shipment_port() -> ShipmentContextPort:
     return FakeShipmentContextClient()
 
 
+def _build_report_generator() -> ReportGeneratorPort:
+    """GEMINI_API_KEY가 있으면 Gemini, 없으면 Stub 리포트 생성기로 배선한다."""
+    settings = get_settings()
+    if settings.gemini_api_key:
+        client = genai.Client(api_key=settings.gemini_api_key)
+        return GeminiReportGenerator(client, settings.gemini_model)
+    return StubReportGenerator()
+
+
 def _build_repository() -> DiagnosisRepositoryPort:
     """database_url이 있으면 SQLAlchemy, 없으면 In-Memory 저장소로 배선한다."""
     settings = get_settings()
@@ -90,16 +106,16 @@ def _build_repository() -> DiagnosisRepositoryPort:
 
 @lru_cache
 def build_diagnosis_service() -> DiagnosisService:
-    """합성 루트 배선. order/shipment 클라이언트(HTTP/Fake), 리포트 생성기(Stub),
-    진단 저장소를 조립한다.
+    """합성 루트 배선. order/shipment 클라이언트(HTTP/Fake), 리포트 생성기(Gemini/Stub),
+    진단 저장소를 환경설정에 따라 조립한다.
 
-    core는 모든 계층을 조립할 수 있는 유일한 자리다. 실제 어댑터는 후속 슬라이스에서
-    이 배선만 교체하면 된다(Gemini 리포트 생성 등).
+    core는 모든 계층을 조립할 수 있는 유일한 자리다. 각 어댑터는 대응 환경변수가
+    없으면 로컬/CI용 폴백(Fake/Stub/In-memory)으로 배선된다.
     """
     workflow = LangGraphDiagnosisWorkflow(
         order_port=_build_order_port(),
         shipment_port=_build_shipment_port(),
-        report_port=StubReportGenerator(),
+        report_port=_build_report_generator(),
         repository=_build_repository(),
     )
     return DiagnosisService(workflow)
