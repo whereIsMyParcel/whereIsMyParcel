@@ -12,7 +12,7 @@ class OrderContext(BaseModel):
 
     order_id: UUID
     order_number: str
-    order_status: OrderStatus
+    order_status: OrderStatus | None
 
 
 class DiagnosisQuery(BaseModel):

@@ -10,10 +10,8 @@ class StubReportGenerator:
 
     def generate(self, diagnosis: Diagnosis, order_context: OrderContext | None) -> str:
         if order_context is not None:
-            order_line = (
-                f"- 주문: {order_context.order_number} "
-                f"(상태 {order_context.order_status.value})"
-            )
+            status = order_context.order_status.value if order_context.order_status else "미상"
+            order_line = f"- 주문: {order_context.order_number} (상태 {status})"
         else:
             order_line = "- 주문: 식별 불가"
 

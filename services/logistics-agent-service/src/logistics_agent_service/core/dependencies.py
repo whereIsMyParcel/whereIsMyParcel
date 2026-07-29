@@ -1,15 +1,21 @@
 from functools import lru_cache
 
+import httpx
+
 from logistics_agent_service.agent.graph.diagnosis_workflow import (
     LangGraphDiagnosisWorkflow,
 )
 from logistics_agent_service.application.port.diagnosis_repository_port import (
     DiagnosisRepositoryPort,
 )
+from logistics_agent_service.application.port.order_context_port import OrderContextPort
 from logistics_agent_service.application.service.diagnosis_service import DiagnosisService
-from logistics_agent_service.core.config import get_settings
+from logistics_agent_service.core.config import Settings, get_settings
 from logistics_agent_service.infrastructure.client.fake_order_context_client import (
     FakeOrderContextClient,
+)
+from logistics_agent_service.infrastructure.client.http_order_context_client import (
+    HttpOrderContextClient,
 )
 from logistics_agent_service.infrastructure.llm.stub_report_generator import (
     StubReportGenerator,
@@ -27,6 +33,29 @@ from logistics_agent_service.infrastructure.persistence.sqlalchemy_diagnosis_rep
 )
 
 
+def _system_headers(settings: Settings) -> dict[str, str]:
+    """내부 API 호출용 service account 헤더(§8.3)."""
+    return {
+        "X-User-Id": settings.internal_user_id,
+        "X-Username": settings.internal_username,
+        "X-User-Role": settings.internal_user_role,
+        "X-User-Status": settings.internal_user_status,
+    }
+
+
+def _build_order_port() -> OrderContextPort:
+    """order_service_base_url이 있으면 실 HTTP 클라이언트, 없으면 Fake로 배선한다."""
+    settings = get_settings()
+    if settings.order_service_base_url:
+        client = httpx.Client(
+            base_url=settings.order_service_base_url,
+            headers=_system_headers(settings),
+            timeout=5.0,
+        )
+        return HttpOrderContextClient(client)
+    return FakeOrderContextClient()
+
+
 def _build_repository() -> DiagnosisRepositoryPort:
     """database_url이 있으면 SQLAlchemy, 없으면 In-Memory 저장소로 배선한다."""
     settings = get_settings()
@@ -39,14 +68,14 @@ def _build_repository() -> DiagnosisRepositoryPort:
 
 @lru_cache
 def build_diagnosis_service() -> DiagnosisService:
-    """합성 루트 배선. S1은 Fake order client + Stub report generator,
-    S2는 진단 결과 저장소(DiagnosisRepositoryPort)를 추가로 조립한다.
+    """합성 루트 배선. order 클라이언트(HTTP/Fake), 리포트 생성기(Stub), 진단 저장소를
+    조립한다.
 
-    core는 모든 계층을 조립할 수 있는 유일한 자리다. 실제 어댑터(HTTP order client,
-    Gemini report generator)는 후속 슬라이스에서 이 배선만 교체하면 된다.
+    core는 모든 계층을 조립할 수 있는 유일한 자리다. 실제 어댑터는 후속 슬라이스에서
+    이 배선만 교체하면 된다(Gemini 리포트 생성 등).
     """
     workflow = LangGraphDiagnosisWorkflow(
-        order_port=FakeOrderContextClient(),
+        order_port=_build_order_port(),
         report_port=StubReportGenerator(),
         repository=_build_repository(),
     )
