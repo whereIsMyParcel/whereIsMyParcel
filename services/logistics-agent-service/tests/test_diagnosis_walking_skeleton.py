@@ -1,16 +1,30 @@
+from uuid import uuid4
+
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from logistics_agent_service.agent.graph.diagnosis_workflow import (
     LangGraphDiagnosisWorkflow,
 )
 from logistics_agent_service.agent.node.nodes import DiagnosisNodes
+from logistics_agent_service.application.dto import DiagnosisResult
 from logistics_agent_service.application.service.diagnosis_service import DiagnosisService
+from logistics_agent_service.domain.enums import OrderStatus
 from logistics_agent_service.domain.rules import RuleBasedDiagnosisEngine
 from logistics_agent_service.infrastructure.client.fake_order_context_client import (
     FakeOrderContextClient,
 )
 from logistics_agent_service.infrastructure.llm.stub_report_generator import (
     StubReportGenerator,
+)
+from logistics_agent_service.infrastructure.persistence.in_memory_diagnosis_repository import (
+    InMemoryDiagnosisRepository,
+)
+from logistics_agent_service.infrastructure.persistence.models import AgentDiagnosis, Base
+from logistics_agent_service.infrastructure.persistence.sqlalchemy_diagnosis_repository import (
+    SqlAlchemyDiagnosisRepository,
 )
 from logistics_agent_service.main import app
 
@@ -19,6 +33,7 @@ def _service() -> DiagnosisService:
     workflow = LangGraphDiagnosisWorkflow(
         order_port=FakeOrderContextClient(),
         report_port=StubReportGenerator(),
+        repository=InMemoryDiagnosisRepository(),
     )
     return DiagnosisService(workflow)
 
@@ -68,7 +83,55 @@ def test_nodes_tolerate_none_message() -> None:
         order_port=FakeOrderContextClient(),
         rule_engine=RuleBasedDiagnosisEngine(),
         report_port=StubReportGenerator(),
+        repository=InMemoryDiagnosisRepository(),
     )
 
     assert nodes.normalize_input({"message": None}) == {"message": ""}
     assert nodes.resolve_order({"message": None}) == {"order_identifier": None}
+
+
+def test_workflow_persists_result_to_repository() -> None:
+    repository = InMemoryDiagnosisRepository()
+    workflow = LangGraphDiagnosisWorkflow(
+        order_port=FakeOrderContextClient(),
+        report_port=StubReportGenerator(),
+        repository=repository,
+    )
+
+    result = DiagnosisService(workflow).diagnose_query("ORD-20260718-COMPFAIL 진단")
+
+    assert result.diagnosis_id is not None
+    assert len(repository.store) == 1
+    assert next(iter(repository.store)) == result.diagnosis_id
+
+
+def test_sqlalchemy_repository_persists_diagnosis_and_evidence() -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(engine, expire_on_commit=False)
+    repository = SqlAlchemyDiagnosisRepository(session_factory)
+
+    diagnosis = RuleBasedDiagnosisEngine().diagnose(OrderStatus.COMPENSATION_FAILED)
+    result = DiagnosisResult(
+        diagnosis=diagnosis,
+        report="테스트 리포트",
+        order_id=uuid4(),
+        order_number="ORD-20260718-COMPFAIL",
+    )
+
+    diagnosis_id = repository.save(result)
+
+    assert result.diagnosis_id == diagnosis_id
+    with session_factory() as session:
+        rows = session.execute(select(AgentDiagnosis)).scalars().all()
+        assert len(rows) == 1
+        saved = rows[0]
+        assert saved.id == diagnosis_id
+        assert saved.diagnosis_status == "FAILED_COMPENSATION_FAILED"
+        assert saved.compensation_status == "FAILED"
+        assert saved.order_number == "ORD-20260718-COMPFAIL"
+        assert len(saved.evidence) == 1

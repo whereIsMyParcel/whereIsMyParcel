@@ -26,3 +26,4 @@ class DiagnosisResult(BaseModel):
     trigger_type: TriggerType = TriggerType.USER_QUERY
     order_id: UUID | None = None
     order_number: str | None = None
+    diagnosis_id: UUID | None = None
