@@ -3,12 +3,25 @@ from uuid import UUID
 import httpx
 
 from logistics_agent_service.application.dto import OrderContext
+from logistics_agent_service.domain.enums import OrderStatus
 
 
 def _as_uuid(identifier: str) -> UUID | None:
     try:
         return UUID(identifier)
     except (ValueError, AttributeError):
+        return None
+
+
+def _as_order_status(value: str) -> OrderStatus | None:
+    """알 수 없는 상태 값은 crash 대신 None으로 흡수한다(→ UNKNOWN 진단).
+
+    agent가 미러링한 OrderStatus와 order-service 계약이 어긋나도(신규 상태 등)
+    진단 요청이 죽지 않게 한다.
+    """
+    try:
+        return OrderStatus(value)
+    except ValueError:
         return None
 
 
@@ -43,5 +56,5 @@ class HttpOrderContextClient:
         return OrderContext(
             order_id=data["orderId"],
             order_number=data["orderNumber"],
-            order_status=data["orderStatus"],
+            order_status=_as_order_status(data["orderStatus"]),
         )

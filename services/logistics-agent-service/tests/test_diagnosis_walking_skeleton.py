@@ -9,7 +9,7 @@ from logistics_agent_service.agent.graph.diagnosis_workflow import (
     LangGraphDiagnosisWorkflow,
 )
 from logistics_agent_service.agent.node.nodes import DiagnosisNodes
-from logistics_agent_service.application.dto import DiagnosisResult
+from logistics_agent_service.application.dto import DiagnosisResult, OrderContext
 from logistics_agent_service.application.service.diagnosis_service import DiagnosisService
 from logistics_agent_service.domain.enums import OrderStatus
 from logistics_agent_service.domain.rules import RuleBasedDiagnosisEngine
@@ -36,6 +36,29 @@ def _service() -> DiagnosisService:
         repository=InMemoryDiagnosisRepository(),
     )
     return DiagnosisService(workflow)
+
+
+class _NoneStatusOrderPort:
+    def get_order_context(self, identifier: str) -> OrderContext:
+        return OrderContext(
+            order_id=uuid4(),
+            order_number="ORD-20260718-XYZ99999",
+            order_status=None,
+        )
+
+
+def test_unknown_order_status_yields_unknown_without_crash() -> None:
+    workflow = LangGraphDiagnosisWorkflow(
+        order_port=_NoneStatusOrderPort(),
+        report_port=StubReportGenerator(),
+        repository=InMemoryDiagnosisRepository(),
+    )
+
+    result = DiagnosisService(workflow).diagnose_query("ORD-20260718-XYZ99999 진단")
+
+    assert result.diagnosis.diagnosis_status.value == "UNKNOWN"
+    assert result.order_number == "ORD-20260718-XYZ99999"
+    assert result.report
 
 
 def test_failed_order_maps_to_failed_compensated() -> None:

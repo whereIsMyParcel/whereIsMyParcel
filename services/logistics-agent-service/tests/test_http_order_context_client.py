@@ -41,6 +41,30 @@ def test_maps_order_ai_context_response() -> None:
     assert context.order_status.value == "COMPENSATION_FAILED"
 
 
+def test_unknown_order_status_maps_to_none() -> None:
+    order_id = uuid4()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "success": True,
+                "data": {
+                    "orderId": str(order_id),
+                    "orderNumber": "ORD-20260718-ABCD1234",
+                    "orderStatus": "WARP_SPEED",
+                },
+            },
+        )
+
+    context = HttpOrderContextClient(_client(handler)).get_order_context(str(order_id))
+
+    assert context is not None
+    assert context.order_id == order_id
+    assert context.order_number == "ORD-20260718-ABCD1234"
+    assert context.order_status is None
+
+
 def test_returns_none_on_404() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(404, json={"success": False, "data": None})
