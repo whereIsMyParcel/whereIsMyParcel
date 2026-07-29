@@ -79,6 +79,20 @@ def test_returns_none_on_business_failure() -> None:
     assert HttpOrderContextClient(_client(handler)).get_order_context(str(uuid4())) is None
 
 
+def test_server_error_is_none() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, json={"success": False})
+
+    assert HttpOrderContextClient(_client(handler)).get_order_context(str(uuid4())) is None
+
+
+def test_transport_error_is_none() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("boom")
+
+    assert HttpOrderContextClient(_client(handler)).get_order_context(str(uuid4())) is None
+
+
 def test_non_uuid_identifier_makes_no_request() -> None:
     calls: list[httpx.Request] = []
 
