@@ -16,6 +16,9 @@ from logistics_agent_service.domain.rules import RuleBasedDiagnosisEngine
 from logistics_agent_service.infrastructure.client.fake_order_context_client import (
     FakeOrderContextClient,
 )
+from logistics_agent_service.infrastructure.client.fake_shipment_context_client import (
+    FakeShipmentContextClient,
+)
 from logistics_agent_service.infrastructure.llm.stub_report_generator import (
     StubReportGenerator,
 )
@@ -29,9 +32,13 @@ from logistics_agent_service.infrastructure.persistence.sqlalchemy_diagnosis_rep
 from logistics_agent_service.main import app
 
 
-def _service() -> DiagnosisService:
+def _service(
+    order_port: object | None = None,
+    shipment_port: object | None = None,
+) -> DiagnosisService:
     workflow = LangGraphDiagnosisWorkflow(
-        order_port=FakeOrderContextClient(),
+        order_port=order_port or FakeOrderContextClient(),
+        shipment_port=shipment_port or FakeShipmentContextClient(),
         report_port=StubReportGenerator(),
         repository=InMemoryDiagnosisRepository(),
     )
@@ -48,13 +55,9 @@ class _NoneStatusOrderPort:
 
 
 def test_unknown_order_status_yields_unknown_without_crash() -> None:
-    workflow = LangGraphDiagnosisWorkflow(
-        order_port=_NoneStatusOrderPort(),
-        report_port=StubReportGenerator(),
-        repository=InMemoryDiagnosisRepository(),
+    result = _service(order_port=_NoneStatusOrderPort()).diagnose_query(
+        "ORD-20260718-XYZ99999 진단"
     )
-
-    result = DiagnosisService(workflow).diagnose_query("ORD-20260718-XYZ99999 진단")
 
     assert result.diagnosis.diagnosis_status.value == "UNKNOWN"
     assert result.order_number == "ORD-20260718-XYZ99999"
@@ -76,6 +79,24 @@ def test_compensation_failed_maps_to_manual_review() -> None:
     assert result.diagnosis.diagnosis_status.value == "FAILED_COMPENSATION_FAILED"
     assert result.diagnosis.compensation_status.value == "FAILED"
     assert result.diagnosis.recommended_actions
+
+
+def test_confirmed_without_shipment_yields_manual() -> None:
+    result = _service(shipment_port=FakeShipmentContextClient(statuses=[])).diagnose_query(
+        "ORD-20260718-CONFIRM1 진단"
+    )
+
+    assert result.diagnosis.diagnosis_status.value == "MANUAL_INTERVENTION_REQUIRED"
+    assert result.diagnosis.failed_step.value == "SHIPMENT_CREATION"
+    assert result.diagnosis.recommended_actions
+
+
+def test_confirmed_with_shipment_is_normal() -> None:
+    result = _service(
+        shipment_port=FakeShipmentContextClient(statuses=["IN_TRANSIT"])
+    ).diagnose_query("ORD-20260718-CONFIRM1 진단")
+
+    assert result.diagnosis.diagnosis_status.value == "NORMAL"
 
 
 def test_unknown_when_no_order_identifier() -> None:
@@ -101,9 +122,23 @@ def test_query_endpoint_end_to_end() -> None:
     assert body["report"]
 
 
+def test_rule_confirmed_shipment_unavailable_degrades_to_normal() -> None:
+    diagnosis = RuleBasedDiagnosisEngine().diagnose(OrderStatus.CONFIRMED, None)
+
+    assert diagnosis.diagnosis_status.value == "NORMAL"
+
+
+def test_rule_includes_order_and_shipment_evidence() -> None:
+    diagnosis = RuleBasedDiagnosisEngine().diagnose(OrderStatus.FAILED, ["IN_TRANSIT"])
+
+    sources = {evidence.source_service for evidence in diagnosis.evidence}
+    assert sources == {"order-service", "shipment-service"}
+
+
 def test_nodes_tolerate_none_message() -> None:
     nodes = DiagnosisNodes(
         order_port=FakeOrderContextClient(),
+        shipment_port=FakeShipmentContextClient(),
         rule_engine=RuleBasedDiagnosisEngine(),
         report_port=StubReportGenerator(),
         repository=InMemoryDiagnosisRepository(),
@@ -117,6 +152,7 @@ def test_workflow_persists_result_to_repository() -> None:
     repository = InMemoryDiagnosisRepository()
     workflow = LangGraphDiagnosisWorkflow(
         order_port=FakeOrderContextClient(),
+        shipment_port=FakeShipmentContextClient(),
         report_port=StubReportGenerator(),
         repository=repository,
     )
@@ -138,7 +174,7 @@ def test_sqlalchemy_repository_persists_diagnosis_and_evidence() -> None:
     session_factory = sessionmaker(engine, expire_on_commit=False)
     repository = SqlAlchemyDiagnosisRepository(session_factory)
 
-    diagnosis = RuleBasedDiagnosisEngine().diagnose(OrderStatus.COMPENSATION_FAILED)
+    diagnosis = RuleBasedDiagnosisEngine().diagnose(OrderStatus.COMPENSATION_FAILED, None)
     result = DiagnosisResult(
         diagnosis=diagnosis,
         report="테스트 리포트",
@@ -157,4 +193,4 @@ def test_sqlalchemy_repository_persists_diagnosis_and_evidence() -> None:
         assert saved.diagnosis_status == "FAILED_COMPENSATION_FAILED"
         assert saved.compensation_status == "FAILED"
         assert saved.order_number == "ORD-20260718-COMPFAIL"
-        assert len(saved.evidence) == 1
+        assert len(saved.evidence) == 2
