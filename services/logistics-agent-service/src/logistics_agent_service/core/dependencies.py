@@ -9,13 +9,22 @@ from logistics_agent_service.application.port.diagnosis_repository_port import (
     DiagnosisRepositoryPort,
 )
 from logistics_agent_service.application.port.order_context_port import OrderContextPort
+from logistics_agent_service.application.port.shipment_context_port import (
+    ShipmentContextPort,
+)
 from logistics_agent_service.application.service.diagnosis_service import DiagnosisService
 from logistics_agent_service.core.config import Settings, get_settings
 from logistics_agent_service.infrastructure.client.fake_order_context_client import (
     FakeOrderContextClient,
 )
+from logistics_agent_service.infrastructure.client.fake_shipment_context_client import (
+    FakeShipmentContextClient,
+)
 from logistics_agent_service.infrastructure.client.http_order_context_client import (
     HttpOrderContextClient,
+)
+from logistics_agent_service.infrastructure.client.http_shipment_context_client import (
+    HttpShipmentContextClient,
 )
 from logistics_agent_service.infrastructure.llm.stub_report_generator import (
     StubReportGenerator,
@@ -56,6 +65,19 @@ def _build_order_port() -> OrderContextPort:
     return FakeOrderContextClient()
 
 
+def _build_shipment_port() -> ShipmentContextPort:
+    """shipment_service_base_url이 있으면 실 HTTP 클라이언트, 없으면 Fake로 배선한다."""
+    settings = get_settings()
+    if settings.shipment_service_base_url:
+        client = httpx.Client(
+            base_url=settings.shipment_service_base_url,
+            headers=_system_headers(settings),
+            timeout=5.0,
+        )
+        return HttpShipmentContextClient(client)
+    return FakeShipmentContextClient()
+
+
 def _build_repository() -> DiagnosisRepositoryPort:
     """database_url이 있으면 SQLAlchemy, 없으면 In-Memory 저장소로 배선한다."""
     settings = get_settings()
@@ -68,14 +90,15 @@ def _build_repository() -> DiagnosisRepositoryPort:
 
 @lru_cache
 def build_diagnosis_service() -> DiagnosisService:
-    """합성 루트 배선. order 클라이언트(HTTP/Fake), 리포트 생성기(Stub), 진단 저장소를
-    조립한다.
+    """합성 루트 배선. order/shipment 클라이언트(HTTP/Fake), 리포트 생성기(Stub),
+    진단 저장소를 조립한다.
 
     core는 모든 계층을 조립할 수 있는 유일한 자리다. 실제 어댑터는 후속 슬라이스에서
     이 배선만 교체하면 된다(Gemini 리포트 생성 등).
     """
     workflow = LangGraphDiagnosisWorkflow(
         order_port=_build_order_port(),
+        shipment_port=_build_shipment_port(),
         report_port=StubReportGenerator(),
         repository=_build_repository(),
     )

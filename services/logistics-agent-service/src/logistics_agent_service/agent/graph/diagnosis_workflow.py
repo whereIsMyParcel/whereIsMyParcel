@@ -10,6 +10,9 @@ from logistics_agent_service.application.port.order_context_port import OrderCon
 from logistics_agent_service.application.port.report_generator_port import (
     ReportGeneratorPort,
 )
+from logistics_agent_service.application.port.shipment_context_port import (
+    ShipmentContextPort,
+)
 from logistics_agent_service.domain.rules import RuleBasedDiagnosisEngine
 
 
@@ -23,11 +26,13 @@ class LangGraphDiagnosisWorkflow:
     def __init__(
         self,
         order_port: OrderContextPort,
+        shipment_port: ShipmentContextPort,
         report_port: ReportGeneratorPort,
         repository: DiagnosisRepositoryPort,
     ) -> None:
         self._nodes = DiagnosisNodes(
             order_port=order_port,
+            shipment_port=shipment_port,
             rule_engine=RuleBasedDiagnosisEngine(),
             report_port=report_port,
             repository=repository,
