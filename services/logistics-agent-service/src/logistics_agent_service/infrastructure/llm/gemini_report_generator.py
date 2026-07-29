@@ -1,8 +1,12 @@
+import logging
+
 from google import genai
 
 from logistics_agent_service.application.dto import OrderContext
 from logistics_agent_service.domain.models import Diagnosis
 from logistics_agent_service.infrastructure.llm.prompt import build_report_prompt
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiReportGenerator:
@@ -23,7 +27,8 @@ class GeminiReportGenerator:
                 model=self._model,
                 contents=prompt,
             )
-        except Exception:
+        except Exception as exc:
+            logger.warning("Gemini 리포트 생성 실패, 폴백 사용: %s", exc)
             return f"[AI 리포트 생성 실패] {diagnosis.summary}"
 
         text = response.text
