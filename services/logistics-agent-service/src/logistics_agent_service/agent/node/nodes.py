@@ -47,6 +47,10 @@ class DiagnosisNodes:
         return {"message": message.strip()}
 
     def resolve_order(self, state: DiagnosisState) -> DiagnosisState:
+        # incident 등으로 식별자가 이미 주어졌으면 정규식 추출을 건너뛴다.
+        given = state.get("order_identifier")
+        if given:
+            return {"order_identifier": given}
         message = state.get("message") or ""
         match = _ORDER_NUMBER.search(message) or _UUID.search(message)
         return {"order_identifier": match.group(0) if match else None}

@@ -18,6 +18,8 @@ class OrderContext(BaseModel):
 class DiagnosisQuery(BaseModel):
     message: str
     trigger_type: TriggerType = TriggerType.USER_QUERY
+    # incident처럼 orderId를 이미 아는 경우 message 정규식 추출을 건너뛴다.
+    order_identifier: str | None = None
 
 
 class DiagnosisResult(BaseModel):

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from logistics_agent_service.application.dto import DiagnosisResult
 from logistics_agent_service.domain.enums import (
@@ -14,6 +14,17 @@ from logistics_agent_service.domain.models import Evidence, RecommendedAction
 
 class DiagnosisQueryRequest(BaseModel):
     message: str
+
+
+class IncidentRequest(BaseModel):
+    """시스템 incident 트리거(design §4.2)."""
+
+    order_id: UUID = Field(alias="orderId")
+    incident_type: str | None = Field(default=None, alias="incidentType")
+    source_service: str | None = Field(default=None, alias="sourceService")
+    message: str = ""
+
+    model_config = {"populate_by_name": True}
 
 
 class DiagnosisResponse(BaseModel):
