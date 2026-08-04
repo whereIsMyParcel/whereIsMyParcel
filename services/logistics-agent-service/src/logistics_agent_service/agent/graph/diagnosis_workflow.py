@@ -59,6 +59,10 @@ class LangGraphDiagnosisWorkflow:
 
     def run(self, query: DiagnosisQuery) -> DiagnosisResult:
         final_state = self._graph.invoke(
-            {"message": query.message, "trigger_type": query.trigger_type}
+            {
+                "message": query.message,
+                "trigger_type": query.trigger_type,
+                "order_identifier": query.order_identifier,
+            }
         )
         return final_state["result"]

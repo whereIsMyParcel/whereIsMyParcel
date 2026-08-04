@@ -2,6 +2,7 @@ from logistics_agent_service.application.dto import DiagnosisQuery, DiagnosisRes
 from logistics_agent_service.application.port.diagnosis_workflow_port import (
     DiagnosisWorkflowPort,
 )
+from logistics_agent_service.domain.enums import TriggerType
 
 
 class DiagnosisService:
@@ -12,3 +13,13 @@ class DiagnosisService:
 
     def diagnose_query(self, message: str) -> DiagnosisResult:
         return self._workflow.run(DiagnosisQuery(message=message))
+
+    def diagnose_incident(self, order_id: str, message: str) -> DiagnosisResult:
+        """시스템 incident로 진단을 시작한다. orderId를 직접 받아 같은 코어를 재사용한다."""
+        return self._workflow.run(
+            DiagnosisQuery(
+                message=message,
+                trigger_type=TriggerType.SYSTEM_INCIDENT,
+                order_identifier=order_id,
+            )
+        )
