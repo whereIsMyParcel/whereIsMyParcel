@@ -14,6 +14,7 @@ class EvalSample(BaseModel):
     name: str
     order_status: OrderStatus | None = None
     shipment_statuses: list[str] | None = None
+    route_ok: bool | None = None
     expected_diagnosis_status: DiagnosisStatus
     expected_compensation_status: CompensationStatus
 
@@ -63,7 +64,7 @@ class EvalRunner:
 
         for sample in samples:
             diagnosis = self._engine.diagnose(
-                sample.order_status, sample.shipment_statuses
+                sample.order_status, sample.shipment_statuses, sample.route_ok
             )
             diagnosis_ok = diagnosis.diagnosis_status == sample.expected_diagnosis_status
             compensation_ok = (

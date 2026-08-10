@@ -15,6 +15,14 @@ class OrderContext(BaseModel):
     order_status: OrderStatus | None
 
 
+class ShipmentInfo(BaseModel):
+    """shipment-service 내부 API가 반환하는 배송 정보 중 진단에 필요한 부분."""
+
+    status: str
+    origin_hub_id: UUID | None = None
+    destination_hub_id: UUID | None = None
+
+
 class DiagnosisQuery(BaseModel):
     message: str
     trigger_type: TriggerType = TriggerType.USER_QUERY

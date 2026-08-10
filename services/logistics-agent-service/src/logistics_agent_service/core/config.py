@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     database_url: str | None = None
     order_service_base_url: str | None = None
     shipment_service_base_url: str | None = None
+    hub_service_base_url: str | None = None
 
     internal_user_id: str = "00000000-0000-0000-0000-000000000001"
     internal_username: str = "logistics-agent-service"

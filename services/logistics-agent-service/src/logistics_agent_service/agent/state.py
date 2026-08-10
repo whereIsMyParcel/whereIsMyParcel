@@ -13,6 +13,7 @@ class DiagnosisState(TypedDict, total=False):
     order_identifier: str | None
     order_context: OrderContext | None
     shipment_statuses: list[str] | None
+    route_ok: bool | None
     diagnosis: Diagnosis
     report: str
     result: DiagnosisResult

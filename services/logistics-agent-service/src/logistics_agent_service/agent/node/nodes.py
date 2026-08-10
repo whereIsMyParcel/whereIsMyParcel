@@ -1,10 +1,11 @@
 import re
 
 from logistics_agent_service.agent.state import DiagnosisState
-from logistics_agent_service.application.dto import DiagnosisResult
+from logistics_agent_service.application.dto import DiagnosisResult, ShipmentInfo
 from logistics_agent_service.application.port.diagnosis_repository_port import (
     DiagnosisRepositoryPort,
 )
+from logistics_agent_service.application.port.hub_context_port import HubContextPort
 from logistics_agent_service.application.port.order_context_port import OrderContextPort
 from logistics_agent_service.application.port.report_generator_port import (
     ReportGeneratorPort,
@@ -32,12 +33,14 @@ class DiagnosisNodes:
         self,
         order_port: OrderContextPort,
         shipment_port: ShipmentContextPort,
+        hub_port: HubContextPort,
         rule_engine: RuleBasedDiagnosisEngine,
         report_port: ReportGeneratorPort,
         repository: DiagnosisRepositoryPort,
     ) -> None:
         self._order_port = order_port
         self._shipment_port = shipment_port
+        self._hub_port = hub_port
         self._rule_engine = rule_engine
         self._report_port = report_port
         self._repository = repository
@@ -58,20 +61,55 @@ class DiagnosisNodes:
     def collect_context(self, state: DiagnosisState) -> DiagnosisState:
         identifier = state.get("order_identifier")
         if not identifier:
-            return {"order_context": None, "shipment_statuses": None}
+            return {"order_context": None, "shipment_statuses": None, "route_ok": None}
 
         order_context = self._order_port.get_order_context(identifier)
-        shipment_statuses = None
-        if order_context is not None:
-            shipment_statuses = self._shipment_port.get_shipment_statuses(
-                order_context.order_id
-            )
-        return {"order_context": order_context, "shipment_statuses": shipment_statuses}
+        if order_context is None:
+            return {"order_context": None, "shipment_statuses": None, "route_ok": None}
+
+        shipments = self._shipment_port.get_shipments(order_context.order_id)
+        shipment_statuses = (
+            [shipment.status for shipment in shipments]
+            if shipments is not None
+            else None
+        )
+        route_ok = self._check_routes(shipments)
+        return {
+            "order_context": order_context,
+            "shipment_statuses": shipment_statuses,
+            "route_ok": route_ok,
+        }
+
+    def _check_routes(self, shipments: list[ShipmentInfo] | None) -> bool | None:
+        """배송 허브 쌍으로 경로 유효성을 확인한다.
+
+        하나라도 경로 없음이면 False, 전부 유효하면 True, 확인 불가(허브 정보 없음/
+        조회 실패)면 None으로 강등한다.
+        """
+        if not shipments:
+            return None
+        results: list[bool | None] = []
+        for shipment in shipments:
+            if shipment.origin_hub_id and shipment.destination_hub_id:
+                results.append(
+                    self._hub_port.route_exists(
+                        shipment.origin_hub_id, shipment.destination_hub_id
+                    )
+                )
+        if not results:
+            return None
+        if any(result is False for result in results):
+            return False
+        if all(result is True for result in results):
+            return True
+        return None
 
     def diagnose(self, state: DiagnosisState) -> DiagnosisState:
         context = state.get("order_context")
         order_status = context.order_status if context else None
-        diagnosis = self._rule_engine.diagnose(order_status, state.get("shipment_statuses"))
+        diagnosis = self._rule_engine.diagnose(
+            order_status, state.get("shipment_statuses"), state.get("route_ok")
+        )
         return {"diagnosis": diagnosis}
 
     def generate_report(self, state: DiagnosisState) -> DiagnosisState:

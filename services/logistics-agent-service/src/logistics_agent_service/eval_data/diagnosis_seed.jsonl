@@ -1,7 +1,8 @@
 {"name": "failed_compensated", "order_status": "FAILED", "shipment_statuses": null, "expected_diagnosis_status": "FAILED_COMPENSATED", "expected_compensation_status": "COMPLETED"}
 {"name": "compensation_failed", "order_status": "COMPENSATION_FAILED", "shipment_statuses": null, "expected_diagnosis_status": "FAILED_COMPENSATION_FAILED", "expected_compensation_status": "FAILED"}
 {"name": "confirmed_missing_shipment", "order_status": "CONFIRMED", "shipment_statuses": [], "expected_diagnosis_status": "MANUAL_INTERVENTION_REQUIRED", "expected_compensation_status": "NOT_REQUIRED"}
-{"name": "confirmed_with_shipment", "order_status": "CONFIRMED", "shipment_statuses": ["IN_TRANSIT"], "expected_diagnosis_status": "NORMAL", "expected_compensation_status": "NOT_REQUIRED"}
+{"name": "confirmed_with_shipment", "order_status": "CONFIRMED", "shipment_statuses": ["IN_TRANSIT"], "route_ok": true, "expected_diagnosis_status": "NORMAL", "expected_compensation_status": "NOT_REQUIRED"}
+{"name": "confirmed_invalid_route", "order_status": "CONFIRMED", "shipment_statuses": ["IN_TRANSIT"], "route_ok": false, "expected_diagnosis_status": "RISK_DETECTED", "expected_compensation_status": "NOT_REQUIRED"}
 {"name": "confirmed_shipment_unavailable", "order_status": "CONFIRMED", "shipment_statuses": null, "expected_diagnosis_status": "NORMAL", "expected_compensation_status": "NOT_REQUIRED"}
 {"name": "completed", "order_status": "COMPLETED", "shipment_statuses": ["DELIVERED"], "expected_diagnosis_status": "NORMAL", "expected_compensation_status": "NOT_REQUIRED"}
 {"name": "cancelled", "order_status": "CANCELLED", "shipment_statuses": null, "expected_diagnosis_status": "NORMAL", "expected_compensation_status": "NOT_REQUIRED"}
