@@ -2,6 +2,8 @@ from uuid import UUID
 
 import httpx
 
+from logistics_agent_service.application.dto import ShipmentInfo
+
 
 class HttpShipmentContextClient:
     """ShipmentContextPort의 shipment-service HTTP 구현.
@@ -14,7 +16,7 @@ class HttpShipmentContextClient:
     def __init__(self, client: httpx.Client) -> None:
         self._client = client
 
-    def get_shipment_statuses(self, order_id: UUID) -> list[str] | None:
+    def get_shipments(self, order_id: UUID) -> list[ShipmentInfo] | None:
         try:
             response = self._client.get(f"/internal/v1/shipments/{order_id}")
         except httpx.HTTPError:
@@ -30,4 +32,11 @@ class HttpShipmentContextClient:
         if not body.get("success") or data is None:
             return None
 
-        return [item["shipmentStatus"] for item in data]
+        return [
+            ShipmentInfo(
+                status=item["shipmentStatus"],
+                origin_hub_id=item.get("originHubId"),
+                destination_hub_id=item.get("destinationHubId"),
+            )
+            for item in data
+        ]

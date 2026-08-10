@@ -9,6 +9,7 @@ from logistics_agent_service.agent.graph.diagnosis_workflow import (
 from logistics_agent_service.application.port.diagnosis_repository_port import (
     DiagnosisRepositoryPort,
 )
+from logistics_agent_service.application.port.hub_context_port import HubContextPort
 from logistics_agent_service.application.port.order_context_port import OrderContextPort
 from logistics_agent_service.application.port.report_generator_port import (
     ReportGeneratorPort,
@@ -18,11 +19,17 @@ from logistics_agent_service.application.port.shipment_context_port import (
 )
 from logistics_agent_service.application.service.diagnosis_service import DiagnosisService
 from logistics_agent_service.core.config import Settings, get_settings
+from logistics_agent_service.infrastructure.client.fake_hub_context_client import (
+    FakeHubContextClient,
+)
 from logistics_agent_service.infrastructure.client.fake_order_context_client import (
     FakeOrderContextClient,
 )
 from logistics_agent_service.infrastructure.client.fake_shipment_context_client import (
     FakeShipmentContextClient,
+)
+from logistics_agent_service.infrastructure.client.http_hub_context_client import (
+    HttpHubContextClient,
 )
 from logistics_agent_service.infrastructure.client.http_order_context_client import (
     HttpOrderContextClient,
@@ -85,6 +92,19 @@ def _build_shipment_port() -> ShipmentContextPort:
     return FakeShipmentContextClient()
 
 
+def _build_hub_port() -> HubContextPort:
+    """hub_service_base_url이 있으면 실 HTTP 클라이언트, 없으면 Fake로 배선한다."""
+    settings = get_settings()
+    if settings.hub_service_base_url:
+        client = httpx.Client(
+            base_url=settings.hub_service_base_url,
+            headers=_system_headers(settings),
+            timeout=5.0,
+        )
+        return HttpHubContextClient(client)
+    return FakeHubContextClient()
+
+
 def _build_report_generator() -> ReportGeneratorPort:
     """GEMINI_API_KEY가 있으면 Gemini, 없으면 Stub 리포트 생성기로 배선한다."""
     settings = get_settings()
@@ -115,6 +135,7 @@ def build_diagnosis_service() -> DiagnosisService:
     workflow = LangGraphDiagnosisWorkflow(
         order_port=_build_order_port(),
         shipment_port=_build_shipment_port(),
+        hub_port=_build_hub_port(),
         report_port=_build_report_generator(),
         repository=_build_repository(),
     )
