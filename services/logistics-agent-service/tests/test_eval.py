@@ -16,16 +16,17 @@ _SEED = (
 def test_loader_reads_seed_dataset() -> None:
     samples = load_samples(_SEED)
 
-    assert len(samples) == 10
+    assert len(samples) == 11
     names = {s.name for s in samples}
     assert "compensation_failed" in names
     assert "order_unknown" in names
+    assert "confirmed_invalid_route" in names
 
 
 def test_runner_all_seed_cases_pass() -> None:
     report = EvalRunner().run(load_samples(_SEED))
 
-    assert report.total == 10
+    assert report.total == 11
     assert report.diagnosis_accuracy == 1.0
     assert report.compensation_accuracy == 1.0
     assert report.all_passed

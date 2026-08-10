@@ -13,6 +13,9 @@ from logistics_agent_service.application.dto import DiagnosisResult, OrderContex
 from logistics_agent_service.application.service.diagnosis_service import DiagnosisService
 from logistics_agent_service.domain.enums import OrderStatus
 from logistics_agent_service.domain.rules import RuleBasedDiagnosisEngine
+from logistics_agent_service.infrastructure.client.fake_hub_context_client import (
+    FakeHubContextClient,
+)
 from logistics_agent_service.infrastructure.client.fake_order_context_client import (
     FakeOrderContextClient,
 )
@@ -35,10 +38,12 @@ from logistics_agent_service.main import app
 def _service(
     order_port: object | None = None,
     shipment_port: object | None = None,
+    hub_port: object | None = None,
 ) -> DiagnosisService:
     workflow = LangGraphDiagnosisWorkflow(
         order_port=order_port or FakeOrderContextClient(),
         shipment_port=shipment_port or FakeShipmentContextClient(),
+        hub_port=hub_port or FakeHubContextClient(),
         report_port=StubReportGenerator(),
         repository=InMemoryDiagnosisRepository(),
     )
@@ -99,6 +104,17 @@ def test_confirmed_with_shipment_is_normal() -> None:
     assert result.diagnosis.diagnosis_status.value == "NORMAL"
 
 
+def test_confirmed_invalid_route_yields_risk() -> None:
+    result = _service(
+        shipment_port=FakeShipmentContextClient(statuses=["IN_TRANSIT"]),
+        hub_port=FakeHubContextClient(route_exists=False),
+    ).diagnose_query("ORD-20260718-CONFIRM1 진단")
+
+    assert result.diagnosis.diagnosis_status.value == "RISK_DETECTED"
+    assert result.diagnosis.failed_step.value == "HUB_ROUTE_LOOKUP"
+    assert result.diagnosis.recommended_actions
+
+
 def test_unknown_when_no_order_identifier() -> None:
     result = _service().diagnose_query("아무 주문이나 봐줘")
 
@@ -139,6 +155,7 @@ def test_nodes_tolerate_none_message() -> None:
     nodes = DiagnosisNodes(
         order_port=FakeOrderContextClient(),
         shipment_port=FakeShipmentContextClient(),
+        hub_port=FakeHubContextClient(),
         rule_engine=RuleBasedDiagnosisEngine(),
         report_port=StubReportGenerator(),
         repository=InMemoryDiagnosisRepository(),
@@ -153,6 +170,7 @@ def test_workflow_persists_result_to_repository() -> None:
     workflow = LangGraphDiagnosisWorkflow(
         order_port=FakeOrderContextClient(),
         shipment_port=FakeShipmentContextClient(),
+        hub_port=FakeHubContextClient(),
         report_port=StubReportGenerator(),
         repository=repository,
     )

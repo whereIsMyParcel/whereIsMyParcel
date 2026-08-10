@@ -9,6 +9,9 @@ from logistics_agent_service.agent.graph.diagnosis_workflow import (
 from logistics_agent_service.application.dto import OrderContext
 from logistics_agent_service.application.service.diagnosis_service import DiagnosisService
 from logistics_agent_service.domain.enums import OrderStatus
+from logistics_agent_service.infrastructure.client.fake_hub_context_client import (
+    FakeHubContextClient,
+)
 from logistics_agent_service.infrastructure.client.fake_shipment_context_client import (
     FakeShipmentContextClient,
 )
@@ -40,6 +43,7 @@ def _service(order_port: object) -> DiagnosisService:
     workflow = LangGraphDiagnosisWorkflow(
         order_port=order_port,
         shipment_port=FakeShipmentContextClient(statuses=[]),
+        hub_port=FakeHubContextClient(),
         report_port=StubReportGenerator(),
         repository=InMemoryDiagnosisRepository(),
     )
