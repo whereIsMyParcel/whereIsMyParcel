@@ -418,6 +418,35 @@ services:
     networks:
       - where-is-my-parcel-network
 
+  logistics-agent-service:
+    build:
+      context: ..
+      dockerfile: services/logistics-agent-service/Dockerfile
+    container_name: logistics-agent-service
+    profiles: ["services"]
+    ports:
+      - "8090:8090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: ../.env
+    environment:
+      DATABASE_URL: ${AGENT_DB_URL:-postgresql+psycopg://sparta:sparta1234@postgres:5432/sparta_logistics}
+      ORDER_SERVICE_BASE_URL: ${ORDER_SERVICE_BASE_URL:-http://order-service:8084}
+      SHIPMENT_SERVICE_BASE_URL: ${SHIPMENT_SERVICE_BASE_URL:-http://shipment-service:8085}
+      HUB_SERVICE_BASE_URL: ${HUB_SERVICE_BASE_URL:-http://hub-service:8082}
+      # GEMINI_API_KEY / GEMINI_MODEL은 env_file(../.env)로만 주입한다.
+      # environment 블록에 두면 호스트 셸에 값이 없을 때 빈 값으로 .env를 덮어쓴다.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://localhost:8090/health').status == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - where-is-my-parcel-network
+
 networks:
   where-is-my-parcel-network:
     driver: bridge

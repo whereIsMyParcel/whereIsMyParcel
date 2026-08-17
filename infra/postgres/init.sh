@@ -17,6 +17,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     CREATE SCHEMA IF NOT EXISTS order_db;
     CREATE SCHEMA IF NOT EXISTS shipment_db;
     CREATE SCHEMA IF NOT EXISTS notification_db;
+    CREATE SCHEMA IF NOT EXISTS agent_db;
 EOSQL
 
 echo "PostgreSQL 초기화 완료: keycloak DB, 서비스별 스키마 생성 성공"
