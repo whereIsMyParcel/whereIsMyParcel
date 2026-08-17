@@ -60,6 +60,10 @@ class AgentDiagnosis(Base):
         back_populates="diagnosis",
         cascade="all, delete-orphan",
     )
+    action_proposals: Mapped[list["AgentActionProposal"]] = relationship(
+        back_populates="diagnosis",
+        cascade="all, delete-orphan",
+    )
 
 
 class AgentEvidence(Base):
@@ -94,6 +98,26 @@ class AgentToolCall(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     diagnosis: Mapped["AgentDiagnosis"] = relationship(back_populates="tool_calls")
+
+
+class AgentActionProposal(Base):
+    """design §12.4 agent_action_proposal. 진단이 산출한 권장 조치 제안 1건.
+
+    현재는 status=PROPOSED로 기록만 한다(read-only). 승인·실행은 후속.
+    """
+
+    __tablename__ = "agent_action_proposal"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    diagnosis_id: Mapped[UUID] = mapped_column(ForeignKey("agent_diagnosis.id"))
+    action_type: Mapped[str] = mapped_column(String(60))
+    risk_level: Mapped[str] = mapped_column(String(30))
+    description: Mapped[str] = mapped_column(Text)
+    requires_approval: Mapped[bool] = mapped_column(Boolean)
+    status: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    diagnosis: Mapped["AgentDiagnosis"] = relationship(back_populates="action_proposals")
 
 
 class AgentLlmTrace(Base):
