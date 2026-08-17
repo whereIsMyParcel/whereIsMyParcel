@@ -32,6 +32,8 @@ class DiagnosisResponse(BaseModel):
 
     diagnosis_id: UUID
     trigger_type: TriggerType
+    incident_type: str | None
+    source_service: str | None
     order_id: UUID | None
     order_number: str | None
     diagnosis_status: DiagnosisStatus
@@ -49,6 +51,8 @@ class DiagnosisResponse(BaseModel):
         return cls(
             diagnosis_id=result.diagnosis_id,
             trigger_type=result.trigger_type,
+            incident_type=result.incident_type,
+            source_service=result.source_service,
             order_id=result.order_id,
             order_number=result.order_number,
             diagnosis_status=diagnosis.diagnosis_status,

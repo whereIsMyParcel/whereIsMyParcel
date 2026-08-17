@@ -66,6 +66,8 @@ class LangGraphDiagnosisWorkflow:
                 "message": query.message,
                 "trigger_type": query.trigger_type,
                 "order_identifier": query.order_identifier,
+                "incident_type": query.incident_type,
+                "source_service": query.source_service,
             }
         )
         return final_state["result"]

@@ -20,6 +20,9 @@ class SqlAlchemyDiagnosisRepository:
     def save(self, result: DiagnosisResult) -> UUID:
         diagnosis = AgentDiagnosis(
             trigger_type=result.trigger_type.value,
+            incident_type=result.incident_type,
+            source_service=result.source_service,
+            user_question=result.user_question,
             order_id=result.order_id,
             order_number=result.order_number,
             diagnosis_status=result.diagnosis.diagnosis_status.value,

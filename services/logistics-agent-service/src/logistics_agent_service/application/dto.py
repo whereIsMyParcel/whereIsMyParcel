@@ -28,6 +28,9 @@ class DiagnosisQuery(BaseModel):
     trigger_type: TriggerType = TriggerType.USER_QUERY
     # incident처럼 orderId를 이미 아는 경우 message 정규식 추출을 건너뛴다.
     order_identifier: str | None = None
+    # SYSTEM_INCIDENT 트리거의 부가 맥락(design §6.2 IncidentType, §12.1).
+    incident_type: str | None = None
+    source_service: str | None = None
 
 
 class ToolCallRecord(BaseModel):
@@ -76,3 +79,7 @@ class DiagnosisResult(BaseModel):
     diagnosis_id: UUID | None = None
     tool_calls: list[ToolCallRecord] = []
     llm_trace: LlmTrace | None = None
+    # incident 트리거 맥락 + 원 사용자 질의(design §12.1).
+    incident_type: str | None = None
+    source_service: str | None = None
+    user_question: str | None = None

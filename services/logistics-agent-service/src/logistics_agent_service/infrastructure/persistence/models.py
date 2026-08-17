@@ -35,6 +35,9 @@ class AgentDiagnosis(Base):
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     trigger_type: Mapped[str] = mapped_column(String(30))
+    incident_type: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    source_service: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    user_question: Mapped[str | None] = mapped_column(Text, nullable=True)
     order_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
     order_number: Mapped[str | None] = mapped_column(String(100), nullable=True)
     diagnosis_status: Mapped[str] = mapped_column(String(40))

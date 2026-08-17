@@ -16,6 +16,8 @@ class DiagnosisState(TypedDict, total=False):
     message: str
     trigger_type: TriggerType
     order_identifier: str | None
+    incident_type: str | None
+    source_service: str | None
     order_context: OrderContext | None
     shipment_statuses: list[str] | None
     route_ok: bool | None

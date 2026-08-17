@@ -15,5 +15,10 @@ def diagnose_incident(
     request: IncidentRequest,
     service: DiagnosisService = Depends(get_diagnosis_service),
 ) -> DiagnosisResponse:
-    result = service.diagnose_incident(str(request.order_id), request.message)
+    result = service.diagnose_incident(
+        str(request.order_id),
+        request.message,
+        incident_type=request.incident_type,
+        source_service=request.source_service,
+    )
     return DiagnosisResponse.from_result(result)

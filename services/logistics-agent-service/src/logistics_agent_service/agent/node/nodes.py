@@ -21,6 +21,7 @@ from logistics_agent_service.application.port.shipment_context_port import (
     ShipmentContextPort,
 )
 from logistics_agent_service.domain.enums import TriggerType
+from logistics_agent_service.domain.models import Evidence
 from logistics_agent_service.domain.rules import RuleBasedDiagnosisEngine
 
 _ORDER_NUMBER = re.compile(r"ORD-\d{8}-[A-Za-z0-9]+")
@@ -179,6 +180,16 @@ class DiagnosisNodes:
         diagnosis = self._rule_engine.diagnose(
             order_status, state.get("shipment_statuses"), state.get("route_ok")
         )
+        # 판정은 규칙만 담당(§5). incident_type은 분류에 쓰지 않고 맥락 근거로만 남긴다.
+        incident_type = state.get("incident_type")
+        if incident_type:
+            diagnosis.evidence.append(
+                Evidence(
+                    source_service=state.get("source_service") or "agent",
+                    tool_name="incident_trigger",
+                    result=f"incidentType={incident_type}",
+                )
+            )
         return {"diagnosis": diagnosis}
 
     def generate_report(self, state: DiagnosisState) -> DiagnosisState:
@@ -189,14 +200,21 @@ class DiagnosisNodes:
 
     def persist_result(self, state: DiagnosisState) -> DiagnosisState:
         context = state.get("order_context")
+        trigger_type = state.get("trigger_type", TriggerType.USER_QUERY)
+        user_question = (
+            state.get("message") if trigger_type == TriggerType.USER_QUERY else None
+        )
         result = DiagnosisResult(
             diagnosis=state["diagnosis"],
             report=state["report"],
-            trigger_type=state.get("trigger_type", TriggerType.USER_QUERY),
+            trigger_type=trigger_type,
             order_id=context.order_id if context else None,
             order_number=context.order_number if context else None,
             tool_calls=state.get("tool_calls", []),
             llm_trace=state.get("llm_trace"),
+            incident_type=state.get("incident_type"),
+            source_service=state.get("source_service"),
+            user_question=user_question,
         )
         self._repository.save(result)
         return {"result": result}
