@@ -6,6 +6,8 @@ from logistics_agent_service.application.dto import DiagnosisResult
 from logistics_agent_service.infrastructure.persistence.models import (
     AgentDiagnosis,
     AgentEvidence,
+    AgentLlmTrace,
+    AgentToolCall,
 )
 
 
@@ -34,6 +36,32 @@ class SqlAlchemyDiagnosisRepository:
                 )
                 for item in result.diagnosis.evidence
             ],
+            tool_calls=[
+                AgentToolCall(
+                    tool_name=call.tool_name,
+                    input=call.input,
+                    output=call.output,
+                    success=call.success,
+                    error_code=call.error_code,
+                    error_message=call.error_message,
+                    latency_ms=call.latency_ms,
+                )
+                for call in result.tool_calls
+            ],
+            llm_traces=(
+                [
+                    AgentLlmTrace(
+                        model=result.llm_trace.model,
+                        prompt_version=result.llm_trace.prompt_version,
+                        input_messages=result.llm_trace.input_messages,
+                        output_message=result.llm_trace.output_message,
+                        token_usage=result.llm_trace.token_usage,
+                        latency_ms=result.llm_trace.latency_ms,
+                    )
+                ]
+                if result.llm_trace is not None
+                else []
+            ),
         )
         with self._session_factory() as session:
             session.add(diagnosis)
