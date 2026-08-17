@@ -1,6 +1,9 @@
 from logistics_agent_service.application.dto import OrderContext
 from logistics_agent_service.domain.models import Diagnosis
 
+# 프롬프트 템플릿 버전. 변경 시 올려 trace(agent_llm_trace.prompt_version)로 추적한다.
+PROMPT_VERSION = "v1"
+
 _SYSTEM = (
     "당신은 물류 운영 진단 어시스턴트입니다. 아래 구조화된 진단 결과를 바탕으로 "
     "운영자가 즉시 이해하고 조치할 수 있는 한국어 리포트를 Markdown으로 작성하세요. "

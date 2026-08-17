@@ -50,24 +50,41 @@ def test_build_report_prompt_includes_diagnosis_fields() -> None:
 def test_generate_returns_model_text() -> None:
     client = _FakeGenaiClient(text="## 운영자 리포트\n확인 필요")
 
-    report = GeminiReportGenerator(client, "gemini-2.0-flash").generate(_diagnosis(), None)
+    result = GeminiReportGenerator(client, "gemini-2.0-flash").generate(_diagnosis(), None)
 
-    assert report == "## 운영자 리포트\n확인 필요"
+    assert result.report == "## 운영자 리포트\n확인 필요"
     assert client.models.calls[0][0] == "gemini-2.0-flash"
     assert "FAILED_COMPENSATION_FAILED" in client.models.calls[0][1]
+
+
+def test_generate_records_llm_trace() -> None:
+    client = _FakeGenaiClient(text="## 운영자 리포트")
+
+    result = GeminiReportGenerator(client, "gemini-2.0-flash").generate(_diagnosis(), None)
+
+    assert result.trace is not None
+    assert result.trace.model == "gemini-2.0-flash"
+    assert result.trace.prompt_version == "v1"
+    assert result.trace.output_message == "## 운영자 리포트"
+    assert result.trace.input_messages is not None
+    assert result.trace.latency_ms >= 0
 
 
 def test_generate_falls_back_on_error() -> None:
     client = _FakeGenaiClient(error=RuntimeError("boom"))
 
-    report = GeminiReportGenerator(client, "gemini-2.0-flash").generate(_diagnosis(), None)
+    result = GeminiReportGenerator(client, "gemini-2.0-flash").generate(_diagnosis(), None)
 
-    assert report.startswith("[AI 리포트 생성 실패]")
+    assert result.report.startswith("[AI 리포트 생성 실패]")
+    # 폴백도 관측 대상: trace는 남기되 token_usage는 없다.
+    assert result.trace is not None
+    assert result.trace.token_usage is None
+    assert result.trace.output_message == result.report
 
 
 def test_generate_falls_back_on_empty_text() -> None:
     client = _FakeGenaiClient(text=None)
 
-    report = GeminiReportGenerator(client, "gemini-2.0-flash").generate(_diagnosis(), None)
+    result = GeminiReportGenerator(client, "gemini-2.0-flash").generate(_diagnosis(), None)
 
-    assert report.startswith("[AI 리포트 없음]")
+    assert result.report.startswith("[AI 리포트 없음]")

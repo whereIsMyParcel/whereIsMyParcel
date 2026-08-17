@@ -30,6 +30,43 @@ class DiagnosisQuery(BaseModel):
     order_identifier: str | None = None
 
 
+class ToolCallRecord(BaseModel):
+    """agent가 진단 중 호출한 internal API tool 1건의 관측 기록(design §12.3).
+
+    error_code/error_message는 port가 HTTP 상태를 감춰 현재 채우지 않는다(nullable).
+    success는 결과가 None이 아닌지로 근사한다(None = 조회 실패/강등).
+    """
+
+    tool_name: str
+    input: dict | None = None
+    output: dict | None = None
+    success: bool
+    error_code: str | None = None
+    error_message: str | None = None
+    latency_ms: int
+
+
+class LlmTrace(BaseModel):
+    """리포트 생성 LLM 호출 1건의 관측 기록(design §12.5).
+
+    model/token_usage/latency는 어댑터(LLM)만 아는 정보라 ReportGeneratorPort가 표면화한다.
+    """
+
+    model: str
+    prompt_version: str
+    input_messages: list[dict] | None = None
+    output_message: str
+    token_usage: dict | None = None
+    latency_ms: int
+
+
+class ReportResult(BaseModel):
+    """ReportGeneratorPort.generate 반환값. 리포트 본문 + (있으면) LLM trace."""
+
+    report: str
+    trace: LlmTrace | None = None
+
+
 class DiagnosisResult(BaseModel):
     diagnosis: Diagnosis
     report: str
@@ -37,3 +74,5 @@ class DiagnosisResult(BaseModel):
     order_id: UUID | None = None
     order_number: str | None = None
     diagnosis_id: UUID | None = None
+    tool_calls: list[ToolCallRecord] = []
+    llm_trace: LlmTrace | None = None
