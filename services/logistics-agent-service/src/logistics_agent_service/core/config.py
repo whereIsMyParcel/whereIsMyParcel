@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     shipment_service_base_url: str | None = None
     hub_service_base_url: str | None = None
 
+    # 관측: Loki 로그 조회(없으면 Fake). window/limit은 검색 범위.
+    loki_base_url: str | None = None
+    loki_search_window_minutes: int = 60
+    loki_search_limit: int = 20
+
     internal_user_id: str = "00000000-0000-0000-0000-000000000001"
     internal_username: str = "logistics-agent-service"
     internal_user_role: str = "MASTER"

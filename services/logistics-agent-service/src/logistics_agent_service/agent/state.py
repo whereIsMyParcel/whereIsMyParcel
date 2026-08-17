@@ -21,6 +21,7 @@ class DiagnosisState(TypedDict, total=False):
     order_context: OrderContext | None
     shipment_statuses: list[str] | None
     route_ok: bool | None
+    log_lines: list[str] | None
     diagnosis: Diagnosis
     report: str
     # 자기관측 telemetry: diagnosis_id 부여(persist) 전에 발생하므로 state에 버퍼링한다.

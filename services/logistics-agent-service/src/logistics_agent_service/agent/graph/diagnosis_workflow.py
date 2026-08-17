@@ -7,6 +7,7 @@ from logistics_agent_service.application.port.diagnosis_repository_port import (
     DiagnosisRepositoryPort,
 )
 from logistics_agent_service.application.port.hub_context_port import HubContextPort
+from logistics_agent_service.application.port.log_context_port import LogContextPort
 from logistics_agent_service.application.port.order_context_port import OrderContextPort
 from logistics_agent_service.application.port.report_generator_port import (
     ReportGeneratorPort,
@@ -31,6 +32,7 @@ class LangGraphDiagnosisWorkflow:
         hub_port: HubContextPort,
         report_port: ReportGeneratorPort,
         repository: DiagnosisRepositoryPort,
+        log_port: LogContextPort,
     ) -> None:
         self._nodes = DiagnosisNodes(
             order_port=order_port,
@@ -39,6 +41,7 @@ class LangGraphDiagnosisWorkflow:
             rule_engine=RuleBasedDiagnosisEngine(),
             report_port=report_port,
             repository=repository,
+            log_port=log_port,
         )
         self._graph = self._build_graph()
 

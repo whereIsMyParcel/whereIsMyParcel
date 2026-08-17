@@ -15,6 +15,9 @@ from logistics_agent_service.domain.enums import OrderStatus
 from logistics_agent_service.infrastructure.client.fake_hub_context_client import (
     FakeHubContextClient,
 )
+from logistics_agent_service.infrastructure.client.fake_log_context_client import (
+    FakeLogContextClient,
+)
 from logistics_agent_service.infrastructure.client.fake_order_context_client import (
     FakeOrderContextClient,
 )
@@ -56,6 +59,7 @@ def _service(order_port: object) -> DiagnosisService:
         hub_port=FakeHubContextClient(),
         report_port=StubReportGenerator(),
         repository=InMemoryDiagnosisRepository(),
+        log_port=FakeLogContextClient(),
     )
     return DiagnosisService(workflow)
 
@@ -118,6 +122,7 @@ def test_incident_columns_persisted_by_sqlalchemy_repository() -> None:
         hub_port=FakeHubContextClient(),
         report_port=StubReportGenerator(),
         repository=SqlAlchemyDiagnosisRepository(session_factory),
+        log_port=FakeLogContextClient(),
     )
 
     DiagnosisService(workflow).diagnose_incident(

@@ -21,6 +21,9 @@ from logistics_agent_service.domain.rules import RuleBasedDiagnosisEngine
 from logistics_agent_service.infrastructure.client.fake_hub_context_client import (
     FakeHubContextClient,
 )
+from logistics_agent_service.infrastructure.client.fake_log_context_client import (
+    FakeLogContextClient,
+)
 from logistics_agent_service.infrastructure.client.fake_order_context_client import (
     FakeOrderContextClient,
 )
@@ -69,6 +72,7 @@ def _workflow(report_port: object) -> LangGraphDiagnosisWorkflow:
         hub_port=FakeHubContextClient(),
         report_port=report_port,
         repository=InMemoryDiagnosisRepository(),
+        log_port=FakeLogContextClient(),
     )
 
 
@@ -81,6 +85,7 @@ def test_workflow_buffers_tool_calls_for_each_port_call() -> None:
         "get_order_context",
         "get_shipments",
         "route_exists",
+        "search_order_logs",
     ]
     assert all(call.success for call in result.tool_calls)
     assert all(call.latency_ms >= 0 for call in result.tool_calls)
@@ -106,7 +111,7 @@ def test_stub_generator_yields_no_llm_trace_but_still_records_tool_calls() -> No
     result = service.diagnose_query("ORD-20260718-CONFIRM1 진단")
 
     assert result.llm_trace is None
-    assert len(result.tool_calls) == 3
+    assert len(result.tool_calls) == 4
 
 
 def test_no_order_identifier_records_no_tool_calls() -> None:
