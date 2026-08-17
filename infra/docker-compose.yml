@@ -435,6 +435,7 @@ services:
       ORDER_SERVICE_BASE_URL: ${ORDER_SERVICE_BASE_URL:-http://order-service:8084}
       SHIPMENT_SERVICE_BASE_URL: ${SHIPMENT_SERVICE_BASE_URL:-http://shipment-service:8085}
       HUB_SERVICE_BASE_URL: ${HUB_SERVICE_BASE_URL:-http://hub-service:8082}
+      LOKI_BASE_URL: ${AGENT_LOKI_BASE_URL:-http://loki:3100}
       # GEMINI_API_KEY / GEMINI_MODEL은 env_file(../.env)로만 주입한다.
       # environment 블록에 두면 호스트 셸에 값이 없을 때 빈 값으로 .env를 덮어쓴다.
     healthcheck:

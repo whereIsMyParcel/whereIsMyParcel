@@ -10,6 +10,7 @@ from logistics_agent_service.application.port.diagnosis_repository_port import (
     DiagnosisRepositoryPort,
 )
 from logistics_agent_service.application.port.hub_context_port import HubContextPort
+from logistics_agent_service.application.port.log_context_port import LogContextPort
 from logistics_agent_service.application.port.order_context_port import OrderContextPort
 from logistics_agent_service.application.port.report_generator_port import (
     ReportGeneratorPort,
@@ -22,6 +23,9 @@ from logistics_agent_service.core.config import Settings, get_settings
 from logistics_agent_service.infrastructure.client.fake_hub_context_client import (
     FakeHubContextClient,
 )
+from logistics_agent_service.infrastructure.client.fake_log_context_client import (
+    FakeLogContextClient,
+)
 from logistics_agent_service.infrastructure.client.fake_order_context_client import (
     FakeOrderContextClient,
 )
@@ -30,6 +34,9 @@ from logistics_agent_service.infrastructure.client.fake_shipment_context_client 
 )
 from logistics_agent_service.infrastructure.client.http_hub_context_client import (
     HttpHubContextClient,
+)
+from logistics_agent_service.infrastructure.client.http_loki_log_client import (
+    HttpLokiLogClient,
 )
 from logistics_agent_service.infrastructure.client.http_order_context_client import (
     HttpOrderContextClient,
@@ -105,6 +112,22 @@ def _build_hub_port() -> HubContextPort:
     return FakeHubContextClient()
 
 
+def _build_log_port() -> LogContextPort:
+    """loki_base_url이 있으면 실 Loki 클라이언트, 없으면 Fake로 배선한다.
+
+    Loki는 내부 서비스 API가 아니라 로그 저장소라 service account 헤더를 붙이지 않는다.
+    """
+    settings = get_settings()
+    if settings.loki_base_url:
+        client = httpx.Client(base_url=settings.loki_base_url, timeout=5.0)
+        return HttpLokiLogClient(
+            client,
+            window_minutes=settings.loki_search_window_minutes,
+            limit=settings.loki_search_limit,
+        )
+    return FakeLogContextClient()
+
+
 def _build_report_generator() -> ReportGeneratorPort:
     """GEMINI_API_KEY가 있으면 Gemini, 없으면 Stub 리포트 생성기로 배선한다."""
     settings = get_settings()
@@ -138,5 +161,6 @@ def build_diagnosis_service() -> DiagnosisService:
         hub_port=_build_hub_port(),
         report_port=_build_report_generator(),
         repository=_build_repository(),
+        log_port=_build_log_port(),
     )
     return DiagnosisService(workflow)

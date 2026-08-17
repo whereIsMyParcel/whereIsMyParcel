@@ -16,6 +16,9 @@ from logistics_agent_service.domain.rules import RuleBasedDiagnosisEngine
 from logistics_agent_service.infrastructure.client.fake_hub_context_client import (
     FakeHubContextClient,
 )
+from logistics_agent_service.infrastructure.client.fake_log_context_client import (
+    FakeLogContextClient,
+)
 from logistics_agent_service.infrastructure.client.fake_order_context_client import (
     FakeOrderContextClient,
 )
@@ -46,6 +49,7 @@ def _service(
         hub_port=hub_port or FakeHubContextClient(),
         report_port=StubReportGenerator(),
         repository=InMemoryDiagnosisRepository(),
+        log_port=FakeLogContextClient(),
     )
     return DiagnosisService(workflow)
 
@@ -159,6 +163,7 @@ def test_nodes_tolerate_none_message() -> None:
         rule_engine=RuleBasedDiagnosisEngine(),
         report_port=StubReportGenerator(),
         repository=InMemoryDiagnosisRepository(),
+        log_port=FakeLogContextClient(),
     )
 
     assert nodes.normalize_input({"message": None}) == {"message": ""}
@@ -173,6 +178,7 @@ def test_workflow_persists_result_to_repository() -> None:
         hub_port=FakeHubContextClient(),
         report_port=StubReportGenerator(),
         repository=repository,
+        log_port=FakeLogContextClient(),
     )
 
     result = DiagnosisService(workflow).diagnose_query("ORD-20260718-COMPFAIL 진단")

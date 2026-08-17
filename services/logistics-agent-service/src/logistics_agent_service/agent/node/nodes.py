@@ -13,6 +13,7 @@ from logistics_agent_service.application.port.diagnosis_repository_port import (
     DiagnosisRepositoryPort,
 )
 from logistics_agent_service.application.port.hub_context_port import HubContextPort
+from logistics_agent_service.application.port.log_context_port import LogContextPort
 from logistics_agent_service.application.port.order_context_port import OrderContextPort
 from logistics_agent_service.application.port.report_generator_port import (
     ReportGeneratorPort,
@@ -47,6 +48,7 @@ class DiagnosisNodes:
         rule_engine: RuleBasedDiagnosisEngine,
         report_port: ReportGeneratorPort,
         repository: DiagnosisRepositoryPort,
+        log_port: LogContextPort,
     ) -> None:
         self._order_port = order_port
         self._shipment_port = shipment_port
@@ -54,6 +56,7 @@ class DiagnosisNodes:
         self._rule_engine = rule_engine
         self._report_port = report_port
         self._repository = repository
+        self._log_port = log_port
 
     def normalize_input(self, state: DiagnosisState) -> DiagnosisState:
         message = state.get("message") or ""
@@ -109,10 +112,19 @@ class DiagnosisNodes:
             else None
         )
         route_ok = self._check_routes(shipments, tool_calls)
+        order_id = str(order_context.order_id)
+        log_lines = self._timed(
+            tool_calls,
+            "search_order_logs",
+            {"order_id": order_id},
+            lambda: self._log_port.search_order_logs(order_id),
+            lambda v: {"line_count": len(v)},
+        )
         return {
             "order_context": order_context,
             "shipment_statuses": shipment_statuses,
             "route_ok": route_ok,
+            "log_lines": log_lines,
             "tool_calls": tool_calls,
         }
 
@@ -180,7 +192,7 @@ class DiagnosisNodes:
         diagnosis = self._rule_engine.diagnose(
             order_status, state.get("shipment_statuses"), state.get("route_ok")
         )
-        # 판정은 규칙만 담당(§5). incident_type은 분류에 쓰지 않고 맥락 근거로만 남긴다.
+        # 판정은 규칙만 담당(§5). 아래 항목들은 분류에 쓰지 않고 맥락 근거로만 남긴다.
         incident_type = state.get("incident_type")
         if incident_type:
             diagnosis.evidence.append(
@@ -188,6 +200,16 @@ class DiagnosisNodes:
                     source_service=state.get("source_service") or "agent",
                     tool_name="incident_trigger",
                     result=f"incidentType={incident_type}",
+                )
+            )
+        log_lines = state.get("log_lines")
+        if log_lines:
+            preview = "\n".join(log_lines[:5])
+            diagnosis.evidence.append(
+                Evidence(
+                    source_service="loki",
+                    tool_name="search_order_logs",
+                    result=f"최근 WARN/ERROR 로그 {len(log_lines)}건:\n{preview}",
                 )
             )
         return {"diagnosis": diagnosis}
