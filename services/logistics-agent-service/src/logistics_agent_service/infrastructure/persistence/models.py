@@ -12,7 +12,12 @@ from sqlalchemy import (
     Text,
     Uuid,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+# design §12는 jsonb를 명시한다. PostgreSQL에서는 jsonb, SQLite 등에서는 json으로
+# 매핑해 테스트 호환성을 유지한다(모델에 dialect를 하드코딩하지 않는다).
+_JSON = JSON().with_variant(JSONB(), "postgresql")
 
 
 def _utcnow() -> datetime:
@@ -77,8 +82,8 @@ class AgentToolCall(Base):
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     diagnosis_id: Mapped[UUID] = mapped_column(ForeignKey("agent_diagnosis.id"))
     tool_name: Mapped[str] = mapped_column(String(100))
-    input: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    output: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    input: Mapped[dict | None] = mapped_column(_JSON, nullable=True)
+    output: Mapped[dict | None] = mapped_column(_JSON, nullable=True)
     success: Mapped[bool] = mapped_column(Boolean)
     error_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -97,9 +102,9 @@ class AgentLlmTrace(Base):
     diagnosis_id: Mapped[UUID] = mapped_column(ForeignKey("agent_diagnosis.id"))
     model: Mapped[str] = mapped_column(String(100))
     prompt_version: Mapped[str] = mapped_column(String(30))
-    input_messages: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    input_messages: Mapped[list | None] = mapped_column(_JSON, nullable=True)
     output_message: Mapped[str] = mapped_column(Text)
-    token_usage: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    token_usage: Mapped[dict | None] = mapped_column(_JSON, nullable=True)
     latency_ms: Mapped[int] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
