@@ -189,8 +189,12 @@ class DiagnosisNodes:
     def diagnose(self, state: DiagnosisState) -> DiagnosisState:
         context = state.get("order_context")
         order_status = context.order_status if context else None
+        log_lines = state.get("log_lines")
         diagnosis = self._rule_engine.diagnose(
-            order_status, state.get("shipment_statuses"), state.get("route_ok")
+            order_status,
+            state.get("shipment_statuses"),
+            state.get("route_ok"),
+            log_lines,
         )
         # 판정은 규칙만 담당(§5). 아래 항목들은 분류에 쓰지 않고 맥락 근거로만 남긴다.
         incident_type = state.get("incident_type")
@@ -202,7 +206,6 @@ class DiagnosisNodes:
                     result=f"incidentType={incident_type}",
                 )
             )
-        log_lines = state.get("log_lines")
         if log_lines:
             preview = "\n".join(log_lines[:5])
             diagnosis.evidence.append(
