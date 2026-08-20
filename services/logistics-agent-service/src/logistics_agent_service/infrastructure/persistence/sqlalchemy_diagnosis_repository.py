@@ -3,7 +3,9 @@ from uuid import UUID
 from sqlalchemy.orm import Session, sessionmaker
 
 from logistics_agent_service.application.dto import DiagnosisResult
+from logistics_agent_service.domain.enums import ProposalStatus
 from logistics_agent_service.infrastructure.persistence.models import (
+    AgentActionProposal,
     AgentDiagnosis,
     AgentEvidence,
     AgentLlmTrace,
@@ -38,6 +40,16 @@ class SqlAlchemyDiagnosisRepository:
                     result=item.result,
                 )
                 for item in result.diagnosis.evidence
+            ],
+            action_proposals=[
+                AgentActionProposal(
+                    action_type=action.action_type,
+                    risk_level=action.risk_level.value,
+                    description=action.description,
+                    requires_approval=action.requires_approval,
+                    status=ProposalStatus.PROPOSED.value,
+                )
+                for action in result.diagnosis.recommended_actions
             ],
             tool_calls=[
                 AgentToolCall(

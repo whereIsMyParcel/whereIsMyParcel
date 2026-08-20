@@ -54,3 +54,13 @@ class ActionRiskLevel(StrEnum):
     SAFE_WRITE = "SAFE_WRITE"
     RECOVERY_WRITE = "RECOVERY_WRITE"
     DANGEROUS_MANUAL = "DANGEROUS_MANUAL"
+
+
+class ProposalStatus(StrEnum):
+    """권장 조치 제안의 생애주기(design §12.4). 현재는 PROPOSED만 기록하고,
+    APPROVED/REJECTED/EXECUTED는 후속 human-in-the-loop recovery에서 사용한다."""
+
+    PROPOSED = "PROPOSED"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    EXECUTED = "EXECUTED"
