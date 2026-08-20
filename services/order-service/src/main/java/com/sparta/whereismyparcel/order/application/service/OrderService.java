@@ -27,6 +27,7 @@ import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCancelRes
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderCreateResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDetailResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderDispatchDeadlineUpdateResponse;
+import com.sparta.whereismyparcel.order.presentation.dto.response.OrderIdsResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderListResponse;
 import com.sparta.whereismyparcel.order.presentation.dto.response.OrderUpdateResponse;
 import lombok.RequiredArgsConstructor;
@@ -225,6 +226,11 @@ public class OrderService {
                 .orElseThrow(OrderNotFoundException::new);
 
         return OrderAiContextResponse.from(order);
+    }
+
+    // logistics-agent scheduled scan(design §16.2)이 상태별 고장 후보 orderId를 열거한다. read-only.
+    public OrderIdsResponse findOrderIdsByStatus(OrderStatus status) {
+        return OrderIdsResponse.from(orderRepository.findOrderIdsByOrderStatus(status));
     }
 
     @Transactional
