@@ -5,6 +5,7 @@ from logistics_agent_service.domain.enums import (
     FailureStep,
     OrderStatus,
 )
+from logistics_agent_service.domain.failure_signatures import classify_failure_step
 from logistics_agent_service.domain.models import (
     Diagnosis,
     Evidence,
@@ -26,6 +27,7 @@ class RuleBasedDiagnosisEngine:
         order_status: OrderStatus | None,
         shipment_statuses: list[str] | None,
         route_ok: bool | None = None,
+        log_lines: list[str] | None = None,
     ) -> Diagnosis:
         if order_status is None:
             return self._unknown()
@@ -37,12 +39,16 @@ class RuleBasedDiagnosisEngine:
         if route_ok is not None:
             evidence.append(self._route_evidence(route_ok))
 
+        # 실패 단계는 Order 상태로 특정 불가하므로 saga ERROR 로그로 좁힌다(§16.1).
+        # 로그가 없거나 무매칭이면 UNKNOWN으로 강등된다.
+        failed_step = classify_failure_step(log_lines)
+
         match order_status:
             case OrderStatus.FAILED:
                 return Diagnosis(
                     diagnosis_status=DiagnosisStatus.FAILED_COMPENSATED,
                     compensation_status=CompensationStatus.COMPLETED,
-                    failed_step=FailureStep.UNKNOWN,
+                    failed_step=failed_step,
                     confidence=0.9,
                     summary=(
                         "주문 생성이 실패했고 보상은 완료된 것으로 판단됩니다"
@@ -54,7 +60,7 @@ class RuleBasedDiagnosisEngine:
                 return Diagnosis(
                     diagnosis_status=DiagnosisStatus.FAILED_COMPENSATION_FAILED,
                     compensation_status=CompensationStatus.FAILED,
-                    failed_step=FailureStep.UNKNOWN,
+                    failed_step=failed_step,
                     confidence=0.9,
                     summary=(
                         "주문 생성 보상까지 실패해 외부 서비스에 예약 또는 배송이 "

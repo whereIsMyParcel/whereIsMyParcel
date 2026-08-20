@@ -746,15 +746,68 @@ S7  Docker Compose 통합
 
 ## 16. 후속 확장
 
+MVP(§15) 이후 확장 항목이다. 표기 규칙:
+
+- ✅ 반영됨: 이미 구현된 항목
+- ▶ 다음: 근시일 착수 대상 (상세는 하위 절)
+- ⏸ 대기: 타 서비스 write 계약·인프라 선행이 필요해 보류
+
 ```text
-Scheduled scan
-Slack 실제 알림
-Human-in-the-loop 승인 기반 recovery action
-Loki/Zipkin trace 조회 tool
-LangSmith 또는 자체 trace dashboard
-sLLM SFT/Distillation
-간단한 운영 대시보드
+✅ Loki 에러로그 조회 tool (진단 evidence 보강)
+✅ 진단 -> SFT/eval dataset export
+✅ agent 자기관측 영속 (tool_call / llm_trace / action_proposal)
+▶ 진단 실패 단계(failed_step) 정밀화
+▶ Scheduled scan
+⏸ Slack 실제 알림
+⏸ Human-in-the-loop 승인 기반 recovery action
+⏸ Zipkin trace 조회 tool (span의 orderId 태깅 선행 필요)
+⏸ LangSmith 또는 자체 trace dashboard
+⏸ sLLM SFT / Distillation
+⏸ 간단한 운영 대시보드
 ```
+
+read-only 원칙(§10)은 recovery action을 제외한 모든 확장에서 유지한다. write/recovery는 human-in-the-loop 승인 인프라와 타 서비스 복구 write 계약이 갖춰진 뒤로 미룬다.
+
+### 16.1 진단 실패 단계(failed_step) 정밀화 (▶ 다음)
+
+현재 `FAILED` / `COMPENSATION_FAILED` 진단은 `failed_step`을 `UNKNOWN`으로 둔다(§6.4). Order 상태만으로는 saga의 어느 단계에서 실패했는지 특정할 수 없기 때문이다.
+
+Loki 에러로그 조회 tool(✅)이 이미 orderId 기준 saga ERROR 로그 라인을 수집한다. 이 로그를 **진단 근거(evidence)로만 붙이는 현재 방식에서, 규칙이 실패 단계 판정에 활용하도록 승격**한다.
+
+```text
+입력: order-service saga ERROR 로그 라인 (Loki tool)
+규칙: 로그 라인에서 실패 지점 시그니처를 매칭해 FailureStep을 특정
+      - 재고 예약 실패 -> INVENTORY_RESERVATION
+      - 허브/경로 조회 실패 -> PRODUCT_HUB_LOOKUP / RECIPIENT_HUB_LOOKUP / HUB_ROUTE_LOOKUP
+      - 배송 생성 실패 -> SHIPMENT_CREATION
+      로그가 없거나 매칭 실패 시 UNKNOWN 유지(강등)
+원칙: §5 유지 - 판정은 규칙, 로그는 입력 근거일 뿐
+DoD: COMPENSATION_FAILED 사례에서 로그 기반으로 failed_step이 UNKNOWN 밖으로 좁혀짐
+```
+
+read-only 원칙(§10)을 유지한다. agent 단일 서비스 내 변경이며 타 서비스 계약 추가가 없다.
+
+### 16.2 Scheduled scan (▶ 다음)
+
+현재 agent는 orderId를 **받아야** 진단한다(User Query / Incident, §4). Scheduled scan은 agent가 **주기적으로 고장 후보 주문을 스스로 열거**해 선제 진단하는 능동 트리거다(`TriggerType.SCHEDULED_SCAN`, §6.1).
+
+선행 의존: agent는 주문을 열거하는 수단이 없다. order-service에 **상태 기준 조회 read API**가 필요하다.
+
+```text
+order-service (신규 internal read API)
+- GET /internal/v1/orders?status=COMPENSATION_FAILED (예시)
+- 응답: 진단 후보 orderId 목록 (+ 상태/시각 등 최소 필드)
+- read-only. 기존 internal 보안 정책(§8.2 order-service = permitAll) 준수
+
+logistics-agent-service (스캔 트리거)
+- 주기 스케줄러가 위 API로 후보 목록을 조회
+- 각 후보에 기존 진단 코어(§5)를 재사용, trigger_type=SCHEDULED_SCAN으로 기록
+- 스캔 범위/주기는 config로 노출
+원칙: read-only 유지. 스캔은 진단·기록만 하고 write/recovery는 하지 않는다.
+DoD: 스케줄러 1회 실행으로 COMPENSATION_FAILED 주문들이 진단·영속됨
+```
+
+order-service read API는 agent 능동 스캔을 위한 의존성 추가이며, Order 단독 기능이 아니라 agent 요구에서 파생된 유지보수다. 두 서비스에 걸치므로 (a) order-service read API, (b) agent scan 트리거로 슬라이스를 분리해 진행한다.
 
 ## 17. Python 서비스 아키텍처 컨벤션
 
