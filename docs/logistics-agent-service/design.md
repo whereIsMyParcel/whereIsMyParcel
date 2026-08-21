@@ -758,6 +758,7 @@ MVP(§15) 이후 확장 항목이다. 표기 규칙:
 ✅ agent 자기관측 영속 (tool_call / llm_trace / action_proposal)
 ✅ 진단 실패 단계(failed_step) 정밀화
 ✅ Scheduled scan
+✅ 주문↔배송 상태 정합성 진단
 ⏸ Slack 실제 알림
 ⏸ Human-in-the-loop 승인 기반 recovery action
 ⏸ Zipkin trace 조회 tool (span의 orderId 태깅 선행 필요)
@@ -815,6 +816,26 @@ DoD: 스캔 1회 실행으로 COMPENSATION_FAILED/FAILED 주문들이 진단·�
 order-service read API는 agent 능동 스캔을 위한 의존성 추가이며, Order 단독 기능이 아니라 agent 요구에서 파생된 유지보수다.
 
 향후: 재진단 정책(마지막 진단 이후 상태 변화/시간 경과 시 재진단)은 현재 "단순 존재 여부 skip"에서 후속으로 확장할 수 있다. 다중 인스턴스로 확장하면 in-process 스케줄러 대신 외부 스케줄러가 수동 endpoint를 호출하는 방식으로 중복 실행을 방지한다.
+
+### 16.3 주문↔배송 상태 정합성 진단 (✅ 반영됨)
+
+기존 규칙은 배송 상태 **값**을 진단에 쓰지 않고 개수(0)만 봤다(CONFIRMED에서 배송 누락/경로 이상만 판정). 이 확장은 shipment-service 배송 상태 계약(`HUB_WAITING/HUB_MOVING/HUB_ARRIVED/COMPANY_MOVING/DELIVERED/CANCELLED`)을 agent에 미러링(`ShipmentStatus`)하고, 주문 상태와 **교차 정합성**이 깨진 케이스를 규칙으로 판정한다.
+
+```text
+A: Order.status = CONFIRMED + 배송 존재하나 전부 CANCELLED
+   => RISK_DETECTED (배송이 취소됐는데 주문은 확정 유지)
+B: Order.status = CANCELLED + 살아있는 배송(HUB_*/COMPANY_MOVING) 존재
+   => RISK_DETECTED (주문 취소됐는데 물류 진행 중, orphan 배송)
+C: Order.status = COMPLETED + DELIVERED 아닌 배송 존재
+   => RISK_DETECTED (주문은 완료인데 배송 미완료)
+원칙: §5 유지(규칙이 분류), read-only. 각 판정에 READ_ONLY 권고 + evidence.
+       알 수 없는 배송 상태는 보수적으로 무시(contract drift에 견고, §7).
+DoD: A/B/C 각 케이스가 RISK_DETECTED로 판정·영속됨
+```
+
+read-only 원칙(§10)을 유지한다. shipment-service는 orderId로 배송을 조회할 수 있어 order↔shipment 정합성은 판정 가능하다(order↔company 재고 정합성은 company에 orderId가 없어 제외, §7 말미). 판정 술어는 `domain/shipment_consistency.py`에 둔다.
+
+혼합 케이스(CONFIRMED에 일부만 CANCELLED)와 재진단은 후속으로 남긴다.
 
 ## 17. Python 서비스 아키텍처 컨벤션
 
