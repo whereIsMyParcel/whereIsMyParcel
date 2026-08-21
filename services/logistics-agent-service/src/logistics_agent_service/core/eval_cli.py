@@ -9,14 +9,25 @@ _DEFAULT_DATASET = (
 )
 
 
+def _case_ok(case) -> bool:
+    return (
+        case.diagnosis_ok
+        and case.compensation_ok
+        and case.failed_step_ok is not False
+        and case.read_only_ok
+        and case.grounding_ok
+    )
+
+
 def _format_report(report: EvalReport) -> str:
     lines = ["== 진단 규칙 Eval =="]
     for case in report.cases:
-        mark = "OK " if case.diagnosis_ok and case.compensation_ok else "FAIL"
+        mark = "OK " if _case_ok(case) else "FAIL"
         lines.append(
             f"[{mark}] {case.name}: "
             f"diagnosis={case.actual_diagnosis_status.value} "
-            f"compensation={case.actual_compensation_status.value}"
+            f"compensation={case.actual_compensation_status.value} "
+            f"failed_step={case.actual_failed_step.value}"
         )
     lines.append("")
     lines.append(
@@ -26,6 +37,16 @@ def _format_report(report: EvalReport) -> str:
     lines.append(
         f"compensationStatus 정확도: {report.compensation_correct}/{report.total} "
         f"({report.compensation_accuracy:.0%})"
+    )
+    lines.append(
+        f"failedStep 정확도: {report.failed_step_correct}/{report.failed_step_total} "
+        f"({report.failed_step_accuracy:.0%})"
+    )
+    lines.append(
+        f"read-only 불변식: {report.read_only_correct}/{report.total}"
+    )
+    lines.append(
+        f"grounding 불변식: {report.grounding_correct}/{report.total}"
     )
     return "\n".join(lines)
 
