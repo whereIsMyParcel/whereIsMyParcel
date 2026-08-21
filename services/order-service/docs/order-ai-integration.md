@@ -164,7 +164,37 @@ AI Slack Service 내부에서는 Gemini, Slack 같은 외부 Provider 호출과 
 
 ---
 
-## 9. 향후 확장
+## 9. logistics-agent 진단 연동 조회 API
+
+logistics-agent-service는 주문 진단을 위해 Order Service의 internal 조회 API를 사용합니다. 모두 read-only이며 `/internal/**`은 permitAll이지만, 추적성을 위해 system header 포함을 권장합니다.
+
+### 9.1 주문 컨텍스트 조회
+
+```text
+GET /internal/v1/orders/{orderId}
+```
+
+단건 주문의 진단용 컨텍스트(상태·수취인·품목 등)를 반환합니다.
+
+### 9.2 상태별 orderId 목록 조회 (scheduled scan)
+
+```text
+GET /internal/v1/orders?status=COMPENSATION_FAILED
+```
+
+agent의 주기 스캔이 고장 후보 주문을 스스로 열거하는 데 씁니다. 응답은 orderId 목록만 담는 경량 계약입니다.
+
+```json
+{ "orderIds": ["..."] }
+```
+
+- `status`는 필수 파라미터이며 `OrderStatus` enum 값입니다. 잘못된 값은 400.
+- 각 후보의 상세 진단은 agent가 9.1로 재조회하므로, 이 응답에는 orderId 외 필드를 넣지 않습니다.
+- 스캔 중복 방지(이미 진단한 건 skip)는 agent가 자체 진단 이력으로 처리하며 이 API의 책임이 아닙니다.
+
+---
+
+## 10. 향후 확장
 
 현재 AI 요청은 주문 확정 후 동기 Feign 호출로 수행됩니다. 향후 확장 방향은 다음과 같습니다.
 

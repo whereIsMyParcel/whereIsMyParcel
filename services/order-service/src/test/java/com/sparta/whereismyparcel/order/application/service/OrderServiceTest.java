@@ -561,6 +561,33 @@ class OrderServiceTest {
     }
 
     // -------------------------------------------------------------------------
+    // findOrderIdsByStatus (logistics-agent scheduled scan)
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("상태 기준으로 orderId 목록을 조회한다")
+    void findOrderIdsByStatus() {
+        List<UUID> orderIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+        given(orderRepository.findOrderIdsByOrderStatus(OrderStatus.COMPENSATION_FAILED))
+                .willReturn(orderIds);
+
+        OrderIdsResponse response = orderService.findOrderIdsByStatus(OrderStatus.COMPENSATION_FAILED);
+
+        assertThat(response.orderIds()).containsExactlyElementsOf(orderIds);
+    }
+
+    @Test
+    @DisplayName("해당 상태의 주문이 없으면 빈 목록을 반환한다")
+    void findOrderIdsByStatusEmpty() {
+        given(orderRepository.findOrderIdsByOrderStatus(OrderStatus.COMPENSATION_FAILED))
+                .willReturn(List.of());
+
+        OrderIdsResponse response = orderService.findOrderIdsByStatus(OrderStatus.COMPENSATION_FAILED);
+
+        assertThat(response.orderIds()).isEmpty();
+    }
+
+    // -------------------------------------------------------------------------
     // updateFinalDispatchDeadline
     // -------------------------------------------------------------------------
 
