@@ -676,17 +676,23 @@ SFT용 chat format export:
 
 ## 14. Eval 기준
 
-초기 eval은 아래 항목을 봅니다.
+eval 항목과 측정 현황이다. 규칙 산출물에서 **결정적으로 측정 가능한 축**은 CI 게이트로
+돌리고(순수 규칙 엔진, LLM/DB/네트워크 없음), LLM 리포트 품질은 비결정적이라 별도
+opt-in lane(S18)으로 분리한다.
 
 ```text
-diagnosisStatus 정확도
-failedStep 정확도
-compensationStatus 정확도
-필수 evidence 포함 여부
-근거 없는 단정 여부
-action risk level 정확도
-JSON schema adherence
-report readability
+[결정적 eval - CI 게이트]
+diagnosisStatus 정확도        ✅ S6
+compensationStatus 정확도     ✅ S6
+failedStep 정확도             ✅ S17 (log_lines 입력, expected 선언 케이스만)
+read-only 불변식              ✅ S17 (모든 권장 조치 READ_ONLY, §10)
+근거 없는 단정(grounding)      ✅ S17 (UNKNOWN→confidence 0·조치 없음, summary 비어있지 않음)
+
+[LLM 리포트 품질 eval - opt-in lane, 비CI (S18)]
+필수 evidence 포함 여부        ▶ S18
+JSON schema adherence         ▶ S18
+report readability            ▶ S18 (LLM-as-judge)
+action risk level 정확도       — read-only 불변식으로 갈음(현재 모든 액션 READ_ONLY)
 ```
 
 ## 15. MVP 구현 순서
@@ -788,6 +794,8 @@ MVP(§15) 이후 확장 항목이다. 표기 규칙:
 ✅ 진단 실패 단계(failed_step) 정밀화
 ✅ Scheduled scan
 ✅ 주문↔배송 상태 정합성 진단
+✅ eval 축 확장 (failedStep·read-only·grounding)
+▶ LLM 리포트 품질 eval (opt-in lane, 비CI)
 ⏸ Slack 실제 알림
 ⏸ Human-in-the-loop 승인 기반 recovery action
 ⏸ Zipkin trace 조회 tool (span의 orderId 태깅 선행 필요)
