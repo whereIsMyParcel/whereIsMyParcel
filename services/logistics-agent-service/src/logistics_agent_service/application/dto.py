@@ -83,3 +83,16 @@ class DiagnosisResult(BaseModel):
     incident_type: str | None = None
     source_service: str | None = None
     user_question: str | None = None
+
+
+class ScanSummary(BaseModel):
+    """scheduled scan 1회 실행 결과 요약(design §16.2).
+
+    scanned: 열거된 후보 수(중복 상태 포함), diagnosed: 새로 진단한 수,
+    skipped: 이미 진단 이력이 있어 건너뛴 수.
+    """
+
+    scanned: int = 0
+    diagnosed: int = 0
+    skipped: int = 0
+    diagnosis_ids: list[UUID] = []

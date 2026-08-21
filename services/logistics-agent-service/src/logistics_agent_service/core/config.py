@@ -20,6 +20,13 @@ class Settings(BaseSettings):
     loki_search_window_minutes: int = 60
     loki_search_limit: int = 20
 
+    # scheduled scan(§16.2): 주기적으로 상태별 고장 후보를 열거해 선제 진단한다.
+    # scan_enabled=false(기본)면 in-process 스케줄러를 띄우지 않는다(CI/테스트 안전).
+    # 수동 트리거(POST /internal/v1/agent/scans)는 enabled와 무관하게 동작한다.
+    scan_enabled: bool = False
+    scan_interval_seconds: int = 300
+    scan_statuses: list[str] = ["COMPENSATION_FAILED", "FAILED"]
+
     internal_user_id: str = "00000000-0000-0000-0000-000000000001"
     internal_username: str = "logistics-agent-service"
     internal_user_role: str = "MASTER"

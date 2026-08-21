@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -10,10 +12,24 @@ from logistics_agent_service.infrastructure.persistence.models import AgentDiagn
 
 
 class SqlAlchemyDiagnosisReader:
-    """DiagnosisReaderPort의 SQLAlchemy 구현(read-only)."""
+    """DiagnosisReaderPort/DiagnosedOrderPort의 SQLAlchemy 구현(read-only)."""
 
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
+
+    def list_diagnosed_order_ids(self) -> set[UUID]:
+        """진단 이력이 있는 orderId 집합. scheduled scan 중복 방지용(§16.2)."""
+        with self._session_factory() as session:
+            rows = (
+                session.execute(
+                    select(AgentDiagnosis.order_id).where(
+                        AgentDiagnosis.order_id.is_not(None)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            return {row for row in rows if row is not None}
 
     def list_all(self) -> list[PersistedDiagnosis]:
         with self._session_factory() as session:

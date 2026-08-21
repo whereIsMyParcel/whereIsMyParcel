@@ -756,8 +756,8 @@ MVP(§15) 이후 확장 항목이다. 표기 규칙:
 ✅ Loki 에러로그 조회 tool (진단 evidence 보강)
 ✅ 진단 -> SFT/eval dataset export
 ✅ agent 자기관측 영속 (tool_call / llm_trace / action_proposal)
-▶ 진단 실패 단계(failed_step) 정밀화
-▶ Scheduled scan
+✅ 진단 실패 단계(failed_step) 정밀화
+✅ Scheduled scan
 ⏸ Slack 실제 알림
 ⏸ Human-in-the-loop 승인 기반 recovery action
 ⏸ Zipkin trace 조회 tool (span의 orderId 태깅 선행 필요)
@@ -768,7 +768,7 @@ MVP(§15) 이후 확장 항목이다. 표기 규칙:
 
 read-only 원칙(§10)은 recovery action을 제외한 모든 확장에서 유지한다. write/recovery는 human-in-the-loop 승인 인프라와 타 서비스 복구 write 계약이 갖춰진 뒤로 미룬다.
 
-### 16.1 진단 실패 단계(failed_step) 정밀화 (▶ 다음)
+### 16.1 진단 실패 단계(failed_step) 정밀화 (✅ 반영됨)
 
 현재 `FAILED` / `COMPENSATION_FAILED` 진단은 `failed_step`을 `UNKNOWN`으로 둔다(§6.4). Order 상태만으로는 saga의 어느 단계에서 실패했는지 특정할 수 없기 때문이다.
 
@@ -787,27 +787,34 @@ DoD: COMPENSATION_FAILED 사례에서 로그 기반으로 failed_step이 UNKNOWN
 
 read-only 원칙(§10)을 유지한다. agent 단일 서비스 내 변경이며 타 서비스 계약 추가가 없다.
 
-### 16.2 Scheduled scan (▶ 다음)
+### 16.2 Scheduled scan (✅ 반영됨)
 
-현재 agent는 orderId를 **받아야** 진단한다(User Query / Incident, §4). Scheduled scan은 agent가 **주기적으로 고장 후보 주문을 스스로 열거**해 선제 진단하는 능동 트리거다(`TriggerType.SCHEDULED_SCAN`, §6.1).
+agent는 orderId를 **받아야** 진단한다(User Query / Incident, §4). Scheduled scan은 agent가 **주기적으로 고장 후보 주문을 스스로 열거**해 선제 진단하는 능동 트리거다(`TriggerType.SCHEDULED_SCAN`, §6.1).
 
-선행 의존: agent는 주문을 열거하는 수단이 없다. order-service에 **상태 기준 조회 read API**가 필요하다.
+두 서비스에 걸치므로 (a) order-service read API, (b) agent scan 트리거로 슬라이스를 나눠 진행했다.
 
 ```text
-order-service (신규 internal read API)
-- GET /internal/v1/orders?status=COMPENSATION_FAILED (예시)
-- 응답: 진단 후보 orderId 목록 (+ 상태/시각 등 최소 필드)
+order-service (internal read API)
+- GET /internal/v1/orders?status=COMPENSATION_FAILED
+- 응답: 진단 후보 orderId 목록만(경량 계약, 방향 A). {"orderIds": [...]}
+- 상세는 agent가 GET /internal/v1/orders/{orderId}로 재조회 → 단일 진단 경로 유지
 - read-only. 기존 internal 보안 정책(§8.2 order-service = permitAll) 준수
 
 logistics-agent-service (스캔 트리거)
-- 주기 스케줄러가 위 API로 후보 목록을 조회
+- OrderScanPort로 상태별 후보 orderId를 열거(scan_statuses config)
 - 각 후보에 기존 진단 코어(§5)를 재사용, trigger_type=SCHEDULED_SCAN으로 기록
-- 스캔 범위/주기는 config로 노출
+- 중복 방지: 이미 진단 이력이 있는 orderId는 skip(DiagnosedOrderPort, 단순 존재 여부).
+  한 스캔 내 여러 상태에 중복 등장하는 orderId도 1회만 진단
+- 트리거: in-process 주기 스케줄러(scan_enabled/scan_interval_seconds, 단일 인스턴스
+  가정) + 수동 endpoint POST /internal/v1/agent/scans(외부 cron/k8s CronJob 대안 겸
+  테스트 트리거). scan_enabled 기본 false라 CI/테스트에서 백그라운드 태스크가 뜨지 않는다
 원칙: read-only 유지. 스캔은 진단·기록만 하고 write/recovery는 하지 않는다.
-DoD: 스케줄러 1회 실행으로 COMPENSATION_FAILED 주문들이 진단·영속됨
+DoD: 스캔 1회 실행으로 COMPENSATION_FAILED/FAILED 주문들이 진단·영속됨 ✅
 ```
 
-order-service read API는 agent 능동 스캔을 위한 의존성 추가이며, Order 단독 기능이 아니라 agent 요구에서 파생된 유지보수다. 두 서비스에 걸치므로 (a) order-service read API, (b) agent scan 트리거로 슬라이스를 분리해 진행한다.
+order-service read API는 agent 능동 스캔을 위한 의존성 추가이며, Order 단독 기능이 아니라 agent 요구에서 파생된 유지보수다.
+
+향후: 재진단 정책(마지막 진단 이후 상태 변화/시간 경과 시 재진단)은 현재 "단순 존재 여부 skip"에서 후속으로 확장할 수 있다. 다중 인스턴스로 확장하면 in-process 스케줄러 대신 외부 스케줄러가 수동 endpoint를 호출하는 방식으로 중복 실행을 방지한다.
 
 ## 17. Python 서비스 아키텍처 컨벤션
 

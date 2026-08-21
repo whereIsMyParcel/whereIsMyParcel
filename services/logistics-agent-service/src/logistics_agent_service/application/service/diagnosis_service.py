@@ -31,3 +31,14 @@ class DiagnosisService:
                 source_service=source_service,
             )
         )
+
+    def diagnose_scanned(self, order_id: str) -> DiagnosisResult:
+        """scheduled scan(§16.2)이 열거한 후보를 진단한다. orderId를 직접 받아
+        같은 코어를 재사용하며 trigger_type=SCHEDULED_SCAN으로 기록한다."""
+        return self._workflow.run(
+            DiagnosisQuery(
+                message=f"scheduled scan: order {order_id}",
+                trigger_type=TriggerType.SCHEDULED_SCAN,
+                order_identifier=order_id,
+            )
+        )
