@@ -744,6 +744,35 @@ S7  Docker Compose 통합
 
 모든 슬라이스는 read-only 원칙(§10)을 지킨다. write/recovery 액션은 human-in-the-loop 도입 이후로 미룬다.
 
+### 15.2 구현 현황 (실제 머지된 슬라이스)
+
+MVP(§15.1)와 후속 확장(§16)을 얇은 수직 슬라이스로 쌓았다. 실제 머지 순서:
+
+```text
+[MVP]
+S1    Walking skeleton (in-memory 진단 루프, user query endpoint)
+S2    진단 결과 영속 (agent_db)
+S3    order-service HTTP client + system header(§8.3)
+S3b   shipment-service client
+S3b2  hub 경로(route) 조회 tool
+S4    Gemini 리포트 생성 + agent_llm_trace
+S5    Incident endpoint (동일 진단 코어 재사용)
+S6    Eval (JSONL dataset + 정확도/schema adherence, §14)
+S7    Docker Compose 통합
+
+[후속 확장 §16] (S9은 결번)
+S8    자기관측 영속 (tool_call / llm_trace)
+S10   진단 -> SFT/eval dataset export (§13)
+S11   Loki 에러로그 조회 tool (진단 evidence 보강)
+S12   action proposal 영속 (§12.4)
+S13   진단 실패 단계(failed_step) 정밀화 (§16.1)
+S14   order-service 상태별 orderId 조회 internal API (§16.2)
+S15   scheduled scan 트리거 (§16.2)
+S16   주문<->배송 상태 정합성 진단 (§16.3)
+```
+
+핵심 원칙은 14개 슬라이스 내내 유지했다: **규칙이 분류하고 LLM은 근거 기반 리포트만 생성(§5)**, **모든 액션 read-only(§10)**, **계층 경계 강제(import-linter, §17.6)**.
+
 ## 16. 후속 확장
 
 MVP(§15) 이후 확장 항목이다. 표기 규칙:
@@ -1030,6 +1059,6 @@ all services
 - SYSTEM role/service account 명시 지원
 
 observability
-- orderId/traceId 기반 Loki 로그 조회 API
-- Zipkin trace 조회 tool
+- orderId 기반 Loki 로그 조회 (✅ S11 반영, §16)
+- Zipkin trace 조회 tool (⏸ span의 orderId 태깅 선행 필요)
 ```
