@@ -13,6 +13,21 @@ class OrderStatus(StrEnum):
     COMPENSATION_FAILED = "COMPENSATION_FAILED"
 
 
+class ShipmentStatus(StrEnum):
+    """shipment-service의 Shipment 상태 계약을 미러링한다(내부 API로 수신하는 값).
+
+    진행 중(살아있는) 상태: HUB_WAITING/HUB_MOVING/HUB_ARRIVED/COMPANY_MOVING.
+    종료 상태: DELIVERED/CANCELLED.
+    """
+
+    HUB_WAITING = "HUB_WAITING"
+    HUB_MOVING = "HUB_MOVING"
+    HUB_ARRIVED = "HUB_ARRIVED"
+    COMPANY_MOVING = "COMPANY_MOVING"
+    DELIVERED = "DELIVERED"
+    CANCELLED = "CANCELLED"
+
+
 class TriggerType(StrEnum):
     USER_QUERY = "USER_QUERY"
     SYSTEM_INCIDENT = "SYSTEM_INCIDENT"

@@ -11,6 +11,11 @@ from logistics_agent_service.domain.models import (
     Evidence,
     RecommendedAction,
 )
+from logistics_agent_service.domain.shipment_consistency import (
+    all_cancelled,
+    has_live_shipment,
+    has_non_delivered,
+)
 
 
 class RuleBasedDiagnosisEngine:
@@ -103,6 +108,30 @@ class RuleBasedDiagnosisEngine:
                             )
                         ],
                     )
+                # A: 주문은 확정인데 배송이 전부 취소됨 → 정합성 이상(§7, T2).
+                if shipment_statuses and all_cancelled(shipment_statuses):
+                    return Diagnosis(
+                        diagnosis_status=DiagnosisStatus.RISK_DETECTED,
+                        compensation_status=CompensationStatus.NOT_REQUIRED,
+                        failed_step=failed_step,
+                        confidence=0.7,
+                        summary=(
+                            "주문은 CONFIRMED인데 연결된 배송이 모두 취소되었습니다. "
+                            "주문↔배송 상태 불일치로 운영자 확인이 필요합니다."
+                        ),
+                        evidence=evidence,
+                        recommended_actions=[
+                            RecommendedAction(
+                                action_type="CHECK_SHIPMENT_CANCELLATION",
+                                risk_level=ActionRiskLevel.READ_ONLY,
+                                description=(
+                                    "shipment-service에서 배송 취소 사유와 order-service "
+                                    "주문 상태의 정합성을 확인합니다."
+                                ),
+                                requires_approval=False,
+                            )
+                        ],
+                    )
                 if route_ok is False:
                     return Diagnosis(
                         diagnosis_status=DiagnosisStatus.RISK_DETECTED,
@@ -134,7 +163,63 @@ class RuleBasedDiagnosisEngine:
                     summary="주문이 정상 상태(CONFIRMED)입니다.",
                     evidence=evidence,
                 )
-            case OrderStatus.COMPLETED | OrderStatus.CANCELLED:
+            case OrderStatus.CANCELLED:
+                # B: 주문은 취소인데 배송이 진행 중 → orphan 배송(§7, T2).
+                if shipment_statuses and has_live_shipment(shipment_statuses):
+                    return Diagnosis(
+                        diagnosis_status=DiagnosisStatus.RISK_DETECTED,
+                        compensation_status=CompensationStatus.NOT_REQUIRED,
+                        failed_step=failed_step,
+                        confidence=0.7,
+                        summary=(
+                            "주문은 CANCELLED인데 진행 중인 배송이 남아 있습니다. "
+                            "취소 누락(orphan 배송) 가능성이 있어 운영자 확인이 필요합니다."
+                        ),
+                        evidence=evidence,
+                        recommended_actions=[
+                            RecommendedAction(
+                                action_type="CHECK_ORPHAN_SHIPMENT",
+                                risk_level=ActionRiskLevel.READ_ONLY,
+                                description=(
+                                    "취소된 주문에 진행 중 배송이 남아 있는지 "
+                                    "shipment-service에서 확인합니다."
+                                ),
+                                requires_approval=False,
+                            )
+                        ],
+                    )
+                return Diagnosis(
+                    diagnosis_status=DiagnosisStatus.NORMAL,
+                    compensation_status=CompensationStatus.NOT_REQUIRED,
+                    confidence=0.8,
+                    summary=f"주문이 정상 상태({order_status.value})입니다.",
+                    evidence=evidence,
+                )
+            case OrderStatus.COMPLETED:
+                # C: 주문은 완료인데 배송이 미완료 → 정합성 이상(§7, T2).
+                if shipment_statuses and has_non_delivered(shipment_statuses):
+                    return Diagnosis(
+                        diagnosis_status=DiagnosisStatus.RISK_DETECTED,
+                        compensation_status=CompensationStatus.NOT_REQUIRED,
+                        failed_step=failed_step,
+                        confidence=0.6,
+                        summary=(
+                            "주문은 COMPLETED인데 배송이 완료(DELIVERED)되지 않았습니다. "
+                            "주문↔배송 상태 불일치로 운영자 확인이 필요합니다."
+                        ),
+                        evidence=evidence,
+                        recommended_actions=[
+                            RecommendedAction(
+                                action_type="CHECK_INCOMPLETE_SHIPMENT",
+                                risk_level=ActionRiskLevel.READ_ONLY,
+                                description=(
+                                    "완료된 주문의 배송이 왜 미완료 상태인지 "
+                                    "shipment-service에서 확인합니다."
+                                ),
+                                requires_approval=False,
+                            )
+                        ],
+                    )
                 return Diagnosis(
                     diagnosis_status=DiagnosisStatus.NORMAL,
                     compensation_status=CompensationStatus.NOT_REQUIRED,
