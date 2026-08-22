@@ -689,11 +689,22 @@ read-only 불변식              ✅ S17 (모든 권장 조치 READ_ONLY, §10)
 근거 없는 단정(grounding)      ✅ S17 (UNKNOWN→confidence 0·조치 없음, summary 비어있지 않음)
 
 [LLM 리포트 품질 eval - opt-in lane, 비CI (S18)]
-필수 evidence 포함 여부        ▶ S18
-JSON schema adherence         ▶ S18
-report readability            ▶ S18 (LLM-as-judge)
+휴리스틱 선필터(폴백 아님·최소 길이)  ✅ S18 (결정적, LLM 호출 0)
+faithfulness (근거 충실성)     ✅ S18 (LLM-as-judge, hallucination 플래그)
+report readability            ✅ S18 (LLM-as-judge, 1~5 점수)
 action risk level 정확도       — read-only 불변식으로 갈음(현재 모든 액션 READ_ONLY)
 ```
+
+S18 레인 상세: `EVAL_LLM_ENABLED=true` + Gemini 키가 있을 때만 도는 별도 진입점
+(`core/report_eval_cli`). 미설정이면 즉시 skip(exit 0), pytest는 fake로 결정적
+검증하므로 실 LLM/키 없이도 CI가 그대로 초록이다. 대상은 실 `GeminiReportGenerator`
+(flash tier)가 생성한 리포트이며, judge는 상위 tier(`eval_judge_model`, 기본
+`gemini-2.5-pro`)로 분리해 self-preference bias를 완화한다(생성=flash가 쓴 글을
+pro가 채점). 파이프라인: 규칙 엔진(순수) → 생성(포트) → 결정적 휴리스틱 선필터
+→ judge(포트). 휴리스틱은 자유형 한국어 prose라 enum echo로 근거를 결정적으로
+재기 어렵다는 판단 아래 폴백/길이만 보수적으로 걸러 judge 호출 낭비를 막고,
+미세한 faithfulness 판정은 judge에 맡긴다. judge 모델은 config knob이라 향후 타
+벤더 교차검증으로 교체 가능하다. **CI 게이트 아님**(참고 지표 / S10 데이터셋 품질 감시용).
 
 ## 15. MVP 구현 순서
 
@@ -775,9 +786,11 @@ S13   진단 실패 단계(failed_step) 정밀화 (§16.1)
 S14   order-service 상태별 orderId 조회 internal API (§16.2)
 S15   scheduled scan 트리거 (§16.2)
 S16   주문<->배송 상태 정합성 진단 (§16.3)
+S17   eval 축 확장 (failedStep·read-only·grounding 불변식, §14)
+S18   LLM 리포트 품질 eval (opt-in lane, 비CI, 휴리스틱+LLM-as-judge, §14)
 ```
 
-핵심 원칙은 14개 슬라이스 내내 유지했다: **규칙이 분류하고 LLM은 근거 기반 리포트만 생성(§5)**, **모든 액션 read-only(§10)**, **계층 경계 강제(import-linter, §17.6)**.
+핵심 원칙은 모든 슬라이스 내내 유지했다: **규칙이 분류하고 LLM은 근거 기반 리포트만 생성(§5)**, **모든 액션 read-only(§10)**, **계층 경계 강제(import-linter, §17.6)**.
 
 ## 16. 후속 확장
 
@@ -795,7 +808,7 @@ MVP(§15) 이후 확장 항목이다. 표기 규칙:
 ✅ Scheduled scan
 ✅ 주문↔배송 상태 정합성 진단
 ✅ eval 축 확장 (failedStep·read-only·grounding)
-▶ LLM 리포트 품질 eval (opt-in lane, 비CI)
+✅ LLM 리포트 품질 eval (opt-in lane, 비CI, 휴리스틱+LLM-as-judge)
 ⏸ Slack 실제 알림
 ⏸ Human-in-the-loop 승인 기반 recovery action
 ⏸ Zipkin trace 조회 tool (span의 orderId 태깅 선행 필요)
