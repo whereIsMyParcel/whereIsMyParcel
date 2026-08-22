@@ -6,7 +6,6 @@ from logistics_agent_service.domain.enums import (
 )
 from logistics_agent_service.domain.failure_signatures import classify_failure_step
 from logistics_agent_service.domain.rules import RuleBasedDiagnosisEngine
-
 # order-service OrderCreateSaga가 실제로 남기는 ERROR 로그 라인 형태(맥락 포함).
 _STOCK_RESERVE_FAIL = 'level=ERROR message="[Saga] 재고 예약 실패. orderId=abc"'
 _SHIPMENT_CREATE_FAIL = 'level=ERROR message="[Saga] 배송 생성 실패. orderId=abc"'

@@ -70,6 +70,21 @@ class ReportResult(BaseModel):
     trace: LlmTrace | None = None
 
 
+class JudgeVerdict(BaseModel):
+    """LLM-as-judge가 리포트 1건을 채점한 결과(design §14, S18 opt-in eval).
+
+    faithfulness/readability는 1~5. hallucination=True면 규칙이 판정한 근거를
+    벗어나 지어낸 내용이 있다는 뜻이다. reason은 판정 사유(사람 검수용).
+    judge 호출/파싱 실패는 어댑터에서 보수적 verdict(faithfulness=1,
+    hallucination=True)로 강등한다(§5 유지: judge는 서술 품질만 평가).
+    """
+
+    faithfulness: int
+    readability: int
+    hallucination: bool
+    reason: str
+
+
 class DiagnosisResult(BaseModel):
     diagnosis: Diagnosis
     report: str

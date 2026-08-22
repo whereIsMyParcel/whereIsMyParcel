@@ -10,6 +10,16 @@ class Settings(BaseSettings):
 
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-2.0-flash"
+
+    # LLM 리포트 품질 eval(§14, S18): 비결정적·과금이라 CI 게이트 밖 opt-in 레인.
+    # eval_llm_enabled=false(기본)면 report_eval_cli/pytest가 즉시 skip한다.
+    # judge는 리포트 생성(flash)과 다른 상위 tier로 분리해 self-preference bias를
+    # 완화한다(생성=flash가 쓴 글을 pro가 채점). eval_judge_model은 config knob이라
+    # 향후 타 벤더로 교차검증 시 코드 변경 없이 교체 가능하다.
+    eval_llm_enabled: bool = False
+    eval_judge_model: str = "gemini-2.5-pro"
+    eval_judge_min_score: int = 4
+    eval_report_min_length: int = 40
     database_url: str | None = None
     order_service_base_url: str | None = None
     shipment_service_base_url: str | None = None
