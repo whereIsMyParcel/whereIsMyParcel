@@ -1,7 +1,17 @@
 from pathlib import Path
 
-from logistics_agent_service.application.eval import EvalRunner, EvalSample
+from logistics_agent_service.application.eval import (
+    EvalRunner,
+    EvalSample,
+    _writes_gated_ok,
+)
 from logistics_agent_service.core.eval_cli import main
+from logistics_agent_service.domain.enums import (
+    ActionRiskLevel,
+    DiagnosisStatus,
+    OrderStatus,
+)
+from logistics_agent_service.domain.models import Diagnosis, RecommendedAction
 from logistics_agent_service.infrastructure.eval.jsonl_loader import load_samples
 
 _SEED = (
@@ -38,7 +48,7 @@ def test_runner_all_seed_cases_pass() -> None:
     assert report.failed_step_total == 5
     assert report.failed_step_accuracy == 1.0
     # 불변식은 전 케이스에서 성립해야 한다.
-    assert report.read_only_correct == report.total
+    assert report.writes_gated_correct == report.total
     assert report.grounding_correct == report.total
     assert report.all_passed
 
@@ -124,8 +134,8 @@ def test_grounding_invariant_holds_for_unknown() -> None:
     assert report.cases[0].grounding_ok is True
 
 
-def test_read_only_invariant_holds_for_risk_case() -> None:
-    # COMPENSATION_FAILED → READ_ONLY 권장 조치. read_only_ok True.
+def test_writes_gated_invariant_holds_for_read_only_case() -> None:
+    # COMPENSATION_FAILED → READ_ONLY 권장 조치(승인 불요). writes_gated_ok True.
     report = EvalRunner().run(
         [
             EvalSample(
@@ -137,8 +147,51 @@ def test_read_only_invariant_holds_for_risk_case() -> None:
         ]
     )
 
-    assert report.read_only_correct == 1
-    assert report.cases[0].read_only_ok is True
+    assert report.writes_gated_correct == 1
+    assert report.cases[0].writes_gated_ok is True
+
+
+def test_orphan_shipment_emits_gated_recovery_action() -> None:
+    # 주문 CANCELLED + 살아있는 배송 → RECOVERY_WRITE 복구 제안(승인 필요, §16.4 T5a).
+    report = EvalRunner().run(
+        [
+            EvalSample(
+                name="orphan",
+                order_status="CANCELLED",
+                shipment_statuses=["HUB_MOVING"],
+                expected_diagnosis_status="RISK_DETECTED",
+                expected_compensation_status="NOT_REQUIRED",
+            )
+        ]
+    )
+
+    diagnosis = EvalRunner()._engine.diagnose(
+        OrderStatus.CANCELLED, ["HUB_MOVING"], None, None
+    )
+    proposal = diagnosis.recommended_actions[0]
+    assert proposal.action_type == "CANCEL_ORPHAN_SHIPMENT"
+    assert proposal.risk_level.value == "RECOVERY_WRITE"
+    assert proposal.requires_approval is True
+    # write 제안이지만 승인 게이트가 걸려 있어 불변식은 성립한다.
+    assert report.cases[0].writes_gated_ok is True
+
+
+def test_writes_gated_invariant_detects_ungated_write() -> None:
+    # 승인 게이트 없는 write 제안 → 불변식 위반. RECOVERY_WRITE인데 requires_approval=False.
+    ungated = Diagnosis(
+        diagnosis_status=DiagnosisStatus.RISK_DETECTED,
+        confidence=0.5,
+        summary="test",
+        recommended_actions=[
+            RecommendedAction(
+                action_type="CANCEL_ORPHAN_SHIPMENT",
+                risk_level=ActionRiskLevel.RECOVERY_WRITE,
+                description="ungated",
+                requires_approval=False,
+            )
+        ],
+    )
+    assert _writes_gated_ok(ungated) is False
 
 
 def test_cli_main_returns_zero_on_seed() -> None:

@@ -73,7 +73,11 @@ def test_cancelled_with_live_shipment_is_risk() -> None:
     diagnosis = _engine.diagnose(OrderStatus.CANCELLED, ["HUB_MOVING"])
 
     assert diagnosis.diagnosis_status.value == "RISK_DETECTED"
-    assert diagnosis.recommended_actions[0].action_type == "CHECK_ORPHAN_SHIPMENT"
+    # orphan 배송은 승인 기반 복구 제안(RECOVERY_WRITE, 승인 필요)을 낸다(§16.4 T5a).
+    action = diagnosis.recommended_actions[0]
+    assert action.action_type == "CANCEL_ORPHAN_SHIPMENT"
+    assert action.risk_level.value == "RECOVERY_WRITE"
+    assert action.requires_approval is True
 
 
 def test_cancelled_with_terminal_shipment_is_normal() -> None:

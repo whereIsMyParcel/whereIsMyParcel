@@ -685,14 +685,14 @@ opt-in lane(S18)으로 분리한다.
 diagnosisStatus 정확도        ✅ S6
 compensationStatus 정확도     ✅ S6
 failedStep 정확도             ✅ S17 (log_lines 입력, expected 선언 케이스만)
-read-only 불변식              ✅ S17 (모든 권장 조치 READ_ONLY, §10)
+write 승인게이트 불변식        ✅ S17→T5a (write 조치는 requires_approval=True, READ_ONLY는 자동, §10·§16.4)
 근거 없는 단정(grounding)      ✅ S17 (UNKNOWN→confidence 0·조치 없음, summary 비어있지 않음)
 
 [LLM 리포트 품질 eval - opt-in lane, 비CI (S18)]
 휴리스틱 선필터(폴백 아님·최소 길이)  ✅ S18 (결정적, LLM 호출 0)
 faithfulness (근거 충실성)     ✅ S18 (LLM-as-judge, hallucination 플래그)
 report readability            ✅ S18 (LLM-as-judge, 1~5 점수)
-action risk level 정확도       — read-only 불변식으로 갈음(현재 모든 액션 READ_ONLY)
+action risk level 정확도       — write 승인게이트 불변식으로 갈음(T5a부터 RECOVERY_WRITE 제안 존재)
 ```
 
 S18 레인 상세: `EVAL_LLM_ENABLED=true` + Gemini 키가 있을 때만 도는 별도 진입점
@@ -912,11 +912,13 @@ LangGraph interrupt/checkpointer 방식은 단일 approve 스텝에 그래프 �
 **첫 액션 — `CANCEL_ORPHAN_SHIPMENT`:** §16.3 규칙 B(주문 CANCELLED + 살아있는 배송 = orphan)에 대응. 요청이 `{orderId}`뿐이고 cancel이 create보다 폭발 반경이 작아 첫 recovery로 안전하다. inventory cancel·shipment create는 검증 뒤 확장한다.
 
 ```text
-T5a  recovery 액션 제안 (실행 없음 → read-only 유지)
+T5a  recovery 액션 제안 (실행 없음 → 쓰기 없음) ✅ 반영됨
      - action_type=CANCEL_ORPHAN_SHIPMENT, risk_level=RECOVERY_WRITE,
        requires_approval=true, status=PROPOSED
      - 규칙 B가 진단 시 이 제안을 남긴다(아무것도 쓰지 않음)
-     DoD: orphan 배송 진단이 RECOVERY_WRITE 제안을 PROPOSED로 영속
+     - eval read-only 불변식을 "write 승인게이트" 불변식으로 진화(§14): write
+       조치는 requires_approval=True, READ_ONLY는 자동 허용
+     DoD: orphan 배송 진단이 RECOVERY_WRITE 제안을 PROPOSED로 영속 ✅
 
 T5b  승인 + 실행 엔드포인트
      - POST /internal/v1/agent/actions/{actionId}/approve
