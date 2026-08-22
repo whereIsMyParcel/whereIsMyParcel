@@ -19,7 +19,9 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",
-    "ruff>=0.8.0",
+    # ruff는 버전=lint 동작이라 정확히 핀 고정한다. 올릴 땐 의도적으로 핀을 올리고
+    # 새 규칙에 걸리는 파일을 같은 PR에서 정리한다(lint 드리프트 방지).
+    "ruff==0.15.22",
     "import-linter>=2.0",
 ]
 
