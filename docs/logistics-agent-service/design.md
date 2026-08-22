@@ -810,14 +810,14 @@ MVP(§15) 이후 확장 항목이다. 표기 규칙:
 ✅ eval 축 확장 (failedStep·read-only·grounding)
 ✅ LLM 리포트 품질 eval (opt-in lane, 비CI, 휴리스틱+LLM-as-judge)
 ⏸ Slack 실제 알림
-⏸ Human-in-the-loop 승인 기반 recovery action
+▶ Human-in-the-loop 승인 기반 recovery action (T5, 설계 §16.4)
 ⏸ Zipkin trace 조회 tool (span의 orderId 태깅 선행 필요)
 ⏸ LangSmith 또는 자체 trace dashboard
 ⏸ sLLM SFT / Distillation
 ⏸ 간단한 운영 대시보드
 ```
 
-read-only 원칙(§10)은 recovery action을 제외한 모든 확장에서 유지한다. write/recovery는 human-in-the-loop 승인 인프라와 타 서비스 복구 write 계약이 갖춰진 뒤로 미룬다.
+read-only 원칙(§10)은 recovery action을 제외한 모든 확장에서 유지한다. recovery의 선행조건은 **agent 내부 승인 게이트(HITL)** 이며, 타 서비스 복구 write 엔드포인트는 이미 존재한다(§16.4 실측). 실 write는 승인 게이트 뒤에서만 일어난다.
 
 ### 16.1 진단 실패 단계(failed_step) 정밀화 (✅ 반영됨)
 
@@ -886,6 +886,50 @@ DoD: A/B/C 각 케이스가 RISK_DETECTED로 판정·영속됨
 read-only 원칙(§10)을 유지한다. shipment-service는 orderId로 배송을 조회할 수 있어 order↔shipment 정합성은 판정 가능하다(order↔company 재고 정합성은 company에 orderId가 없어 제외, §7 말미). 판정 술어는 `domain/shipment_consistency.py`에 둔다.
 
 혼합 케이스(CONFIRMED에 일부만 CANCELLED)와 재진단은 후속으로 남긴다.
+
+### 16.4 승인 기반 recovery 액션 (▶ T5, §10·§12.4)
+
+지금까지 모든 슬라이스는 read-only(§10)였고 조치는 **제안(action proposal)까지만** 남겼다. recovery lane은 그 제안을 **운영자 승인 뒤 실제 write로 실행**하는 별도 흐름이다. §10이 "write/recovery는 human-in-the-loop 승인 이후"라 했고, 그 승인 게이트를 여기서 붙인다.
+
+**외부 의존 실측(코드 기준):** recovery용 write 엔드포인트는 이미 존재한다.
+
+```text
+shipment  POST /internal/v1/shipments/cancel   {orderId}            hasAnyRole(MASTER,...)
+          POST /internal/v1/shipments          ShipmentCreateRequest hasAnyRole(MASTER)
+company   POST /internal/v1/inventories/cancel  {orderId, items[]}   /internal/** permitAll
+```
+
+agent는 system header로 `X-User-Role: MASTER`(§8.3)를 보내므로 위 엔드포인트를 인증상 호출할 수 있다. 즉 T5의 선행조건은 **외부 API 추가가 아니라 agent 내부 승인 게이트**다. `AgentActionProposal`(§12.4)에는 이미 `status`/`requires_approval`가 있고 `ProposalStatus(PROPOSED/APPROVED/...)`가 정의돼 있어 상태머신 스캐폴딩이 준비돼 있다.
+
+**승인 방식 — 엔드포인트 상태머신(채택):** `ProposalStatus` 전이를 명시적 endpoint로 구동한다.
+
+```text
+PROPOSED --(운영자 승인)--> APPROVED --(agent 실행)--> EXECUTED | FAILED
+```
+
+LangGraph interrupt/checkpointer 방식은 단일 approve 스텝에 그래프 상태 영속 인프라를 요구해 과설계다. 기존 proposal 테이블·enum을 재사용하는 endpoint 상태머신이 이 서비스의 얇은 슬라이스 결에 맞다.
+
+**첫 액션 — `CANCEL_ORPHAN_SHIPMENT`:** §16.3 규칙 B(주문 CANCELLED + 살아있는 배송 = orphan)에 대응. 요청이 `{orderId}`뿐이고 cancel이 create보다 폭발 반경이 작아 첫 recovery로 안전하다. inventory cancel·shipment create는 검증 뒤 확장한다.
+
+```text
+T5a  recovery 액션 제안 (실행 없음 → read-only 유지)
+     - action_type=CANCEL_ORPHAN_SHIPMENT, risk_level=RECOVERY_WRITE,
+       requires_approval=true, status=PROPOSED
+     - 규칙 B가 진단 시 이 제안을 남긴다(아무것도 쓰지 않음)
+     DoD: orphan 배송 진단이 RECOVERY_WRITE 제안을 PROPOSED로 영속
+
+T5b  승인 + 실행 엔드포인트
+     - POST /internal/v1/agent/actions/{actionId}/approve
+     - RecoveryActionPort가 shipment POST /cancel 호출 → status EXECUTED|FAILED
+     - 실행 결과를 evidence로 영속
+     안전장치:
+       - 멱등: status=APPROVED이고 미실행일 때만 실행
+       - 실행 직전 현재 상태 재조회·재검증(제안↔승인 사이 상태 변화 대비,
+         orphan이 여전히 성립할 때만 write). 아니면 실행 취소·기록
+     DoD: 승인된 orphan-cancel 제안이 실제 배송 취소로 실행·기록됨
+```
+
+**원칙:** 진단(diagnosis) 흐름은 계속 read-only다(§5 유지). recovery는 진단 그래프에 인라인하지 않고 **별도 승인·실행 경로**로 분리한다. 실 write는 오직 승인 게이트(APPROVED) 뒤에서만 일어난다. 재진단 정책과 다중 액션 확장은 후속으로 남긴다.
 
 ## 17. Python 서비스 아키텍처 컨벤션
 
