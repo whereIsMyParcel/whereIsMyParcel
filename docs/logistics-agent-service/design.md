@@ -788,9 +788,11 @@ S15   scheduled scan 트리거 (§16.2)
 S16   주문<->배송 상태 정합성 진단 (§16.3)
 S17   eval 축 확장 (failedStep·read-only·grounding 불변식, §14)
 S18   LLM 리포트 품질 eval (opt-in lane, 비CI, 휴리스틱+LLM-as-judge, §14)
+T5a   orphan 배송 승인기반 복구 제안 (RECOVERY_WRITE, §16.4)
+T5b   orphan 배송 승인+실행 (승인 게이트·재검증·멱등, §16.4)
 ```
 
-핵심 원칙은 모든 슬라이스 내내 유지했다: **규칙이 분류하고 LLM은 근거 기반 리포트만 생성(§5)**, **모든 액션 read-only(§10)**, **계층 경계 강제(import-linter, §17.6)**.
+핵심 원칙은 모든 슬라이스 내내 유지했다: **규칙이 분류하고 LLM은 근거 기반 리포트만 생성(§5)**, **진단은 read-only, write는 승인 게이트 뒤에서만(§10·§16.4)**, **계층 경계 강제(import-linter, §17.6)**.
 
 ## 16. 후속 확장
 
@@ -810,7 +812,7 @@ MVP(§15) 이후 확장 항목이다. 표기 규칙:
 ✅ eval 축 확장 (failedStep·read-only·grounding)
 ✅ LLM 리포트 품질 eval (opt-in lane, 비CI, 휴리스틱+LLM-as-judge)
 ⏸ Slack 실제 알림
-▶ Human-in-the-loop 승인 기반 recovery action (T5, 설계 §16.4)
+✅ Human-in-the-loop 승인 기반 recovery action (T5a/T5b: orphan 배송 취소, §16.4)
 ⏸ Zipkin trace 조회 tool (span의 orderId 태깅 선행 필요)
 ⏸ LangSmith 또는 자체 trace dashboard
 ⏸ sLLM SFT / Distillation
@@ -920,18 +922,22 @@ T5a  recovery 액션 제안 (실행 없음 → 쓰기 없음) ✅ 반영됨
        조치는 requires_approval=True, READ_ONLY는 자동 허용
      DoD: orphan 배송 진단이 RECOVERY_WRITE 제안을 PROPOSED로 영속 ✅
 
-T5b  승인 + 실행 엔드포인트
-     - POST /internal/v1/agent/actions/{actionId}/approve
-     - RecoveryActionPort가 shipment POST /cancel 호출 → status EXECUTED|FAILED
-     - 실행 결과를 evidence로 영속
+T5b  승인 + 실행 엔드포인트 ✅ 반영됨
+     - POST /internal/v1/agent/actions/{actionId}/approve (동기: 승인=즉시 실행)
+     - RecoveryActionPort가 shipment POST /internal/v1/shipments/cancel 호출
+       → status EXECUTED(성공) | FAILED(실패) | SUPERSEDED(재검증 실패)
      안전장치:
-       - 멱등: status=APPROVED이고 미실행일 때만 실행
-       - 실행 직전 현재 상태 재조회·재검증(제안↔승인 사이 상태 변화 대비,
-         orphan이 여전히 성립할 때만 write). 아니면 실행 취소·기록
-     DoD: 승인된 orphan-cancel 제안이 실제 배송 취소로 실행·기록됨
+       - 멱등: status=PROPOSED일 때만 실행. 이미 종결된 제안은 재실행 없이 현재
+         상태 반환
+       - 실행 직전 order/shipment 재조회·재검증(is_orphan_shipment): orphan이
+         여전히 성립할 때만 write. 아니면 실행하지 않고 SUPERSEDED로 기록
+       - 실행 가능한 조치는 CANCEL_ORPHAN_SHIPMENT만(그 외 action_type은 422)
+     인증: 승인 주체(운영자) 인증은 미구현(현 internal permitAll, §8.2). 승인자
+       검증은 후속 인증 인프라에서 붙인다
+     DoD: 승인된 orphan-cancel 제안이 실제 배송 취소로 실행·EXECUTED 기록 ✅
 ```
 
-**원칙:** 진단(diagnosis) 흐름은 계속 read-only다(§5 유지). recovery는 진단 그래프에 인라인하지 않고 **별도 승인·실행 경로**로 분리한다. 실 write는 오직 승인 게이트(APPROVED) 뒤에서만 일어난다. 재진단 정책과 다중 액션 확장은 후속으로 남긴다.
+**원칙:** 진단(diagnosis) 흐름은 계속 read-only다(§5 유지). recovery는 진단 그래프에 인라인하지 않고 **별도 승인·실행 경로**로 분리한다. 실 write는 오직 승인 게이트(PROPOSED→재검증 통과) 뒤에서만 일어난다. 재진단 정책과 다중 액션 확장은 후속으로 남긴다.
 
 ## 17. Python 서비스 아키텍처 컨벤션
 

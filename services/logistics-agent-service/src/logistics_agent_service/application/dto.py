@@ -2,7 +2,11 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from logistics_agent_service.domain.enums import OrderStatus, TriggerType
+from logistics_agent_service.domain.enums import (
+    OrderStatus,
+    ProposalStatus,
+    TriggerType,
+)
 from logistics_agent_service.domain.models import Diagnosis
 
 
@@ -98,6 +102,31 @@ class DiagnosisResult(BaseModel):
     incident_type: str | None = None
     source_service: str | None = None
     user_question: str | None = None
+
+
+class ActionProposalView(BaseModel):
+    """승인·실행 대상 조치 제안 1건의 조회 뷰(design §16.4 T5b).
+
+    order_id는 제안이 속한 진단(agent_diagnosis)에서 온다(제안 자체엔 orderId 없음).
+    """
+
+    action_id: UUID
+    order_id: UUID | None
+    action_type: str
+    status: ProposalStatus
+
+
+class RecoveryResult(BaseModel):
+    """승인+실행 요청의 결과(design §16.4 T5b).
+
+    executed=True면 실제 write가 일어났다. status는 전이 후 제안 상태
+    (EXECUTED/FAILED/SUPERSEDED, 또는 멱등 반환 시 기존 상태)이다.
+    """
+
+    action_id: UUID
+    status: ProposalStatus
+    executed: bool
+    detail: str
 
 
 class ScanSummary(BaseModel):

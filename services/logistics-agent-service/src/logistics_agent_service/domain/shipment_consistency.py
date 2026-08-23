@@ -5,7 +5,7 @@
 drift에 견고 — 규칙이 오판하지 않게, §7).
 """
 
-from logistics_agent_service.domain.enums import ShipmentStatus
+from logistics_agent_service.domain.enums import OrderStatus, ShipmentStatus
 
 # 진행 중(살아있는) 배송 상태. 종료 상태는 DELIVERED / CANCELLED.
 _LIVE_STATUSES = frozenset(
@@ -32,6 +32,17 @@ def has_live_shipment(shipment_statuses: list[str]) -> bool:
     살아있다고 보지 않는다(보수적).
     """
     return any(_parse(status) in _LIVE_STATUSES for status in shipment_statuses)
+
+
+def is_orphan_shipment(
+    order_status: OrderStatus | None, shipment_statuses: list[str]
+) -> bool:
+    """주문이 CANCELLED인데 살아있는 배송이 남아 있으면 True(§16.3 규칙 B).
+
+    recovery 실행 직전 재검증에도 쓴다(§16.4 T5b): 제안↔승인 사이 상태가 바뀌어
+    orphan이 해소됐으면 실제 배송 취소를 하지 않기 위함이다.
+    """
+    return order_status is OrderStatus.CANCELLED and has_live_shipment(shipment_statuses)
 
 
 def all_cancelled(shipment_statuses: list[str]) -> bool:

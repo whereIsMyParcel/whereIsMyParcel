@@ -8,9 +8,11 @@ from fastapi import FastAPI
 from logistics_agent_service.core.config import Settings, get_settings
 from logistics_agent_service.core.dependencies import (
     build_diagnosis_service,
+    build_recovery_service,
     build_scheduled_scan_service,
 )
 from logistics_agent_service.presentation.controller import (
+    action_controller,
     diagnosis_controller,
     health_controller,
     incident_controller,
@@ -18,6 +20,7 @@ from logistics_agent_service.presentation.controller import (
 )
 from logistics_agent_service.presentation.dependencies import (
     get_diagnosis_service,
+    get_recovery_service,
     get_scheduled_scan_service,
 )
 
@@ -67,10 +70,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(diagnosis_controller.router)
     app.include_router(incident_controller.router)
     app.include_router(scan_controller.router)
+    app.include_router(action_controller.router)
 
     # 합성 루트: presentation의 placeholder 의존성에 실제 구현을 주입한다.
     app.dependency_overrides[get_diagnosis_service] = build_diagnosis_service
     app.dependency_overrides[get_scheduled_scan_service] = build_scheduled_scan_service
+    app.dependency_overrides[get_recovery_service] = build_recovery_service
     return app
 
 
