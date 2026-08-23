@@ -41,6 +41,7 @@ def build_report_prompt(diagnosis: Diagnosis, order_context: OrderContext | None
         "## 진단 결과\n"
         f"{order_line}\n"
         f"- 진단 상태: {diagnosis.diagnosis_status.value}\n"
+        f"- 심각도: {diagnosis.severity.value}\n"
         f"- 실패 단계: {diagnosis.failed_step.value}\n"
         f"- 보상 상태: {diagnosis.compensation_status.value}\n"
         f"- 신뢰도: {diagnosis.confidence:.2f}\n"

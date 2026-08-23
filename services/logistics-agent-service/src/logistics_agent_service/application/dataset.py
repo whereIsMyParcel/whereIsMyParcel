@@ -41,6 +41,7 @@ class PersistedDiagnosis(BaseModel):
     diagnosis_status: str
     failed_step: str
     compensation_status: str
+    severity: str = "LOW"
     confidence: float
     summary: str
     report: str
@@ -89,8 +90,8 @@ class DatasetSample(BaseModel):
                 "diagnosisStatus": d.diagnosis_status,
                 "failedStep": d.failed_step,
                 "compensationStatus": d.compensation_status,
+                "severity": d.severity,
                 "responsibleService": None,  # 미영속(§13 목표 스키마)
-                "severity": None,  # 미영속
                 "report": d.report,
             },
             metadata={

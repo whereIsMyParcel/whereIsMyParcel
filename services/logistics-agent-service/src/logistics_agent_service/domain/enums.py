@@ -43,6 +43,16 @@ class DiagnosisStatus(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class Severity(StrEnum):
+    """진단의 심각도/긴급도(design §13 dataset label). diagnosis_status에서 결정적으로
+    매핑한다(domain.severity.severity_for). 복구 우선순위·정렬의 기준이 된다."""
+
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
 class CompensationStatus(StrEnum):
     NOT_REQUIRED = "NOT_REQUIRED"
     COMPLETED = "COMPLETED"

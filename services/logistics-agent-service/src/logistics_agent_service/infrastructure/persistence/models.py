@@ -43,6 +43,7 @@ class AgentDiagnosis(Base):
     diagnosis_status: Mapped[str] = mapped_column(String(40))
     failed_step: Mapped[str] = mapped_column(String(40))
     compensation_status: Mapped[str] = mapped_column(String(40))
+    severity: Mapped[str] = mapped_column(String(20), default="LOW")
     confidence: Mapped[float] = mapped_column(Float)
     summary: Mapped[str] = mapped_column(Text)
     report: Mapped[str] = mapped_column(Text)

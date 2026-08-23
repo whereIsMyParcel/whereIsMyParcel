@@ -30,6 +30,7 @@ class SqlAlchemyDiagnosisRepository:
             diagnosis_status=result.diagnosis.diagnosis_status.value,
             failed_step=result.diagnosis.failed_step.value,
             compensation_status=result.diagnosis.compensation_status.value,
+            severity=result.diagnosis.severity.value,
             confidence=result.diagnosis.confidence,
             summary=result.diagnosis.summary,
             report=result.report,

@@ -189,6 +189,21 @@ RECOVERY_WRITE
 DANGEROUS_MANUAL
 ```
 
+### 6.7 Severity
+
+진단의 심각도/긴급도(§13 dataset label). `diagnosis_status`에서 결정적으로 매핑한다
+(`domain/severity.py`). 복구 우선순위·정렬의 기준이 된다.
+
+```text
+LOW       NORMAL
+MEDIUM    FAILED_COMPENSATED(실패했으나 dangling 없음) / UNKNOWN(평가 불가)
+HIGH      RISK_DETECTED / MANUAL_INTERVENTION_REQUIRED
+CRITICAL  FAILED_COMPENSATION_FAILED(dangling 재고/배송, 경계 깨짐)
+```
+
+severity는 `diagnosis_status`의 결정적 함수이므로 별도 eval 축으로 두지 않는다
+(diagnosisStatus 정확도가 이미 함의, §14).
+
 ## 7. 초기 Rule 예시
 
 초기 rule은 보수적으로 둡니다. 근거가 부족하면 확정적으로 말하지 않고 `UNKNOWN` 또는 `MANUAL_INTERVENTION_REQUIRED`로 분류합니다.
@@ -790,6 +805,7 @@ S17   eval 축 확장 (failedStep·read-only·grounding 불변식, §14)
 S18   LLM 리포트 품질 eval (opt-in lane, 비CI, 휴리스틱+LLM-as-judge, §14)
 T5a   orphan 배송 승인기반 복구 제안 (RECOVERY_WRITE, §16.4)
 T5b   orphan 배송 승인+실행 (승인 게이트·재검증·멱등, §16.4)
+—     진단 severity 분류 (LOW/MEDIUM/HIGH/CRITICAL, §6.7·§13)
 ```
 
 핵심 원칙은 모든 슬라이스 내내 유지했다: **규칙이 분류하고 LLM은 근거 기반 리포트만 생성(§5)**, **진단은 read-only, write는 승인 게이트 뒤에서만(§10·§16.4)**, **계층 경계 강제(import-linter, §17.6)**.
