@@ -178,13 +178,14 @@ class RuleBasedDiagnosisEngine:
                         evidence=evidence,
                         recommended_actions=[
                             RecommendedAction(
-                                action_type="CHECK_ORPHAN_SHIPMENT",
-                                risk_level=ActionRiskLevel.READ_ONLY,
+                                action_type="CANCEL_ORPHAN_SHIPMENT",
+                                risk_level=ActionRiskLevel.RECOVERY_WRITE,
                                 description=(
-                                    "취소된 주문에 진행 중 배송이 남아 있는지 "
-                                    "shipment-service에서 확인합니다."
+                                    "취소된 주문에 남은 orphan 배송을 shipment-service"
+                                    "(POST /internal/v1/shipments/cancel)로 취소하는 "
+                                    "복구 조치입니다. 운영자 승인 후 실행됩니다(§16.4)."
                                 ),
-                                requires_approval=False,
+                                requires_approval=True,
                             )
                         ],
                     )

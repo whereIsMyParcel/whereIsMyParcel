@@ -34,8 +34,8 @@ class EvalCaseResult(BaseModel):
     compensation_ok: bool
     # expected_failed_step이 없으면 평가하지 않음(None).
     failed_step_ok: bool | None
-    # 불변식(§10 read-only, §14 근거 없는 단정)은 모든 케이스에서 측정한다.
-    read_only_ok: bool
+    # 불변식(§10·§16.4 write 승인게이트, §14 근거 없는 단정)은 모든 케이스에서 측정한다.
+    writes_gated_ok: bool
     grounding_ok: bool
     actual_diagnosis_status: DiagnosisStatus
     actual_compensation_status: CompensationStatus
@@ -49,7 +49,7 @@ class EvalReport(BaseModel):
     # failed_step은 expected가 선언된 케이스만 대상으로 한다(total과 분모가 다름).
     failed_step_total: int
     failed_step_correct: int
-    read_only_correct: int
+    writes_gated_correct: int
     grounding_correct: int
     cases: list[EvalCaseResult]
 
@@ -76,20 +76,28 @@ class EvalReport(BaseModel):
             and self.diagnosis_correct == self.total
             and self.compensation_correct == self.total
             and self.failed_step_correct == self.failed_step_total
-            and self.read_only_correct == self.total
+            and self.writes_gated_correct == self.total
             and self.grounding_correct == self.total
         )
 
 
-def _read_only_ok(diagnosis: Diagnosis) -> bool:
-    """모든 권장 조치가 READ_ONLY인가(§10 read-only 레인 불변식).
+def _writes_gated_ok(diagnosis: Diagnosis) -> bool:
+    """write 조치가 승인 게이트로 보호되는가(§10·§16.4 불변식).
 
+    read-only 레인이 recovery로 확장되며 S17의 "모든 조치 READ_ONLY" 불변식을
+    "write는 승인 게이트"로 진화시킨다(T5a). 안전 보장은 동일하다: 승인 없는
+    write 실행이 제안조차 되지 않는다.
+    - READ_ONLY 조치는 자동 허용이라 승인을 요구하면 안 된다(requires_approval=False).
+    - 비 READ_ONLY(RECOVERY_WRITE 등) 조치는 반드시 승인을 요구해야 한다.
     권장 조치가 없으면 자명히 True.
     """
-    return all(
-        action.risk_level is ActionRiskLevel.READ_ONLY
-        for action in diagnosis.recommended_actions
-    )
+    for action in diagnosis.recommended_actions:
+        if action.risk_level is ActionRiskLevel.READ_ONLY:
+            if action.requires_approval:
+                return False
+        elif not action.requires_approval:
+            return False
+    return True
 
 
 def _grounding_ok(diagnosis: Diagnosis) -> bool:
@@ -110,7 +118,7 @@ class EvalRunner:
 
     LLM/DB/외부 호출 없이 순수 규칙 엔진만 평가하므로 CI에서도 실행 가능하다.
     측정 축: diagnosisStatus / compensationStatus / failedStep 정확도 +
-    read-only·grounding 불변식. LLM 리포트 품질(readability 등)은 별도 lane(S18).
+    write-승인게이트·grounding 불변식. LLM 리포트 품질(readability 등)은 별도 lane(S18).
     """
 
     def __init__(self, engine: RuleBasedDiagnosisEngine | None = None) -> None:
@@ -122,7 +130,7 @@ class EvalRunner:
         compensation_correct = 0
         failed_step_total = 0
         failed_step_correct = 0
-        read_only_correct = 0
+        writes_gated_correct = 0
         grounding_correct = 0
 
         for sample in samples:
@@ -145,9 +153,9 @@ class EvalRunner:
                 failed_step_ok = diagnosis.failed_step == sample.expected_failed_step
                 failed_step_correct += int(failed_step_ok)
 
-            read_only_ok = _read_only_ok(diagnosis)
+            writes_gated_ok = _writes_gated_ok(diagnosis)
             grounding_ok = _grounding_ok(diagnosis)
-            read_only_correct += int(read_only_ok)
+            writes_gated_correct += int(writes_gated_ok)
             grounding_correct += int(grounding_ok)
 
             cases.append(
@@ -156,7 +164,7 @@ class EvalRunner:
                     diagnosis_ok=diagnosis_ok,
                     compensation_ok=compensation_ok,
                     failed_step_ok=failed_step_ok,
-                    read_only_ok=read_only_ok,
+                    writes_gated_ok=writes_gated_ok,
                     grounding_ok=grounding_ok,
                     actual_diagnosis_status=diagnosis.diagnosis_status,
                     actual_compensation_status=diagnosis.compensation_status,
@@ -170,7 +178,7 @@ class EvalRunner:
             compensation_correct=compensation_correct,
             failed_step_total=failed_step_total,
             failed_step_correct=failed_step_correct,
-            read_only_correct=read_only_correct,
+            writes_gated_correct=writes_gated_correct,
             grounding_correct=grounding_correct,
             cases=cases,
         )

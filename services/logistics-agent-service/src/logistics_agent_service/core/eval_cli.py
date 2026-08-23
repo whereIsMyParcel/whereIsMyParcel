@@ -14,7 +14,7 @@ def _case_ok(case) -> bool:
         case.diagnosis_ok
         and case.compensation_ok
         and case.failed_step_ok is not False
-        and case.read_only_ok
+        and case.writes_gated_ok
         and case.grounding_ok
     )
 
@@ -43,7 +43,7 @@ def _format_report(report: EvalReport) -> str:
         f"({report.failed_step_accuracy:.0%})"
     )
     lines.append(
-        f"read-only 불변식: {report.read_only_correct}/{report.total}"
+        f"write 승인게이트 불변식: {report.writes_gated_correct}/{report.total}"
     )
     lines.append(
         f"grounding 불변식: {report.grounding_correct}/{report.total}"
