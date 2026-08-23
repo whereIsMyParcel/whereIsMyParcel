@@ -6,6 +6,9 @@ from google import genai
 from logistics_agent_service.agent.graph.diagnosis_workflow import (
     LangGraphDiagnosisWorkflow,
 )
+from logistics_agent_service.application.port.action_proposal_port import (
+    ActionProposalPort,
+)
 from logistics_agent_service.application.port.diagnosed_order_port import (
     DiagnosedOrderPort,
 )
@@ -16,6 +19,9 @@ from logistics_agent_service.application.port.hub_context_port import HubContext
 from logistics_agent_service.application.port.log_context_port import LogContextPort
 from logistics_agent_service.application.port.order_context_port import OrderContextPort
 from logistics_agent_service.application.port.order_scan_port import OrderScanPort
+from logistics_agent_service.application.port.recovery_action_port import (
+    RecoveryActionPort,
+)
 from logistics_agent_service.application.port.report_generator_port import (
     ReportGeneratorPort,
 )
@@ -23,6 +29,7 @@ from logistics_agent_service.application.port.shipment_context_port import (
     ShipmentContextPort,
 )
 from logistics_agent_service.application.service.diagnosis_service import DiagnosisService
+from logistics_agent_service.application.service.recovery_service import RecoveryService
 from logistics_agent_service.application.service.scheduled_scan_service import (
     ScheduledScanService,
 )
@@ -43,6 +50,9 @@ from logistics_agent_service.infrastructure.client.fake_order_scan_client import
 from logistics_agent_service.infrastructure.client.fake_shipment_context_client import (
     FakeShipmentContextClient,
 )
+from logistics_agent_service.infrastructure.client.fake_shipment_recovery_client import (
+    FakeShipmentRecoveryClient,
+)
 from logistics_agent_service.infrastructure.client.http_hub_context_client import (
     HttpHubContextClient,
 )
@@ -58,6 +68,9 @@ from logistics_agent_service.infrastructure.client.http_order_scan_client import
 from logistics_agent_service.infrastructure.client.http_shipment_context_client import (
     HttpShipmentContextClient,
 )
+from logistics_agent_service.infrastructure.client.http_shipment_recovery_client import (
+    HttpShipmentRecoveryClient,
+)
 from logistics_agent_service.infrastructure.llm.gemini_report_generator import (
     GeminiReportGenerator,
 )
@@ -69,8 +82,14 @@ from logistics_agent_service.infrastructure.persistence.engine import (
     build_session_factory,
     create_all,
 )
+from logistics_agent_service.infrastructure.persistence.in_memory_action_proposal_repository import (  # noqa: E501
+    InMemoryActionProposalRepository,
+)
 from logistics_agent_service.infrastructure.persistence.in_memory_diagnosis_repository import (
     InMemoryDiagnosisRepository,
+)
+from logistics_agent_service.infrastructure.persistence.sqlalchemy_action_proposal_repository import (  # noqa: E501
+    SqlAlchemyActionProposalRepository,
 )
 from logistics_agent_service.infrastructure.persistence.sqlalchemy_diagnosis_reader import (
     SqlAlchemyDiagnosisReader,
@@ -155,6 +174,20 @@ def _build_report_generator() -> ReportGeneratorPort:
 
 
 @lru_cache
+def _build_session_factory():
+    """database_url이 있으면 세션 팩토리를, 없으면 None을 반환한다(프로세스 단일).
+
+    진단 저장소와 조치 제안 저장소가 같은 DB 팩토리를 공유하도록 한 자리에 둔다.
+    """
+    settings = get_settings()
+    if not settings.database_url:
+        return None
+    engine = build_engine(settings.database_url)
+    create_all(engine)  # 개발 편의; 운영은 마이그레이션으로 대체
+    return build_session_factory(engine)
+
+
+@lru_cache
 def _build_persistence() -> tuple[DiagnosisRepositoryPort, DiagnosedOrderPort]:
     """진단 저장소(write)와 진단완료 orderId 조회(read, scheduled scan 중복 방지)를
     같은 저장소 위에 배선한다.
@@ -163,14 +196,33 @@ def _build_persistence() -> tuple[DiagnosisRepositoryPort, DiagnosedOrderPort]:
     단일 인스턴스를 둘 다로 공유한다. in-memory에서 인스턴스를 공유해야 방금
     진단한 건까지 중복 방지가 본다. @lru_cache로 프로세스 내 단일 인스턴스를 보장한다.
     """
-    settings = get_settings()
-    if settings.database_url:
-        engine = build_engine(settings.database_url)
-        create_all(engine)  # 개발 편의; 운영은 마이그레이션으로 대체
-        factory = build_session_factory(engine)
+    factory = _build_session_factory()
+    if factory is not None:
         return SqlAlchemyDiagnosisRepository(factory), SqlAlchemyDiagnosisReader(factory)
     repository = InMemoryDiagnosisRepository()
     return repository, repository
+
+
+@lru_cache
+def _build_action_proposal_port() -> ActionProposalPort:
+    """조치 제안 조회·상태 전이 포트(§16.4 T5b). 진단 저장소와 같은 DB 팩토리를 공유."""
+    factory = _build_session_factory()
+    if factory is not None:
+        return SqlAlchemyActionProposalRepository(factory)
+    return InMemoryActionProposalRepository()
+
+
+def _build_recovery_action_port() -> RecoveryActionPort:
+    """shipment_service_base_url이 있으면 실 HTTP 복구 클라이언트, 없으면 Fake로 배선한다."""
+    settings = get_settings()
+    if settings.shipment_service_base_url:
+        client = httpx.Client(
+            base_url=settings.shipment_service_base_url,
+            headers=_system_headers(settings),
+            timeout=5.0,
+        )
+        return HttpShipmentRecoveryClient(client)
+    return FakeShipmentRecoveryClient()
 
 
 def _build_order_scan_port() -> OrderScanPort:
@@ -222,4 +274,17 @@ def build_scheduled_scan_service() -> ScheduledScanService:
         diagnosed_port=diagnosed_port,
         diagnosis_service=build_diagnosis_service(),
         scan_statuses=scan_statuses,
+    )
+
+
+@lru_cache
+def build_recovery_service() -> RecoveryService:
+    """승인 기반 recovery(§16.4 T5b) 배선. 제안 저장소(진단과 동일 DB), 복구 실행
+    클라이언트(shipment cancel), 재검증용 order/shipment 컨텍스트 포트를 조립한다.
+    """
+    return RecoveryService(
+        proposals=_build_action_proposal_port(),
+        recovery=_build_recovery_action_port(),
+        order_context=_build_order_port(),
+        shipment_context=_build_shipment_port(),
     )

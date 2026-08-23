@@ -72,10 +72,15 @@ class ActionRiskLevel(StrEnum):
 
 
 class ProposalStatus(StrEnum):
-    """권장 조치 제안의 생애주기(design §12.4). 현재는 PROPOSED만 기록하고,
-    APPROVED/REJECTED/EXECUTED는 후속 human-in-the-loop recovery에서 사용한다."""
+    """권장 조치 제안의 생애주기(design §12.4, §16.4).
+
+    진단은 PROPOSED로 기록한다(§12.4). 승인 기반 recovery(T5b)가 실행 시:
+    EXECUTED(실행 성공)·FAILED(실행 실패)·SUPERSEDED(실행 직전 재검증 결과 더 이상
+    필요 없어 실행 안 함)로 전이한다. APPROVED/REJECTED는 승인/거부 상태값이다."""
 
     PROPOSED = "PROPOSED"
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
     EXECUTED = "EXECUTED"
+    FAILED = "FAILED"
+    SUPERSEDED = "SUPERSEDED"
