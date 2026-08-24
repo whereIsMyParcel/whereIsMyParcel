@@ -12,11 +12,7 @@ from logistics_agent_service.domain.models import (
     RecommendedAction,
 )
 from logistics_agent_service.domain.severity import severity_for
-from logistics_agent_service.domain.shipment_consistency import (
-    all_cancelled,
-    has_live_shipment,
-    has_non_delivered,
-)
+from logistics_agent_service.domain.shipment_consistency import summarize
 
 
 class RuleBasedDiagnosisEngine:
@@ -121,8 +117,9 @@ class RuleBasedDiagnosisEngine:
                             )
                         ],
                     )
+                summary = summarize(shipment_statuses) if shipment_statuses else None
                 # A: 주문은 확정인데 배송이 전부 취소됨 → 정합성 이상(§7, T2).
-                if shipment_statuses and all_cancelled(shipment_statuses):
+                if summary and summary.all_cancelled:
                     return Diagnosis(
                         diagnosis_status=DiagnosisStatus.RISK_DETECTED,
                         compensation_status=CompensationStatus.NOT_REQUIRED,
@@ -140,6 +137,32 @@ class RuleBasedDiagnosisEngine:
                                 description=(
                                     "shipment-service에서 배송 취소 사유와 order-service "
                                     "주문 상태의 정합성을 확인합니다."
+                                ),
+                                requires_approval=False,
+                            )
+                        ],
+                    )
+                # A': 일부 배송만 취소(나머지는 생존/배달) → 부분 취소, 소프트 정합성
+                # 이상(§16.3). 전부 취소보다 약한 신호라 confidence를 낮춘다.
+                if summary and summary.partially_cancelled:
+                    return Diagnosis(
+                        diagnosis_status=DiagnosisStatus.RISK_DETECTED,
+                        compensation_status=CompensationStatus.NOT_REQUIRED,
+                        failed_step=failed_step,
+                        confidence=0.6,
+                        summary=(
+                            "주문은 CONFIRMED인데 연결된 배송 중 일부만 취소되었습니다"
+                            f"(취소 {summary.cancelled}/{summary.total}건). 부분 취소가 "
+                            "의도된 것인지 운영자 확인이 필요합니다."
+                        ),
+                        evidence=evidence,
+                        recommended_actions=[
+                            RecommendedAction(
+                                action_type="CHECK_SHIPMENT_CANCELLATION",
+                                risk_level=ActionRiskLevel.READ_ONLY,
+                                description=(
+                                    "shipment-service에서 일부 배송의 취소 사유와 "
+                                    "order-service 주문 상태의 정합성을 확인합니다."
                                 ),
                                 requires_approval=False,
                             )
@@ -178,7 +201,7 @@ class RuleBasedDiagnosisEngine:
                 )
             case OrderStatus.CANCELLED:
                 # B: 주문은 취소인데 배송이 진행 중 → orphan 배송(§7, T2).
-                if shipment_statuses and has_live_shipment(shipment_statuses):
+                if shipment_statuses and summarize(shipment_statuses).has_live:
                     return Diagnosis(
                         diagnosis_status=DiagnosisStatus.RISK_DETECTED,
                         compensation_status=CompensationStatus.NOT_REQUIRED,
@@ -211,16 +234,39 @@ class RuleBasedDiagnosisEngine:
                 )
             case OrderStatus.COMPLETED:
                 # C: 주문은 완료인데 배송이 미완료 → 정합성 이상(§7, T2).
-                if shipment_statuses and has_non_delivered(shipment_statuses):
+                # 혼합 케이스를 세분한다(§16.3): 진행 중 배송 잔존(강)·전부 취소(중)·
+                # 일부 배달+일부 취소(약, 정상 부분 취소 가능성).
+                summary = summarize(shipment_statuses) if shipment_statuses else None
+                if summary and summary.has_non_delivered:
+                    if summary.has_live:
+                        confidence = 0.7
+                        detail = (
+                            "주문은 COMPLETED인데 아직 진행 중인 배송이 남아 있습니다"
+                            f"(진행 중 {summary.live}/{summary.total}건). 주문↔배송 "
+                            "상태 불일치로 운영자 확인이 필요합니다."
+                        )
+                    elif summary.delivered > 0:
+                        # 진행 중은 없고 일부 배달 + 일부 취소 → 정상 부분 취소일 수
+                        # 있으나 확인은 권장(과탐 완화: confidence를 낮춘다).
+                        confidence = 0.5
+                        detail = (
+                            "주문은 COMPLETED이고 일부 배송은 배달됐으나 일부가 "
+                            f"취소되었습니다(취소 {summary.cancelled}/{summary.total}건). "
+                            "의도된 부분 취소인지 운영자 확인을 권장합니다."
+                        )
+                    else:
+                        # 배달 0 + 취소만 → 완료인데 배송이 취소됨(명백 이상).
+                        confidence = 0.6
+                        detail = (
+                            "주문은 COMPLETED인데 연결된 배송이 취소되었습니다. "
+                            "주문↔배송 상태 불일치로 운영자 확인이 필요합니다."
+                        )
                     return Diagnosis(
                         diagnosis_status=DiagnosisStatus.RISK_DETECTED,
                         compensation_status=CompensationStatus.NOT_REQUIRED,
                         failed_step=failed_step,
-                        confidence=0.6,
-                        summary=(
-                            "주문은 COMPLETED인데 배송이 완료(DELIVERED)되지 않았습니다. "
-                            "주문↔배송 상태 불일치로 운영자 확인이 필요합니다."
-                        ),
+                        confidence=confidence,
+                        summary=detail,
                         evidence=evidence,
                         recommended_actions=[
                             RecommendedAction(

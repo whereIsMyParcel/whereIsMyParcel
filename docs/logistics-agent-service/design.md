@@ -806,6 +806,7 @@ S18   LLM 리포트 품질 eval (opt-in lane, 비CI, 휴리스틱+LLM-as-judge, 
 T5a   orphan 배송 승인기반 복구 제안 (RECOVERY_WRITE, §16.4)
 T5b   orphan 배송 승인+실행 (승인 게이트·재검증·멱등, §16.4)
 —     진단 severity 분류 (LOW/MEDIUM/HIGH/CRITICAL, §6.7·§13)
+—     혼합(부분) 배송 상태 정밀 분류 (ShipmentSetSummary, §16.3.1)
 ```
 
 핵심 원칙은 모든 슬라이스 내내 유지했다: **규칙이 분류하고 LLM은 근거 기반 리포트만 생성(§5)**, **진단은 read-only, write는 승인 게이트 뒤에서만(§10·§16.4)**, **계층 경계 강제(import-linter, §17.6)**.
@@ -903,7 +904,22 @@ DoD: A/B/C 각 케이스가 RISK_DETECTED로 판정·영속됨
 
 read-only 원칙(§10)을 유지한다. shipment-service는 orderId로 배송을 조회할 수 있어 order↔shipment 정합성은 판정 가능하다(order↔company 재고 정합성은 company에 orderId가 없어 제외, §7 말미). 판정 술어는 `domain/shipment_consistency.py`에 둔다.
 
-혼합 케이스(CONFIRMED에 일부만 CANCELLED)와 재진단은 후속으로 남긴다.
+#### 16.3.1 혼합(부분) 배송 상태 정밀 분류 (✅ 반영됨)
+
+초기 A/B/C 규칙은 `all_cancelled`/`has_live_shipment`/`has_non_delivered` 세 이진 술어(any/all)라, 배송이 여러 건이고 상태가 섞이면(부분 취소/부분 배송) "전부"와 "일부"를 구분하지 못했다. 배송 목록을 한 번 훑어 카테고리별로 세는 `ShipmentSetSummary(live, delivered, cancelled, unknown)`를 1차 출처로 두고 술어를 그 위에서 파생시켜, 다음을 정밀화한다.
+
+```text
+A': CONFIRMED + 일부만 CANCELLED(나머지 생존/배달) => RISK_DETECTED (부분 취소, confidence 0.6)
+    - 전부 취소(A, 0.7)보다 약한 신호. 이전엔 NORMAL로 새던 사각지대.
+C 세분(COMPLETED, DELIVERED 아닌 배송 존재):
+    - 진행 중 배송 잔존        => RISK 0.7 (완료인데 물류 진행 중, 강)
+    - 배달 0 + 취소만          => RISK 0.6 (완료인데 배송 취소, 명백 이상)
+    - 일부 배달 + 일부 취소    => RISK 0.5 (정상 부분 취소 가능성, 과탐 완화)
+원칙: 순수 도메인 로직(외부 의존 0), 새 액션 타입 없음(기존 READ_ONLY 재사용).
+      알 수 없는 상태는 unknown으로 격리 — 전부/부분 취소로 확정하지 않는다(보수적).
+```
+
+재진단(상태 변화 시 재실행)은 후속으로 남긴다.
 
 ### 16.4 승인 기반 recovery 액션 (▶ T5, §10·§12.4)
 
