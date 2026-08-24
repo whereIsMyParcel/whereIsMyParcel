@@ -11,6 +11,7 @@ from logistics_agent_service.domain.models import (
     Evidence,
     RecommendedAction,
 )
+from logistics_agent_service.domain.severity import severity_for
 from logistics_agent_service.domain.shipment_consistency import (
     all_cancelled,
     has_live_shipment,
@@ -28,6 +29,18 @@ class RuleBasedDiagnosisEngine:
     """
 
     def diagnose(
+        self,
+        order_status: OrderStatus | None,
+        shipment_statuses: list[str] | None,
+        route_ok: bool | None = None,
+        log_lines: list[str] | None = None,
+    ) -> Diagnosis:
+        """진단 후 severity를 diagnosis_status에서 결정적으로 채운다(§13)."""
+        diagnosis = self._classify(order_status, shipment_statuses, route_ok, log_lines)
+        diagnosis.severity = severity_for(diagnosis.diagnosis_status)
+        return diagnosis
+
+    def _classify(
         self,
         order_status: OrderStatus | None,
         shipment_statuses: list[str] | None,

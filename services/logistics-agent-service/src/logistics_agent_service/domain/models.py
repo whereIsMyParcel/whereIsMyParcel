@@ -5,6 +5,7 @@ from logistics_agent_service.domain.enums import (
     CompensationStatus,
     DiagnosisStatus,
     FailureStep,
+    Severity,
 )
 
 
@@ -27,6 +28,8 @@ class Diagnosis(BaseModel):
     diagnosis_status: DiagnosisStatus
     failed_step: FailureStep = FailureStep.UNKNOWN
     compensation_status: CompensationStatus = CompensationStatus.UNKNOWN
+    # 심각도(§13). 엔진이 diagnosis_status로부터 결정적으로 채운다(domain.severity).
+    severity: Severity = Severity.LOW
     confidence: float = Field(ge=0.0, le=1.0)
     summary: str
     evidence: list[Evidence] = Field(default_factory=list)

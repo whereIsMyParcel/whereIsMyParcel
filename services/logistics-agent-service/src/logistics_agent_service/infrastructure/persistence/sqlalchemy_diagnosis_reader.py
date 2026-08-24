@@ -54,6 +54,7 @@ class SqlAlchemyDiagnosisReader:
             diagnosis_status=row.diagnosis_status,
             failed_step=row.failed_step,
             compensation_status=row.compensation_status,
+            severity=row.severity,
             confidence=row.confidence,
             summary=row.summary,
             report=row.report,

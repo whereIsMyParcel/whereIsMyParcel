@@ -7,6 +7,7 @@ from logistics_agent_service.domain.enums import (
     CompensationStatus,
     DiagnosisStatus,
     FailureStep,
+    Severity,
     TriggerType,
 )
 from logistics_agent_service.domain.models import Evidence, RecommendedAction
@@ -39,6 +40,7 @@ class DiagnosisResponse(BaseModel):
     diagnosis_status: DiagnosisStatus
     failed_step: FailureStep
     compensation_status: CompensationStatus
+    severity: Severity
     confidence: float
     summary: str
     evidence: list[Evidence]
@@ -58,6 +60,7 @@ class DiagnosisResponse(BaseModel):
             diagnosis_status=diagnosis.diagnosis_status,
             failed_step=diagnosis.failed_step,
             compensation_status=diagnosis.compensation_status,
+            severity=diagnosis.severity,
             confidence=diagnosis.confidence,
             summary=diagnosis.summary,
             evidence=diagnosis.evidence,
